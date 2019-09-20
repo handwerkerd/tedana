@@ -28,6 +28,48 @@ LGR = logging.getLogger(__name__)
     """),
     description='Introduces method for choosing PCA dimensionality '
                 'automatically')
+
+
+def getSVDThreshold(svd_input,u,s,v,verb=False,SEprogram=False,Ne=None):
+    """
+    This function estimates the number of non-noise components in a PCA decomposition
+    The algorithm used is from: Gavish and Donoho 2014 "The optiomal hard threshold for singular values is 4/sqrt(3)"
+    Parameters:
+   -----------
+    svd_input: Input data to the SVD decomposition in an array (Nv.Nt)
+    u:   U matrix from the SVD decomposition
+    s:   Eigen-values from the SVD decomposition
+    v:   VT matrix from the SVD decomposition.
+          These three inputs are the outcomes of np.linalg.svd as they come out of that function.
+    verb: If true, the function will print(out some metrics about the results.)
+          By default is set to False
+   Results:
+   --------
+   Nc:  Number of non-gaussian noise components.
+    """
+    m = svd_input.shape[1]
+    n = svd_input.shape[0]
+    if SEprogram==True and not (Ne is None):
+        n = n / Ne
+    beta = np.float(m)/np.float(n)
+    omega = 0.56*beta**3 - 0.95*beta**2 + 1.82*beta + 1.43
+    ymed = np.median(s)
+    tau = omega*ymed
+    shat = s * (s>tau)
+    svd_inputhat = np.dot(u,np.dot(np.diag(shat),v))
+    err = svd_input  - svd_inputhat
+    relerr = np.linalg.norm(err,'fro')**2/np.linalg.norm(svd_input,'fro')**2
+    Nc = np.where(shat>0)[0][-1] + 1
+    if verb:
+        print(" +              M = " + str(m) + ", N = " + str(n))
+        print(" +              Beta = " + str(beta) + ", omega = " + str(omega))
+        print(" +              Median y = " + str(ymed) + ", Tau = "+str(tau))
+        print(" +              Number of components = " + str(Nc))
+        print(" +              Signal power: " + str(1.0 - relerr))
+        print(" +              Noise power: " + str(relerr))
+    return Nc
+
+ 
 def run_mlepca(data):
     """
     Run Singular Value Decomposition (SVD) on input data,
@@ -55,6 +97,8 @@ def run_mlepca(data):
     u = np.dot(np.dot(data, v), np.diag(1. / s))
     varex_norm = ppca.explained_variance_ratio_
     return u, s, varex_norm, v
+
+
 
 
 def low_mem_pca(data):
@@ -85,7 +129,7 @@ def low_mem_pca(data):
 
 
 def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
-           ref_img, tes, algorithm='mle', source_tes=-1, kdaw=10., rdaw=1.,
+           ref_img, tes, algorithm='FourSThree', source_tes=-1, kdaw=10., rdaw=1.,
            out_dir='.', verbose=False, low_mem=False):
     """
     Use principal components analysis (PCA) to identify and remove thermal
@@ -111,8 +155,8 @@ def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
         Reference image to dictate how outputs are saved to disk
     tes : :obj:`list`
         List of echo times associated with `data_cat`, in milliseconds
-    algorithm : {'mle', 'kundu', 'kundu-stabilize'}, optional
-        Method with which to select components in TEDPCA. Default is 'mle'.
+    algorithm : {'FourSThree', 'mle', 'kundu', 'kundu-stabilize'}, optional
+        Method with which to select components in TEDPCA. Default is 'FourSThree'.
     source_tes : :obj:`int` or :obj:`list` of :obj:`int`, optional
         Which echos to use in PCA. Values -1 and 0 are special, where a value
         of -1 will indicate using the optimal combination of the echos
@@ -227,6 +271,8 @@ def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
         voxel_comp_weights = np.dot(np.dot(data_z, comp_ts),
                                     np.diag(1. / varex))
         varex_norm = varex / varex.sum()
+        if algorithm == 'FourSThree':
+            NumCompKeep = getSVDThreshold(data_z, voxel_comp_weights, varex, comp_ts, verb=True)
 
     # Compute Kappa and Rho for PCA comps
     eimum = np.atleast_2d(eim)
@@ -269,6 +315,14 @@ def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
                  'detection'.format(comptable.shape[0]))
         comptable['classification'] = 'accepted'
         comptable['rationale'] = ''
+    elif algorithm == 'FourSThree':
+        LGR.info('Selected {0} components with 4*sqrt(3) dimensionality '
+                 'detection'.format(NumCompKeep))
+        # NEED TO MAKE SURE COMP TABLE IS CORRECTLY SORTED BY VARIANCE
+        # OR NEED TO EXPLICITLY THRESHOLD BY VARIANCE         
+        comptable['classification'][0:(NumCompKeep-1)] = 'accepted'
+        comptable['classification'][NumCompKeep::] = 'rejected'
+        comptable['rationale'][NumCompKeep::] = 'P002' 
 
     comptable.to_csv('comp_table_pca.txt', sep='\t', index=True,
                      index_label='component', float_format='%.6f')
