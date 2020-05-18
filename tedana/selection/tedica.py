@@ -316,48 +316,52 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
                    (comptable.loc[unclf, 'rho'] < rho_elbow)),
             np.sum(comptable.loc[unclf, 'kappa'] > kappa_elbow)]))
 
-        # # Rejection candidate based on artifact type A: candartA
-        # conservative_guess = num_acc_guess / RESTRICT_FACTOR
-        # candartA = np.intersect1d(
-        #     unclf[comptable.loc[unclf, 'd_table_score_scrub'] > conservative_guess],
-        #     unclf[comptable.loc[unclf, 'kappa ratio'] > EXTEND_FACTOR * 2])
-        # candartA = (candartA[comptable.loc[candartA, 'variance explained'] >
-        #                      varex_upper * EXTEND_FACTOR])
-        # comptable.loc[candartA, 'classification'] = 'rejected'
-        # comptable.loc[candartA, 'rationale'] += 'I009;'
-        # midk = np.union1d(midk, candartA)
-        # unclf = np.setdiff1d(unclf, midk)
+        # Rejection candidate based on artifact type A: candartA
+        conservative_guess = num_acc_guess / RESTRICT_FACTOR
+        candartA = np.intersect1d(
+            unclf[comptable.loc[unclf, 'd_table_score_scrub'] > conservative_guess],
+            unclf[comptable.loc[unclf, 'kappa ratio'] > EXTEND_FACTOR * 2])
+        candartA = (candartA[comptable.loc[candartA, 'variance explained'] >
+                             varex_upper * EXTEND_FACTOR])
+        comptable.loc[candartA, 'classification'] = 'rejected'
+        comptable.loc[candartA, 'rationale'] += 'I009;'
+        midk = np.union1d(midk, candartA)
+        unclf = np.setdiff1d(unclf, midk)
 
-        # # Rejection candidate based on artifact type B: candartB
-        # conservative_guess2 = num_acc_guess * HIGH_PERC / 100.
-        # candartB = unclf[comptable.loc[unclf, 'd_table_score_scrub'] > conservative_guess2]
-        # candartB = (candartB[comptable.loc[candartB, 'variance explained'] >
-        #                      varex_lower * EXTEND_FACTOR])
-        # comptable.loc[candartB, 'classification'] = 'rejected'
-        # comptable.loc[candartB, 'rationale'] += 'I010;'
-        # midk = np.union1d(midk, candartB)
-        # unclf = np.setdiff1d(unclf, midk)
+        # Rejection candidate based on artifact type B: candartB
+        conservative_guess2 = num_acc_guess * HIGH_PERC / 100.
+        candartB = unclf[comptable.loc[unclf, 'd_table_score_scrub'] > conservative_guess2]
+        candartB = (candartB[comptable.loc[candartB, 'variance explained'] >
+                             varex_lower * EXTEND_FACTOR])
+        comptable.loc[candartB, 'classification'] = 'rejected'
+        comptable.loc[candartB, 'rationale'] += 'I010;'
+        midk = np.union1d(midk, candartB)
+        unclf = np.setdiff1d(unclf, midk)
 
-        # # Find components to ignore
-        # # Ignore high variance explained, poor decision tree scored components
-        # new_varex_lower = stats.scoreatpercentile(
-        #     comptable.loc[unclf[:num_acc_guess], 'variance explained'],
-        #     LOW_PERC)
-        # candart = unclf[comptable.loc[unclf, 'd_table_score_scrub'] > num_acc_guess]
-        # ign_add0 = candart[comptable.loc[candart, 'variance explained'] > new_varex_lower]
-        # ign_add0 = np.setdiff1d(ign_add0, midk)
-        # comptable.loc[ign_add0, 'classification'] = 'ignored'
-        # comptable.loc[ign_add0, 'rationale'] += 'I011;'
-        # ign = np.union1d(ign, ign_add0)
-        # unclf = np.setdiff1d(unclf, ign)
+        # Find components to ignore
+        # Ignore high variance explained, poor decision tree scored components
+        new_varex_lower = stats.scoreatpercentile(
+            comptable.loc[unclf[:num_acc_guess], 'variance explained'],
+            LOW_PERC)
+        candart = unclf[comptable.loc[unclf, 'd_table_score_scrub'] > num_acc_guess]
+        ign_add0 = candart[comptable.loc[candart, 'variance explained'] > new_varex_lower]
+        ign_add0 = np.setdiff1d(ign_add0, midk)
+        comptable.loc[ign_add0, 'classification'] = 'ignored'
+        comptable.loc[ign_add0, 'rationale'] += 'I011;'
+        ign = np.union1d(ign, ign_add0)
+        unclf = np.setdiff1d(unclf, ign)
 
-        # # Ignore low Kappa, high variance explained components
-        # ign_add1 = np.intersect1d(
-        #     unclf[comptable.loc[unclf, 'kappa'] <= kappa_elbow],
-        #     unclf[comptable.loc[unclf, 'variance explained'] > new_varex_lower])
-        # ign_add1 = np.setdiff1d(ign_add1, midk)
-        # comptable.loc[ign_add1, 'classification'] = 'ignored'
-        # comptable.loc[ign_add1, 'rationale'] += 'I012;'
+        # Ignore low Kappa, high variance explained components
+        ign_add1 = np.intersect1d(
+            unclf[comptable.loc[unclf, 'kappa'] <= kappa_elbow],
+            unclf[comptable.loc[unclf, 'variance explained'] > new_varex_lower])
+        ign_add1 = np.setdiff1d(ign_add1, midk)
+        comptable.loc[ign_add1, 'classification'] = 'ignored'
+        comptable.loc[ign_add1, 'rationale'] += 'I012;'
+
+    # As a conservative step, keep all components that were accepted based
+    # on kappa and rho elbow criteria
+    unclf = np.union1d(unclf, acc_prov)
 
     # at this point, unclf is equivalent to accepted
 
