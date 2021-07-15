@@ -424,8 +424,8 @@ def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx,
                                                    custom_node_label="", only_used_metrics=False):
     """
     The 'mean metric rank' (formerly d_table) is the mean of rankings of 5 metrics:
-        'kappa', 'DICE_FT2', 'T2fitdiff invsout ICAmap Tstat',
-        and 'countnoise', 'countsig in T2clusters'
+        'kappa', 'dice_FT2', 'signal-noise_t',
+        and 'countnoise', 'countsigFT2'
     For these 5 metrics, a lower rank (smaller number) is less likely to be
     T2* weighted.
     This function tests of meanmetricrank is above a threshold based on the number
@@ -461,7 +461,7 @@ def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx,
         The threshold used for variance
     """
 
-    used_metrics = ['mean metric rank', 'variance explained']
+    used_metrics = ['d_table_score', 'variance explained']
     if only_used_metrics:
         return used_metrics
 
@@ -498,7 +498,7 @@ def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx,
         extend_factor = get_extend_factor(n_vols=n_vols, extend_factor=extend_factor)
         max_good_meanmetricrank = extend_factor * num_prov_accept
 
-        decision_boolean1 = comptable.loc[comps2use, 'mean metric rank'] > max_good_meanmetricrank
+        decision_boolean1 = comptable.loc[comps2use, 'd_table_score'] > max_good_meanmetricrank
         decision_boolean2 = comptable.loc[comps2use, 'variance explained'] > varex_upper_thresh
         decision_boolean = decision_boolean1 & decision_boolean2
 
@@ -698,20 +698,39 @@ def kappa_rho_elbow_cutoffs_kundu(comptable, decision_node_idx, iftrue, iffalse,
         # Kappa values. High Kappa is defined as Kappa above Kappa elbow.
         f05, _, f01 = getfbounds(n_echos)
         varex_upper_p = np.median(
-            comptable.loc[comptable['kappa'] > getelbow(comptable['kappa'], return_val=True),
-                          'variance explained'])
-        temp_comptable = comptable.loc[unclassified_comps2use].sort_values(
-            by=['variance explained'], ascending=False)
-        diff_vals = temp_comptable['variance explained'].diff(-1)
-        top_five = diff_vals[:5]
-        bad_from_top_five = top_five.loc[top_five > varex_upper_p]
-        idx = bad_from_top_five.index[-1]
-        comps_to_drop = top_five.loc[:idx].index.values
-        comps_to_keep = list(set(unclassified_comps2use) - set(comps_to_drop))
+            comptable.loc[
+                comptable['kappa'] > getelbow(
+                    comptable['kappa'], return_val=True
+                ),
+                'variance explained'
+            ]
+        )
 
-        rho_elbow = np.mean((getelbow(comptable.loc[comps_to_keep, 'rho'], return_val=True),
-                             getelbow(comptable['rho'], return_val=True),
-                             f05))
+        ncls = unclassified_comps2use.copy()
+        for i_loop in range(3):
+            temp_comptable = comptable.loc[ncls].sort_values(
+                    by=['variance explained'],
+                    ascending=False
+            )
+            diff_vals = temp_comptable['variance explained'].diff(-1)
+            diff_vals = diff_vals.fillna(0)
+            ncls = temp_comptable.loc[
+                        diff_vals < varex_upper_p
+                    ].index.values
+        kappas_nonsig = comptable.loc[comptable["kappa"] < f01, "kappa"]
+        kappa_elbow = np.min((getelbow(kappas_nonsig, return_val=True),
+                              getelbow(
+                                  comptable["kappa"],
+                                  return_val=True
+                              )))
+        rho_elbow = np.mean((
+            getelbow(
+                comptable.loc[ncls, "rho"],
+                return_val=True
+            ),
+            getelbow(comptable["rho"], return_val=True),
+            f05
+        ))
 
         decision_boolean = (
                 comptable.loc[comps2use, 'kappa'] >= kappa_elbow) & (
@@ -770,7 +789,7 @@ def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, iftrue
     {basicreturns}
     """
 
-    used_metrics = ['variance explained', 'kappa', 'mean metric rank']
+    used_metrics = ['variance explained', 'kappa', 'd_table_score']
     if only_used_metrics:
         return used_metrics
 
@@ -809,7 +828,7 @@ def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, iftrue
         extend_factor = get_extend_factor(n_vols=n_vols, extend_factor=extend_factor)
         max_good_meanmetricrank = extend_factor * num_prov_accept
         db_meanmetricrank = comptable.loc[comps2use,
-                                          'mean metric rank'] < max_good_meanmetricrank
+                                          'd_table_score'] < max_good_meanmetricrank
 
         # kappa threshold
         kappa_elbow = kappa_elbow_kundu(comptable, n_echos)
@@ -880,8 +899,8 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
     {basicreturns}
     """
 
-    used_metrics = ['variance explained', 'kappa', 'rho', 'DICE_FT2',
-                    'T2fitdiff invsout ICAmap Tstat', 'countsig in T2clusters',
+    used_metrics = ['variance explained', 'kappa', 'rho', 'dice_FT2',
+                    'signal-noise_t', 'countsigFT2',
                     'countnoise']
     if only_used_metrics:
         return used_metrics
@@ -1007,8 +1026,8 @@ def highvariance_highmeanmetricrank(comptable, decision_node_idx, iftrue, iffals
     {basicreturns}
     """
 
-    used_metrics = ['variance explained', 'kappa', 'rho', 'DICE_FT2',
-                    'T2fitdiff invsout ICAmap Tstat', 'countsig in T2clusters',
+    used_metrics = ['variance explained', 'kappa', 'rho', 'dice_FT2',
+                    'signal-noise_t', 'countsigFT2',
                     'countnoise']
     if only_used_metrics:
         return used_metrics

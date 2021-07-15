@@ -6,8 +6,8 @@
     "necessary_metrics": [
         "kappa",
         "rho",
-        "countsig_FS0",
-        "countsig_FT2",
+        "countsigFS0",
+        "countsigFT2",
         "dice_FS0",
         "dice_FT2",
         "signal-noise_t",
@@ -48,8 +48,8 @@
                 "iftrue": "reject",
                 "iffalse": "nochange",
                 "decide_comps": "all",
-                "metric1": "countsig_FS0",
-                "metric2": "countsig_FT2"
+                "metric1": "countsigFS0",
+                "metric2": "countsigFT2"
             },
             "kwargs": {
                 "log_extra_info": "Reject if countsig_in S0clusters > T2clusters",

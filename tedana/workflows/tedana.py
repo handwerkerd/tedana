@@ -121,6 +121,13 @@ def _get_parser():
                                 "cumulative variance explained. "
                                 "Default='mdl'."),
                           default='mdl')
+    optional.add_argument('--tree',
+                          dest='tree',
+                          help=('Decision tree to use. You may use a '
+                          'packaged tree (kundu, simple) or supply a JSON '
+                          'file which matches the decision tree file '
+                          'specification.'),
+                          default='kundu')
     optional.add_argument('--seed',
                           dest='fixed_seed',
                           metavar='INT',
@@ -250,6 +257,7 @@ def _get_parser():
 def tedana_workflow(data, tes, out_dir='.', mask=None,
                     convention='bids', prefix='',
                     fittype='loglin', combmode='t2s', tedpca='mdl',
+                    tree='kundu',
                     fixed_seed=42, maxit=500, maxrestart=10,
                     tedort=False, gscontrol=None,
                     no_reports=False, png_cmap='coolwarm',
@@ -572,8 +580,8 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
                 io_generator, 'ICA',
                 metrics=required_metrics, sort_by='kappa', ascending=False,
             )
-            comptable, metric_metadata = selection.kundu_selection_v2(
-                comptable, n_echos, n_vols
+            comptable, metric_metadata = selection.automatic_selection(
+                comptable, n_echos, n_vols, tree=tree
             )
 
             n_bold_comps = comptable[comptable.classification == 'accepted'].shape[0]
@@ -601,8 +609,8 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
                 io_generator, 'ICA',
                 metrics=required_metrics, sort_by='kappa', ascending=False
             )
-            comptable, metric_metadata = selection.kundu_selection_v2(
-                    comptable, n_echos, n_vols
+            comptable, metric_metadata = selection.automatic_selection(
+                    comptable, n_echos, n_vols, tree=tree
             )
         else:
             mmix = mmix_orig.copy()
