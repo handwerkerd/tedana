@@ -492,22 +492,21 @@ def get_new_meanmetricrank(comptable, comps2use, decision_node_idx,
     """
 
     if not calc_new_rank:
-        # check to see if a revised d_table_score was already calculated
-        # and use that rank. A revised d_table_score would be named
-        # 'd_table_score' followed by a number that is lower than the
-        # current decision_node_idx
-        for didx in range(decision_node_idx, -1, -1):
-            if ('d_table_score' + str(didx)) in comptable.columns:
-                return comptable['d_table_score' + str(didx)], comptable
-        else:
-            comptable['d_table_score ' + str(decision_node_idx)] = (
+        # If not calc_new_rank, check if the rank already exists
+        # If it does, then just returnt he existing rank
+        # Note every component won't have a d_table_score, I'm still a bit fuzzy
+        # a dataframe queries & I'm not 100% sure this will search all elements
+        # Maybe that's why I previous included a for loop?
+        if ('d_table_score' + str(decision_node_idx)) in comptable.columns:
+            return comptable['d_table_score' + str(decision_node_idx)], comptable
+    comptable['d_table_score ' + str(decision_node_idx)] = (
                 generate_decision_table_score(
                     comptable.loc[comps2use, 'kappa'],
                     comptable.loc[comps2use, 'dice_FT2'],
                     comptable.loc[comps2use, 'signal-noise_t'],
                     comptable.loc[comps2use, 'countnoise'],
                     comptable.loc[comps2use, 'countsigFT2']))
-            return comptable['d_table_score ' + str(decision_node_idx)], comptable
+    return comptable['d_table_score ' + str(decision_node_idx)], comptable
 
 
 def prev_classified_comps(comptable, decision_node_idx, classification_label, prev_X_steps=0):
