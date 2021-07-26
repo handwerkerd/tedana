@@ -487,26 +487,30 @@ def get_new_meanmetricrank(comptable, comps2use, decision_node_idx,
 
     Return
     ------
-    comptable
     meanmetricrank
+    comptable
     """
+    rank_label = 'd_table_score' + str(decision_node_idx)
+    if not calc_new_rank and (rank_label in comptable.columns):
+        # go ahead and return existing
+        return comptable[rank_label], comptable
+    # get the array of ranks
+    ranks = generate_decision_table_score(
+                comptable.loc[comps2use, 'kappa'],
+                comptable.loc[comps2use, 'dice_FT2'],
+                comptable.loc[comps2use, 'signal-noise_t'],
+                comptable.loc[comps2use, 'countnoise'],
+                comptable.loc[comps2use, 'countsigFT2']
+            )
+    # see if we need to make a new column
+    if rank_label not in comptable.columns:
+        comptable[rank_label] = np.zeros(comptable.shape[0]) * np.nan
 
-    if not calc_new_rank:
-        # If not calc_new_rank, check if the rank already exists
-        # If it does, then just returnt he existing rank
-        # Note every component won't have a d_table_score, I'm still a bit fuzzy
-        # a dataframe queries & I'm not 100% sure this will search all elements
-        # Maybe that's why I previous included a for loop?
-        if ('d_table_score' + str(decision_node_idx)) in comptable.columns:
-            return comptable['d_table_score' + str(decision_node_idx)], comptable
-    comptable['d_table_score ' + str(decision_node_idx)] = (
-                generate_decision_table_score(
-                    comptable.loc[comps2use, 'kappa'],
-                    comptable.loc[comps2use, 'dice_FT2'],
-                    comptable.loc[comps2use, 'signal-noise_t'],
-                    comptable.loc[comps2use, 'countnoise'],
-                    comptable.loc[comps2use, 'countsigFT2']))
-    return comptable['d_table_score ' + str(decision_node_idx)], comptable
+    # fill in the column with the components of interest
+    for c, rank in zip(comps2use, ranks):
+        comptable[c, rank_label] = rank
+
+    return comptable[rank_label], comptable
 
 
 def prev_classified_comps(comptable, decision_node_idx, classification_label, prev_X_steps=0):
