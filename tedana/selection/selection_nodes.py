@@ -900,6 +900,7 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
     """
 
     used_metrics = ['variance explained', 'kappa', 'rho', 'dice_FT2',
+                    'kappa ratio',
                     'signal-noise_t', 'countsigFT2',
                     'countnoise']
     if only_used_metrics:
@@ -947,8 +948,13 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
         # instead of >kappa_eblow and <rho_elbow, which si how provisionally accepted components
         # are initially classified
         num_acc_guess = int(
-            np.mean(len(previous_provaccept_comps2use),
-                    np.sum(comptable.loc[previous_comps2use, 'kappa'] > kappa_elbow)))
+            np.mean(
+                [len(previous_provaccept_comps2use),
+                np.sum(
+                    comptable.loc[previous_comps2use, 'kappa'] > kappa_elbow
+                )]
+            )
+        )
 
         # a scaling factor that is either based on the number of volumes or can be
         # directly assigned
