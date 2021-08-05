@@ -109,6 +109,10 @@ def validate_tree(tree):
     err_msg = ''
     tree_info = ['tree_id', 'info', 'report', 'refs', 'necessary_metrics', 'nodes']
     defaults = {'comptable', 'decision_node_idx'}
+    default_classifications = ['nochange', 'accepted', 'rejected', 'ignored',
+                               'provisionalaccept', 'provisionalreject', 'unclassified']
+    default_decide_comps = ['all', 'accepted', 'rejected', 'ignored',
+                            'provisionalaccept', 'provisionalreject', 'unclassified']
 
     for k in tree_info:
         try:
@@ -137,6 +141,19 @@ def validate_tree(tree):
         if len(invalid_kwargs) > 0:
             err_msg += ('Node {} has additional, undefined kwarg(s): {}\n'
                         .format(i, invalid_kwargs))
+
+        if 'ifTrue' in node.get('parameters').keys():
+            compclass = node['parameters']['ifTrue']
+            if compclass not in default_classifications:
+                print('WARNING: {} in node {} of the decision tree is not a standard label'.format(compclass, i))
+        if 'ifFalse' in node.get('parameters').keys():
+            compclass = node['parameters']['ifFalse']
+            if compclass not in default_classifications:
+                print('WARNING: {} in node {} of the decision tree is not a standard label'.format(compclass, i))
+        if 'decide_comps' in node.get('parameters').keys():
+            compclass = node['parameters']['decide_comps']
+            if compclass not in default_decide_comps:
+                print('WARNING: {} in node {} of the decision tree is not a standard label'.format(compclass, i))
 
     if err_msg:
         raise TreeError('\n' + err_msg)
