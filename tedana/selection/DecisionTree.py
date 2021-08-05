@@ -149,7 +149,7 @@ class DecisionTree:
     Classifies components based on specified `tree` when the class is initialized
     and then the `run` function is called.
     The expected output of running a decision tree is that every component
-    will be classified as 'accept', 'reject', or 'ignore'.
+    will be classified as 'accepted', 'rejected', or 'ignored'.
 
     The selection process uses previously calculated parameters listed in
     `comptable` for each ICA component such as Kappa (a T2* weighting metric),

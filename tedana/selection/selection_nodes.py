@@ -35,8 +35,8 @@ decison_node_idx : :obj: `int`
     'ifTrue': """\
 ifTrue : :obj:`str`
     If the condition in this step is true, give the component
-    the label in this string. Options are 'accept', 'reject',
-    'provisionalaccept', 'provisionalreject', 'ignore', or 'nochange'
+    the label in this string. Options are 'accepted', 'rejected',
+    'provisionalaccept', 'provisionalreject', 'ignored', or 'nochange'
     If 'nochange' then don't change the current component classification\
 """,
     'ifFalse': """\
@@ -83,8 +83,8 @@ comptable: (C x M) :obj:`pandas.DataFrame`
     decide_comps may change depending on the the ifTrue and ifFalse instructions.
     When a classification changes, the 'rationale' column is appended to include
     and additional decision node index and change. For example, if this function
-    is the 5th decision node run and a component is reclassified as 'ignore',
-    the string in 'rationale' is appended to include '5: ignore;'
+    is the 5th decision node run and a component is reclassified as 'ignored',
+    the string in 'rationale' is appended to include '5: ignored;'
     comptable is only only returned if only_used_metrics=False
 dnode_outputs: :obj:`dict`
     Several parameters that should be output from each decision node function
@@ -155,7 +155,7 @@ def manual_classify(comptable, decision_node_idx,
     for the first node of a decision tree.
     clear_rationale=True is recommended for this use case
     2. Shift all components between classifications, such as
-    provisionalaccept to accept for the penultimate node in the
+    provisionalaccept to accepted for the penultimate node in the
     decision tree.
     3. Manually re-classify components by number based on user
     observations.
@@ -167,8 +167,8 @@ def manual_classify(comptable, decision_node_idx,
     {decide_comps}
     new_classification: :obj: `str`
         Assign all components identified in decide_comps the classification
-        in new_classification. Options are 'accept', 'reject',
-        'provisionalaccept', 'provisionalreject', or 'ignore'
+        in new_classification. Options are 'accepted', 'rejected',
+        'provisionalaccept', 'provisionalreject', or 'ignored'
     clear_rationale: :obj: `bool`
         If True, reset all values in the 'rationale' column to empty strings
         If False, do nothing

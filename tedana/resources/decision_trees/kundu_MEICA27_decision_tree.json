@@ -30,7 +30,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "rho",
@@ -45,7 +45,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "countsig_FS0",
@@ -60,7 +60,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "dice_FS0",
@@ -75,7 +75,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": 0,
@@ -104,7 +104,7 @@
             "functionname": "classification_exists",
             "parameters": {
                 "ifTrue": "nochange",
-                "ifFalse": "ignore",
+                "ifFalse": "ignored",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -119,7 +119,7 @@
         {
             "functionname": "meanmetricrank_and_variance_greaterthan_thresh",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
@@ -136,7 +136,7 @@
         {
             "functionname": "lowvariance_highmeanmetricrank_lowkappa",
             "parameters": {
-                "ifTrue": "ignore",
+                "ifTrue": "ignored",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
@@ -155,7 +155,7 @@
             "functionname": "classification_exists",
             "parameters": {
                 "ifTrue": "nochange",
-                "ifFalse": "accept",
+                "ifFalse": "accepted",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -170,7 +170,7 @@
         {
             "functionname": "highvariance_highmeanmetricrank_highkapparatio",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
@@ -188,7 +188,7 @@
         {
             "functionname": "highvariance_highmeanmetricrank",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
@@ -206,7 +206,7 @@
         {
             "functionname": "highvariance_highmeanmetricrank",
             "parameters": {
-                "ifTrue": "ignore",
+                "ifTrue": "ignored",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
@@ -226,7 +226,7 @@
         {
             "functionname": "highvariance_lowkappa",
             "parameters": {
-                "ifTrue": "ignore",
+                "ifTrue": "ignored",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
@@ -242,7 +242,7 @@
         {
             "functionname": "manual_classify",
             "parameters": {
-                "new_classification": "accept",
+                "new_classification": "accepted",
                 "decide_comps": "provisionalaccept"
             },
             "kwargs": {
@@ -254,7 +254,7 @@
         {
             "functionname": "manual_classify",
             "parameters": {
-                "new_classification": "reject",
+                "new_classification": "rejected",
                 "decide_comps": "provisionalreject"
             },
             "kwargs": {

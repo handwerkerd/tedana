@@ -59,9 +59,9 @@ def change_comptable_classifications(comptable, ifTrue, ifFalse,
     Note
     ----
     May want to add a check here so that, if a component classification is changed from
-    accept, reject, or ignore, to something else, throw a warning. A user would have the power
+    accepted, rejected, or ignored, to something else, throw a warning. A user would have the power
     to change component labels in any order, but the ideal is that once something is assigned
-    as accept, reject, or ignore, those are final classifications that should not be changed.
+    as accepted, rejected, or ignored, those are final classifications that should not be changed.
     If this is added, then there should be an option to override the warning. That override
     would be necessary when manual_classify is used to remove all classification info at the
     start of a decision tree. It also might be useful to have an override for ignore.

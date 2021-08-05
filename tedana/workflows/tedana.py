@@ -124,9 +124,9 @@ def _get_parser():
     optional.add_argument('--tree',
                           dest='tree',
                           help=('Decision tree to use. You may use a '
-                          'packaged tree (kundu, simple) or supply a JSON '
-                          'file which matches the decision tree file '
-                          'specification.'),
+                                'packaged tree (kundu, simple) or supply a JSON '
+                                'file which matches the decision tree file '
+                                'specification.'),
                           default='minimal')
     optional.add_argument('--seed',
                           dest='fixed_seed',
@@ -583,8 +583,11 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
             comptable, metric_metadata = selection.automatic_selection(
                 comptable, n_echos, n_vols, tree=tree
             )
-
+            print(comptable)
+            print(comptable.classification == 'accepted')
             n_bold_comps = comptable[comptable.classification == 'accepted'].shape[0]
+            print(comptable[comptable.classification == 'accepted'].shape)
+            print(n_bold_comps)
             if (n_restarts < maxrestart) and (n_bold_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")
             elif (n_bold_comps == 0):

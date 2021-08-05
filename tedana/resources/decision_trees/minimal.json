@@ -29,7 +29,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "rho",
@@ -44,7 +44,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "countsigFS0",
@@ -59,7 +59,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "dice_FS0",
@@ -74,7 +74,7 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "ifTrue": "reject",
+                "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": 0,
@@ -103,7 +103,7 @@
             "functionname": "variance_lessthan_thresholds",
             "parameters": {
                 "ifTrue": "nochange",
-                "ifFalse": "ignore",
+                "ifFalse": "ignored",
                 "decide_comps": "provisionalreject",
                 "var_metric": "variance explained"
             },
@@ -117,7 +117,7 @@
         {
             "functionname": "manual_classify",
             "parameters": {
-                "new_classification": "accept",
+                "new_classification": "accepted",
                 "decide_comps": "provisionalaccept"
             },
             "kwargs": {
@@ -129,7 +129,7 @@
         {
             "functionname": "manual_classify",
             "parameters": {
-                "new_classification": "reject",
+                "new_classification": "rejected",
                 "decide_comps": "provisionalreject"
             },
             "kwargs": {
