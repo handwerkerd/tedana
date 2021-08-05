@@ -50,7 +50,7 @@ def selectcomps2use(comptable, decide_comps):
     return comps2use
 
 
-def change_comptable_classifications(comptable, iftrue, iffalse,
+def change_comptable_classifications(comptable, ifTrue, ifFalse,
                                      decision_boolean, decision_node_idx_str):
     """
     Given information on whether a decision critereon is true or false for each component
@@ -69,16 +69,17 @@ def change_comptable_classifications(comptable, iftrue, iffalse,
     is above a threshold (i.e >5% of accepted explained variance) then move the highest variance
     ignored components with rho/kappa>a threshold form ignore to reject
     """
-    print(('iftrue={}, iffalse={}, decision_node_idx_str{}').format(
-        iftrue, iffalse, decision_node_idx_str))
-    if iftrue != 'nochange':
+    # print(('ifTrue={}, ifFalse={}, decision_node_idx_str{}').format(
+    #    ifTrue, ifFalse, decision_node_idx_str))
+
+    if ifTrue != 'nochange':
         changeidx = decision_boolean.index[np.asarray(decision_boolean)]
-        comptable.loc[changeidx, 'classification'] = iftrue
-        comptable.loc[changeidx, 'rationale'] += (decision_node_idx_str + ': ' + iftrue + '; ')
-    if iffalse != 'nochange':
+        comptable.loc[changeidx, 'classification'] = ifTrue
+        comptable.loc[changeidx, 'rationale'] += (decision_node_idx_str + ': ' + ifTrue + '; ')
+    if ifFalse != 'nochange':
         changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
-        comptable.loc[changeidx, 'classification'] = iffalse
-        comptable.loc[changeidx, 'rationale'] += (decision_node_idx_str + ': ' + iffalse + '; ')
+        comptable.loc[changeidx, 'classification'] = ifFalse
+        comptable.loc[changeidx, 'rationale'] += (decision_node_idx_str + ': ' + ifFalse + '; ')
 
     # decision_tree_steps[-1]['numtrue'] = (decision_boolean is True).sum()
     # decision_tree_steps[-1]['numfalse'] = (decision_boolean is False).sum()
@@ -188,7 +189,7 @@ def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
 
 
 def new_decision_node_info(decision_tree_steps, function_name,
-                           metrics_used, iftrue, iffalse,
+                           metrics_used, ifTrue, ifFalse,
                            additionalparameters=None):
     """
     create a new node that logs steps in the decision tree
@@ -198,8 +199,8 @@ def new_decision_node_info(decision_tree_steps, function_name,
     tmp_decision_tree = {'nodeidx': None,
                          'function_name': function_name,
                          'metrics_used': metrics_used,
-                         'iftrue': iftrue,
-                         'iffalse': iffalse,
+                         'ifTrue': ifTrue,
+                         'ifFalse': ifFalse,
                          'additionalparameters': additionalparameters,
                          'report_extra_log': [],  # optionally defined by user
                          'numfalse': [],  # will be filled in at runtime
@@ -218,20 +219,23 @@ def new_decision_node_info(decision_tree_steps, function_name,
 
 def log_decision_tree_step(function_name_idx, comps2use,
                            decide_comps=None,
-                           numTrue=None, numFalse=None):
+                           numTrue=None, numFalse=None,
+                           ifTrue=None, ifFalse=None):
     """
         Logging text to add for every decision tree calculation
+        If decide_comps is not None, then the output will be ugly
+        if numTrue, numFalse, ifTrue, and ifFalse are not defined
     """
 
     if comps2use is None:
-        LGR.info(function_name_idx + " not applied because "
-                 "no remaining components were classified as " + str(decide_comps))
+        LGR.info(('{} not applied because no remaining components were '
+                  'classified as {}').format(function_name_idx, decide_comps))
     else:
-        LGR.info((function_name_idx + "applied to " + str(np.array(comps2use).sum()) + " "
-                  "components. " + str(numTrue) + " were True "
-                  "and " + str(numFalse) + "were False"))
-        # decision_tree_steps[-1]['numtrue']) + " "
-        # "were True and " + str(decision_tree_steps[-1]['numfalse']) + " were False"))
+        LGR.info(('{} applied to {} components. '
+                  '{} True -> {}. '
+                  '{} False -> {}.').format(
+                      function_name_idx, len(comps2use),
+            numTrue, ifTrue, numFalse, ifFalse))
 
 
 def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, numFalse,

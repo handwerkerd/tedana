@@ -32,22 +32,22 @@ decison_node_idx : :obj: `int`
     This is the positional index for when this function has been run
     as part of this list.\
 """,
-    'iftrue': """\
-iftrue : :obj:`str`
+    'ifTrue': """\
+ifTrue : :obj:`str`
     If the condition in this step is true, give the component
     the label in this string. Options are 'accept', 'reject',
     'provisionalaccept', 'provisionalreject', 'ignore', or 'nochange'
     If 'nochange' then don't change the current component classification\
 """,
-    'iffalse': """\
-iffalse: :obj:`str`
+    'ifFalse': """\
+ifFalse: :obj:`str`
     If the condition in this step is false, give the component the label
-    in this string. Same options as iftrue\
+    in this string. Same options as ifTrue\
 """,
     'decide_comps': """\
 decide_comps: :obj:`str` or :obj:`list[str]` or :obj:`int` or :obj:`list[int]`
     If this is string or a list of strings describing what classifications
-    of components to operate on, using the same labels as in iftrue.
+    of components to operate on, using the same labels as in ifTrue.
     For example: decide_comps='unclassified' means to operate only on
     unclassified components. The label 'all' will operate on all
     components regardess of classification.
@@ -80,7 +80,7 @@ comptable: (C x M) :obj:`pandas.DataFrame`
     Component metric table. One row for each component, with a column for
     each metric. The index should be the component number.
     Labels in the 'classifications' for components initially labeled in
-    decide_comps may change depending on the the iftrue and iffalse instructions.
+    decide_comps may change depending on the the ifTrue and ifFalse instructions.
     When a classification changes, the 'rationale' column is appended to include
     and additional decision node index and change. For example, if this function
     is the 5th decision node run and a component is reclassified as 'ignore',
@@ -182,7 +182,7 @@ def manual_classify(comptable, decision_node_idx,
 
     Note
     ----
-    Unlike other decision node functions, iftrue and iffalse are not inputs
+    Unlike other decision node functions, ifTrue and ifFalse are not inputs
     since the same classification is assigned to all components listed in
     decide_comps
     """
@@ -190,10 +190,10 @@ def manual_classify(comptable, decision_node_idx,
     if only_used_metrics:
         return used_metrics
 
-    iftrue = new_classification
-    iffalse = 'nochange'
+    ifTrue = new_classification
+    ifFalse = 'nochange'
 
-    function_name_idx = ("manual_classify, step " + str(decision_node_idx))
+    function_name_idx = ('Step {}: manual_classify'.format((decision_node_idx)))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -213,19 +213,22 @@ def manual_classify(comptable, decision_node_idx,
     else:
         decision_boolean = pd.Series(True, index=comps2use)
         comptable = change_comptable_classifications(
-                        comptable, iftrue, iffalse,
+                        comptable, ifTrue, ifFalse,
                         decision_boolean, str(decision_node_idx))
         numTrue = decision_boolean.sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-            numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
     if clear_rationale:
         comptable['rationale'] = ""
-        LGR.info(function_name_idx + " all 'rationale' values are set to empty strings")
+        LGR.info(function_name_idx +
+                 " component classification 'rationale' values are set to empty strings")
 
     dnode_outputs = create_dnode_outputs(
         decision_node_idx, used_metrics, node_label, numTrue, numFalse)
@@ -236,7 +239,7 @@ def manual_classify(comptable, decision_node_idx,
 manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
 
 
-def metric1_greaterthan_metric2(comptable, decision_node_idx, iftrue, iffalse,
+def metric1_greaterthan_metric2(comptable, decision_node_idx, ifTrue, ifFalse,
                                 decide_comps, metric1, metric2, metric2_scale=1,
                                 log_extra_report="", log_extra_info="",
                                 custom_node_label="", only_used_metrics=False):
@@ -250,8 +253,8 @@ def metric1_greaterthan_metric2(comptable, decision_node_idx, iftrue, iffalse,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     metric1, metric2: :obj:`str` or :obj:`float`
         The labels for the two metrics to be used for comparision.
@@ -280,7 +283,7 @@ def metric1_greaterthan_metric2(comptable, decision_node_idx, iftrue, iffalse,
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = ("metric1_greaterthan_metric2, step " + str(decision_node_idx))
+    function_name_idx = ('Step {}: metric1_greaterthan_metric2'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     elif metric2_scale == 1:
@@ -298,7 +301,7 @@ def metric1_greaterthan_metric2(comptable, decision_node_idx, iftrue, iffalse,
     confirm_metrics_exist(comptable, used_metrics, function_name=function_name_idx)
 
     # decision_tree_steps = new_decision_node_info(decision_tree_steps, function_name,
-    #                                             necessary_metrics, iftrue, iffalse,
+    #                                             necessary_metrics, ifTrue, ifFalse,
     #                                             additionalparameters=None)
     # nodeidxstr = str(decision_tree_steps[-1]['nodeidx'])
 
@@ -320,15 +323,17 @@ def metric1_greaterthan_metric2(comptable, decision_node_idx, iftrue, iffalse,
         decision_boolean = val1 > (metric2_scale * val2)
 
         comptable = change_comptable_classifications(
-                        comptable, iftrue, iffalse,
+                        comptable, ifTrue, ifFalse,
                         decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-            numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
     dnode_outputs = create_dnode_outputs(
         decision_node_idx, used_metrics, node_label, numTrue, numFalse)
@@ -339,7 +344,7 @@ def metric1_greaterthan_metric2(comptable, decision_node_idx, iftrue, iffalse,
 metric1_greaterthan_metric2.__doc__ = metric1_greaterthan_metric2.__doc__.format(**decision_docs)
 
 
-def classification_exists(comptable, decision_node_idx, iftrue, iffalse,
+def classification_exists(comptable, decision_node_idx, ifTrue, ifFalse,
                           decide_comps, class_comp_exists,
                           log_extra_report="", log_extra_info="",
                           custom_node_label="", only_used_metrics=False):
@@ -350,8 +355,8 @@ def classification_exists(comptable, decision_node_idx, iftrue, iffalse,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     class_comp_exists: :obj:`str` or :obj:`list[str]` or :obj:`int` or :obj:`list[int]`
         This has the same structure options as decide_comps. This function tests
@@ -370,7 +375,7 @@ def classification_exists(comptable, decision_node_idx, iftrue, iffalse,
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = ("classification_exists, step " + str(decision_node_idx))
+    function_name_idx = ('Step {}: classification_exists'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -394,22 +399,26 @@ def classification_exists(comptable, decision_node_idx, iftrue, iffalse,
         # should be false for all components
         decision_boolean = comptable.loc[comps2use, 'component'] < -100
         comptable = change_comptable_classifications(
-                        comptable, iftrue, iffalse,
+                        comptable, ifTrue, ifFalse,
                         decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         # numtrue should always be 0 in this situation
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-            numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
     else:
         numTrue = len(comps2use)
         numFalse = 0
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
     dnode_outputs = create_dnode_outputs(
         decision_node_idx, used_metrics, node_label, numTrue, numFalse)
@@ -417,7 +426,7 @@ def classification_exists(comptable, decision_node_idx, iftrue, iffalse,
     return comptable, dnode_outputs
 
 
-def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx, iftrue, iffalse,
+def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx, ifTrue, ifFalse,
                                                    decide_comps, n_vols,
                                                    high_perc=90, extend_factor=None,
                                                    log_extra_report="", log_extra_info="",
@@ -437,8 +446,8 @@ def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     {n_vols}
     high_perc: :obj:`int`
@@ -466,7 +475,7 @@ def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx,
         return used_metrics
 
     function_name_idx = (
-        "meanmetricrank_and_variance_greaterthan_thresh, step " + str(decision_node_idx))
+        'Step {}: meanmetricrank_and_variance_greaterthan_thresh'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -503,15 +512,17 @@ def meanmetricrank_and_variance_greaterthan_thresh(comptable, decision_node_idx,
         decision_boolean = decision_boolean1 & decision_boolean2
 
         comptable = change_comptable_classifications(
-                        comptable, iftrue, iffalse,
+                        comptable, ifTrue, ifFalse,
                         decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-            numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label,
                                              numTrue, numFalse,
@@ -527,7 +538,7 @@ meanmetricrank_and_variance_greaterthan_thresh.__doc__ = (
     meanmetricrank_and_variance_greaterthan_thresh.__doc__.format(**decision_docs))
 
 
-def variance_lessthan_thresholds(comptable, decision_node_idx, iftrue, iffalse,
+def variance_lessthan_thresholds(comptable, decision_node_idx, ifTrue, ifFalse,
                                  decide_comps, var_metric='varexp',
                                  single_comp_threshold=0.1,
                                  all_comp_threshold=1.0,
@@ -543,8 +554,8 @@ def variance_lessthan_thresholds(comptable, decision_node_idx, iftrue, iffalse,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     varmetric: :obj:`str`
         The name of the metric in comptable for variance. default=varexp
@@ -568,7 +579,7 @@ def variance_lessthan_thresholds(comptable, decision_node_idx, iftrue, iffalse,
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = ("variance_lt_thresholds, step " + str(decision_node_idx))
+    function_name_idx = ('Step {}: variance_lt_thresholds'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -599,15 +610,17 @@ def variance_lessthan_thresholds(comptable, decision_node_idx, iftrue, iffalse,
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
         comptable = change_comptable_classifications(
-                        comptable, iftrue, iffalse,
+                        comptable, ifTrue, ifFalse,
                         decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-            numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
     dnode_outputs = create_dnode_outputs(
         decision_node_idx, used_metrics, node_label, numTrue, numFalse)
@@ -618,7 +631,7 @@ def variance_lessthan_thresholds(comptable, decision_node_idx, iftrue, iffalse,
 variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.format(**decision_docs)
 
 
-def kappa_rho_elbow_cutoffs_kundu(comptable, decision_node_idx, iftrue, iffalse,
+def kappa_rho_elbow_cutoffs_kundu(comptable, decision_node_idx, ifTrue, ifFalse,
                                   decide_comps, n_echos,
                                   log_extra_report="", log_extra_info="",
                                   custom_node_label="", only_used_metrics=False):
@@ -630,8 +643,8 @@ def kappa_rho_elbow_cutoffs_kundu(comptable, decision_node_idx, iftrue, iffalse,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     {n_echos}
     {log_extra}
@@ -658,7 +671,7 @@ def kappa_rho_elbow_cutoffs_kundu(comptable, decision_node_idx, iftrue, iffalse,
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = ("kappa_rho_elbow_cutoffs_kundu, step " + str(decision_node_idx))
+    function_name_idx = ('Step {}: kappa_rho_elbow_cutoffs_kundu'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -737,15 +750,17 @@ def kappa_rho_elbow_cutoffs_kundu(comptable, decision_node_idx, iftrue, iffalse,
                 comptable.loc[comps2use, 'rho'] < rho_elbow)
 
         comptable = change_comptable_classifications(
-                            comptable, iftrue, iffalse,
+                            comptable, ifTrue, ifFalse,
                             decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-                numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #        numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
     dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label,
                                          numTrue, numFalse,
@@ -759,7 +774,7 @@ kappa_rho_elbow_cutoffs_kundu.__doc__ = kappa_rho_elbow_cutoffs_kundu.__doc__.fo
     **decision_docs)
 
 
-def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, iftrue, iffalse,
+def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, ifTrue, ifFalse,
                                             decide_comps, n_echos, n_vols,
                                             low_perc=25, extend_factor=None,
                                             log_extra_report="", log_extra_info="",
@@ -774,8 +789,8 @@ def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, iftrue
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     {n_echos}
     {n_vols}
@@ -793,7 +808,8 @@ def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, iftrue
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = ("lowvariance_highmeanmetricrank_lowkappa, step " + str(decision_node_idx))
+    function_name_idx = (
+        'Step {}: lowvariance_highmeanmetricrank_lowkappa'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -838,16 +854,18 @@ def lowvariance_highmeanmetricrank_lowkappa(comptable, decision_node_idx, iftrue
         decision_boolean = db_low_varex & db_meanmetricrank & db_kappa
 
         comptable = change_comptable_classifications(
-                        comptable, iftrue, iffalse,
+                        comptable, ifTrue, ifFalse,
                         decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-            numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
 
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label,
                                              numTrue, numFalse,
@@ -866,7 +884,7 @@ lowvariance_highmeanmetricrank_lowkappa.__doc__ = (
     lowvariance_highmeanmetricrank_lowkappa.__doc__.format(**decision_docs))
 
 
-def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx, iftrue, iffalse,
+def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx, ifTrue, ifFalse,
                                                    decide_comps, n_echos, n_vols=None,
                                                    extend_factor=None,
                                                    restrict_factor=2,
@@ -882,8 +900,8 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     {n_echos}
     {n_vols}
@@ -907,7 +925,7 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
         return used_metrics
 
     function_name_idx = (
-        "highvariance_highmeanmetricrank_highkapparatio, step " + str(decision_node_idx))
+        'Step {}: highvariance_highmeanmetricrank_highkapparatio'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -950,7 +968,7 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
         num_acc_guess = int(
             np.mean(
                 [len(previous_provaccept_comps2use),
-                np.sum(
+                 np.sum(
                     comptable.loc[previous_comps2use, 'kappa'] > kappa_elbow
                 )]
             )
@@ -971,16 +989,18 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
         decision_boolean = db_mmrank & db_kapparatio & db_var_upper
 
         comptable = change_comptable_classifications(
-                            comptable, iftrue, iffalse,
+                            comptable, ifTrue, ifFalse,
                             decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-                numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #        numTrue, numFalse, len(comps2use))))
 
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label,
                                              numTrue, numFalse,
@@ -1000,7 +1020,7 @@ highvariance_highmeanmetricrank_highkapparatio.__doc__ = (
     highvariance_highmeanmetricrank_highkapparatio.__doc__.format(**decision_docs))
 
 
-def highvariance_highmeanmetricrank(comptable, decision_node_idx, iftrue, iffalse,
+def highvariance_highmeanmetricrank(comptable, decision_node_idx, ifTrue, ifFalse,
                                     decide_comps, n_echos, n_vols=None,
                                     low_perc=25, high_perc=90,
                                     extend_factor=None,
@@ -1016,8 +1036,8 @@ def highvariance_highmeanmetricrank(comptable, decision_node_idx, iftrue, iffals
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     {n_echos}
     {n_vols}
@@ -1039,7 +1059,7 @@ def highvariance_highmeanmetricrank(comptable, decision_node_idx, iftrue, iffals
         return used_metrics
 
     function_name_idx = (
-        "highvariance_highmeanmetricrank_highkapparatio, step " + str(decision_node_idx))
+        'Step {}: highvariance_highmeanmetricrank_highkapparatio'.format((decision_node_idx)))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -1109,16 +1129,18 @@ def highvariance_highmeanmetricrank(comptable, decision_node_idx, iftrue, iffals
         decision_boolean = db_mmrank & db_var_lower
 
         comptable = change_comptable_classifications(
-                            comptable, iftrue, iffalse,
+                            comptable, ifTrue, ifFalse,
                             decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-                numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #        numTrue, numFalse, len(comps2use))))
 
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label,
                                              numTrue, numFalse,
@@ -1137,7 +1159,7 @@ highvariance_highmeanmetricrank.__doc__ = (
     highvariance_highmeanmetricrank.__doc__.format(**decision_docs))
 
 
-def highvariance_lowkappa(comptable, decision_node_idx, iftrue, iffalse,
+def highvariance_lowkappa(comptable, decision_node_idx, ifTrue, ifFalse,
                           decide_comps, n_echos,
                           low_perc=25,
                           log_extra_report="", log_extra_info="",
@@ -1151,8 +1173,8 @@ def highvariance_lowkappa(comptable, decision_node_idx, iftrue, iffalse,
     ----------
     {comptable}
     {decision_node_idx}
-    {iftrue}
-    {iffalse}
+    {ifTrue}
+    {ifFalse}
     {decide_comps}
     {n_echos}
     {log_extra}
@@ -1169,7 +1191,7 @@ def highvariance_lowkappa(comptable, decision_node_idx, iftrue, iffalse,
         return used_metrics
 
     function_name_idx = (
-        "highvariance_lowkappa, step " + str(decision_node_idx))
+        'Step {}: highvariance_lowkappa'.format(decision_node_idx))
     if custom_node_label:
         node_label = custom_node_label
     else:
@@ -1206,16 +1228,18 @@ def highvariance_lowkappa(comptable, decision_node_idx, iftrue, iffalse,
         decision_boolean = db_kappa & db_var_lower
 
         comptable = change_comptable_classifications(
-                            comptable, iftrue, iffalse,
+                            comptable, ifTrue, ifFalse,
                             decision_boolean, str(decision_node_idx))
         numTrue = np.asarray(decision_boolean).sum()
         numFalse = np.logical_not(decision_boolean).sum()
-        print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-                numTrue, numFalse, len(comps2use))))
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #        numTrue, numFalse, len(comps2use))))
 
         log_decision_tree_step(function_name_idx, comps2use,
                                numTrue=numTrue,
-                               numFalse=numFalse)
+                               numFalse=numFalse,
+                               ifTrue=ifTrue,
+                               ifFalse=ifFalse)
 
         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label,
                                              numTrue, numFalse,

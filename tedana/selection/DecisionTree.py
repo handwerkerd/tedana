@@ -59,7 +59,7 @@ def load_config(tree):
         `parameters`: Required parameters for the function<br>
         The only parameter that is used in all functions is `decidecomps`.
         This is a list of component classifications, that this function should
-        operate on. Most functions also include `iftrue` and `iffalse` which
+        operate on. Most functions also include `ifTrue` and `ifFalse` which
         define how to to change the classification of a component if the
         criteria in the function is true or false.<br>
         `kwargs`: Optional parameters for the function
@@ -219,6 +219,11 @@ class DecisionTree:
         self.tree = tree
         self.comptable = comptable.copy()
 
+        # To run a decision tree, each component needs to have an initial classification
+        # If the classification column doesn't exist, create it and label all components
+        # as unclassified
+        if "classification" not in self.comptable:
+            self.comptable["classification"] = "unclassified"
         self.__dict__.update(kwargs)
         self.config = load_config(self.tree)
 
@@ -262,12 +267,12 @@ class DecisionTree:
             params = self.check_null(params, node['functionname'])
             kwargs = self.check_null(kwargs, node['functionname'])
 
-            LGR.info('Running function {} with parameters: {}'
-                     .format(node['functionname'], {**params, **kwargs}))
+            LGR.info('Step {}: Running function {} with parameters: {}'
+                     .format(ii, node['functionname'], {**params, **kwargs}))
             self.comptable, dnode_outputs = fcn(
                 self.comptable, decision_node_idx=ii, **params, **kwargs)
             used_metrics.update(dnode_outputs['outputs']['used_metrics'])
-            print(node['functionname'])
+
             # print(list(self.comptable['rationale']))
             # dnode_outputs is a dict that should always include fields for
             #   decision_node_idx, numTrue, numFalse, used_metrics, and node_label

@@ -1,6 +1,6 @@
 {
     "tree_id": "minimal_decision_tree_test1",
-    "info": "First test of a minimal decision tree",
+    "info": "Proposed minimal decision tree",
     "report": "This is based on the minimal criteria of the original MEICA decision tree without the more agressive noise removal steps",
     "refs": "Kundu 2013",
     "necessary_metrics": [
@@ -29,8 +29,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "rho",
                 "metric2": "kappa"
@@ -44,8 +44,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "countsigFS0",
                 "metric2": "countsigFT2"
@@ -59,8 +59,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "dice_FS0",
                 "metric2": "dice_FT2"
@@ -74,8 +74,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": 0,
                 "metric2": "signal-noise_t"
@@ -89,8 +89,8 @@
         {
             "functionname": "kappa_rho_elbow_cutoffs_kundu",
             "parameters": {
-                "iftrue": "provisionalaccept",
-                "iffalse": "provisionalreject",
+                "ifTrue": "provisionalaccept",
+                "ifFalse": "provisionalreject",
                 "decide_comps": "unclassified",
                 "n_echos": null
             },
@@ -102,8 +102,8 @@
         {
             "functionname": "variance_lessthan_thresholds",
             "parameters": {
-                "iftrue": "nochange",
-                "iffalse": "ignore",
+                "ifTrue": "nochange",
+                "ifFalse": "ignore",
                 "decide_comps": "provisionalreject",
                 "var_metric": "variance explained"
             },

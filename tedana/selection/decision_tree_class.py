@@ -61,7 +61,7 @@ def load_config(tree, path=None):
         `parameters`: Required parameters for the function<br>
         The only parameter that is used in all functions is `decidecomps`.
         This is a list of component classifications, that this function should
-        operate on. Most functions also include `iftrue` and `iffalse` which
+        operate on. Most functions also include `ifTrue` and `ifFalse` which
         define how to to change the classification of a component if the
         criteria in the function is true or false.<br>
         `kwargs`: Optional parameters for the function

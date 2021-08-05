@@ -30,8 +30,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "rho",
                 "metric2": "kappa"
@@ -45,8 +45,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "countsigFS0",
                 "metric2": "countsigFT2"
@@ -60,8 +60,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": "dice_FS0",
                 "metric2": "dice_FT2"
@@ -75,8 +75,8 @@
         {
             "functionname": "metric1_greaterthan_metric2",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": "all",
                 "metric1": 0,
                 "metric2": "signal-noise_t"
@@ -90,8 +90,8 @@
         {
             "functionname": "kappa_rho_elbow_cutoffs_kundu",
             "parameters": {
-                "iftrue": "provisionalaccept",
-                "iffalse": "provisionalreject",
+                "ifTrue": "provisionalaccept",
+                "ifFalse": "provisionalreject",
                 "decide_comps": "unclassified",
                 "n_echos": null
             },
@@ -103,8 +103,8 @@
         {
             "functionname": "classification_exists",
             "parameters": {
-                "iftrue": "nochange",
-                "iffalse": "ignore",
+                "ifTrue": "nochange",
+                "ifFalse": "ignore",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -119,8 +119,8 @@
         {
             "functionname": "meanmetricrank_and_variance_greaterthan_thresh",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -136,8 +136,8 @@
         {
             "functionname": "lowvariance_highmeanmetricrank_lowkappa",
             "parameters": {
-                "iftrue": "ignore",
-                "iffalse": "nochange",
+                "ifTrue": "ignore",
+                "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -154,8 +154,8 @@
         {
             "functionname": "classification_exists",
             "parameters": {
-                "iftrue": "nochange",
-                "iffalse": "accept",
+                "ifTrue": "nochange",
+                "ifFalse": "accept",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -170,8 +170,8 @@
         {
             "functionname": "highvariance_highmeanmetricrank_highkapparatio",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -188,8 +188,8 @@
         {
             "functionname": "highvariance_highmeanmetricrank",
             "parameters": {
-                "iftrue": "reject",
-                "iffalse": "nochange",
+                "ifTrue": "reject",
+                "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -206,8 +206,8 @@
         {
             "functionname": "highvariance_highmeanmetricrank",
             "parameters": {
-                "iftrue": "ignore",
-                "iffalse": "nochange",
+                "ifTrue": "ignore",
+                "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
@@ -226,8 +226,8 @@
         {
             "functionname": "highvariance_lowkappa",
             "parameters": {
-                "iftrue": "ignore",
-                "iffalse": "nochange",
+                "ifTrue": "ignore",
+                "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
                     "provisionalreject"
