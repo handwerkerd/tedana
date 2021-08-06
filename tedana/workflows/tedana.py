@@ -240,15 +240,21 @@ def _get_parser():
                           dest='ctab',
                           metavar='FILE',
                           type=lambda x: is_valid_file(parser, x),
-                          help=('File containing a component table from which '
-                                'to extract pre-computed classifications.'),
+                          help=(
+                              'File containing a component table from which '
+                              'to extract pre-computed classifications. '
+                              "Requires --mix."
+                          ),
                           default=None)
     rerungrp.add_argument('--manacc',
                           dest='manacc',
                           metavar='INT',
                           type=int,
                           nargs='+',
-                          help='List of manually accepted components.',
+                          help=(
+                              'List of manually accepted components. '
+                              "Requires --ctab and --mix."
+                          ),
                           default=None)
 
     return parser
@@ -319,6 +325,7 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
     manacc : :obj:`list` of :obj:`int` or None, optional
         List of manually accepted components. Can be a list of the components
         numbers or None.
+        If provided, this parameter requires ``mixm`` and ``ctab`` to be provided as well.
         Default is None.
 
     Other Parameters
@@ -466,8 +473,8 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
     if ctab and not mixm:
         LGR.warning('Argument "ctab" requires argument "mixm".')
         ctab = None
-    elif manacc is not None and not mixm:
-        LGR.warning('Argument "manacc" requires argument "mixm".')
+    elif manacc is not None and (not mixm or not ctab):
+        LGR.warning('Argument "manacc" requires arguments "mixm" and "ctab".')
         manacc = None
     elif manacc is not None:
         # coerce to list of integers
@@ -558,7 +565,7 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
         n_restarts = 0
         seed = fixed_seed
         while keep_restarting:
-            mmix_orig, seed = decomposition.tedica(
+            mmix, seed = decomposition.tedica(
                 dd, n_components, seed,
                 maxit, maxrestart=(maxrestart - n_restarts)
             )
@@ -575,10 +582,10 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
                 'variance explained', 'normalized variance explained',
                 'd_table_score'
             ]
-            comptable, mmix = metrics.collect.generate_metrics(
-                catd, data_oc, mmix_orig, masksum, tes,
+            comptable = metrics.collect.generate_metrics(
+                catd, data_oc, mmix, masksum, tes,
                 io_generator, 'ICA',
-                metrics=required_metrics, sort_by='kappa', ascending=False,
+                metrics=required_metrics,
             )
             comptable, metric_metadata = selection.automatic_selection(
                 comptable, n_echos, n_vols, tree=tree
@@ -591,10 +598,13 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
                 keep_restarting = False
             else:
                 keep_restarting = False
+
+            RepLGR.disabled = True  # Disable the report to avoid duplicate text
+        RepLGR.disabled = False  # Re-enable the report after the while loop is escaped
     else:
         LGR.info('Using supplied mixing matrix from ICA')
         mixing_file = io_generator.get_name("ICA mixing tsv")
-        mmix_orig = pd.read_table(mixing_file).values
+        mmix = pd.read_table(mixing_file).values
 
         if ctab is None:
             required_metrics = [
@@ -603,16 +613,15 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
                 'variance explained', 'normalized variance explained',
                 'd_table_score'
             ]
-            comptable, mmix = metrics.collect.generate_metrics(
-                catd, data_oc, mmix_orig, masksum, tes,
+            comptable = metrics.collect.generate_metrics(
+                catd, data_oc, mmix, masksum, tes,
                 io_generator, 'ICA',
-                metrics=required_metrics, sort_by='kappa', ascending=False
+                metrics=required_metrics,
             )
             comptable, metric_metadata = selection.automatic_selection(
                     comptable, n_echos, n_vols, tree=tree
             )
         else:
-            mmix = mmix_orig.copy()
             comptable = pd.read_table(ctab)
 
             if manacc is not None:
@@ -624,28 +633,19 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
     # Write out ICA files.
     comp_names = comptable["Component"].values
     mixing_df = pd.DataFrame(data=mmix, columns=comp_names)
-    mixing_df.to_csv(io_generator.get_name("ICA mixing tsv"), sep="\t", index=False)
+    io_generator.save_file(mixing_df, "ICA mixing tsv")
     betas_oc = utils.unmask(computefeats2(data_oc, mmix, mask), mask)
     io_generator.save_file(betas_oc, 'z-scored ICA components img')
 
     # Save component table and associated json
-    temp_comptable = comptable.set_index("Component", inplace=False)
-    temp_comptable.to_csv(
-        io_generator.get_name("ICA metrics tsv"),
-        index=True,
-        index_label="Component",
-        sep='\t',
-    )
-    metric_metadata = metrics.collect.get_metadata(temp_comptable)
+    io_generator.save_file(comptable, "ICA metrics tsv")
+    metric_metadata = metrics.collect.get_metadata(comptable)
     io_generator.save_file(metric_metadata, "ICA metrics json")
 
     decomp_metadata = {
         "Method": (
             "Independent components analysis with FastICA "
-            "algorithm implemented by sklearn. Components "
-            "are sorted by Kappa in descending order. "
-            "Component signs are flipped to best match the "
-            "data."
+            "algorithm implemented by sklearn. "
         ),
     }
     for comp_name in comp_names:
@@ -675,11 +675,7 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
         comp_names = [io.add_decomp_prefix(comp, prefix='ica', max_value=comptable.index.max())
                       for comp in comptable.index.values]
         mixing_df = pd.DataFrame(data=mmix, columns=comp_names)
-        mixing_df.to_csv(
-            io_generator.get_name("ICA orthogonalized mixing tsv"),
-            sep='\t',
-            index=False
-        )
+        io_generator.save_file(mixing_df, "ICA orthogonalized mixing tsv")
         RepLGR.info("Rejected components' time series were then "
                     "orthogonalized with respect to accepted components' time "
                     "series.")
@@ -696,23 +692,6 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
 
     if verbose:
         io.writeresults_echoes(catd, mmix, mask, comptable, io_generator)
-
-    if not no_reports:
-        LGR.info('Making figures folder with static component maps and '
-                 'timecourse plots.')
-        reporting.static_figures.comp_figures(data_oc, mask=mask,
-                                              comptable=comptable,
-                                              mmix=mmix_orig,
-                                              io_generator=io_generator,
-                                              png_cmap=png_cmap)
-
-        if sys.version_info.major == 3 and sys.version_info.minor < 6:
-            warn_msg = ("Reports requested but Python version is less than "
-                        "3.6.0. Dynamic reports will not be generated.")
-            LGR.warn(warn_msg)
-        else:
-            LGR.info('Generating dynamic report')
-            reporting.generate_report(io_generator, tr=img_t_r)
 
     # Write out BIDS-compatible description file
     derivative_metadata = {
@@ -774,6 +753,37 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
     report += '\n\nReferences:\n\n' + references
     with open(repname, 'w') as fo:
         fo.write(report)
+
+    if not no_reports:
+        LGR.info('Making figures folder with static component maps and timecourse plots.')
+
+        dn_ts, hikts, lowkts = io.denoise_ts(data_oc, mmix, mask, comptable)
+
+        reporting.static_figures.carpet_plot(
+            optcom_ts=data_oc,
+            denoised_ts=dn_ts,
+            hikts=hikts,
+            lowkts=lowkts,
+            mask=mask,
+            io_generator=io_generator,
+            gscontrol=gscontrol,
+        )
+        reporting.static_figures.comp_figures(
+            data_oc,
+            mask=mask,
+            comptable=comptable,
+            mmix=mmix_orig,
+            io_generator=io_generator,
+            png_cmap=png_cmap,
+        )
+
+        if sys.version_info.major == 3 and sys.version_info.minor < 6:
+            warn_msg = ("Reports requested but Python version is less than "
+                        "3.6.0. Dynamic reports will not be generated.")
+            LGR.warn(warn_msg)
+        else:
+            LGR.info('Generating dynamic report')
+            reporting.generate_report(io_generator, tr=img_t_r)
 
     log_handler.close()
     logging.root.removeHandler(log_handler)
