@@ -238,6 +238,21 @@ def log_decision_tree_step(function_name_idx, comps2use,
             numTrue, ifTrue, numFalse, ifFalse))
 
 
+def log_classification_counts(decision_node_idx, comptable):
+    """
+    Log the total counts for each component classification in the comptable
+    That is something like 'Total component classifications: 10 accepted, 5 ignored, 8 rejected'
+    """
+
+    (classification_labels, label_counts) = np.unique(
+        comptable['classification'].values, return_counts=True)
+    out_str = 'Step {}: Total component classifications:'.format(
+        decision_node_idx)
+    for i, class_label in enumerate(classification_labels):
+        out_str = ' {} {} {}'.format(out_str, label_counts[i], class_label)
+    LGR.info(out_str)
+
+
 def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, numFalse,
                          n_echos=None, n_vols=None, kappa_elbow=None, rho_elbow=None,
                          num_prov_accept=None, max_good_meanmetricrank=None,

@@ -9,7 +9,7 @@ import logging
 from pkg_resources import resource_filename
 
 from tedana.selection._utils import (
-    clean_dataframe, confirm_metrics_exist)
+    clean_dataframe, confirm_metrics_exist, log_classification_counts)
 from tedana.selection import selection_nodes
 from tedana.io import load_json
 from tedana.utils import get_resource_path
@@ -295,6 +295,7 @@ class DecisionTree:
             #   decision_node_idx, numTrue, numFalse, used_metrics, and node_label
             #   any other fields will also be logged in this output
             self.nodes[ii].update(dnode_outputs)
+            log_classification_counts(ii, self.comptable)
 
         # Move decision columns to end
         self.comptable = clean_dataframe(self.comptable)
