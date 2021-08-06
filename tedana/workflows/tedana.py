@@ -583,11 +583,7 @@ def tedana_workflow(data, tes, out_dir='.', mask=None,
             comptable, metric_metadata = selection.automatic_selection(
                 comptable, n_echos, n_vols, tree=tree
             )
-            print(comptable)
-            print(comptable.classification == 'accepted')
             n_bold_comps = comptable[comptable.classification == 'accepted'].shape[0]
-            print(comptable[comptable.classification == 'accepted'].shape)
-            print(n_bold_comps)
             if (n_restarts < maxrestart) and (n_bold_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")
             elif (n_bold_comps == 0):
