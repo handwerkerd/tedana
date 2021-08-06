@@ -145,15 +145,15 @@ def validate_tree(tree):
         if 'ifTrue' in node.get('parameters').keys():
             compclass = node['parameters']['ifTrue']
             if compclass not in default_classifications:
-                print('WARNING: {} in node {} of the decision tree is not a standard label'.format(compclass, i))
+                LGR.warning('{} in node {} of the decision tree is not a standard label'.format(compclass, i))
         if 'ifFalse' in node.get('parameters').keys():
             compclass = node['parameters']['ifFalse']
             if compclass not in default_classifications:
-                print('WARNING: {} in node {} of the decision tree is not a standard label'.format(compclass, i))
+                LGR.warning('{} in node {} of the decision tree is not a standard label'.format(compclass, i))
         if 'decide_comps' in node.get('parameters').keys():
             compclass = node['parameters']['decide_comps']
             if compclass not in default_decide_comps:
-                print('WARNING: {} in node {} of the decision tree is not a standard label'.format(compclass, i))
+                LGR.warning('{} in node {} of the decision tree is not a standard label'.format(compclass, i))
 
     if err_msg:
         raise TreeError('\n' + err_msg)
@@ -343,8 +343,8 @@ class DecisionTree:
         not_declared = set(used_metrics) - set(self.metrics)
         not_used = set(self.metrics) - set(used_metrics)
         if len(not_declared) > 0:
-            LGR.warn('Decision tree {} used additional metrics not declared '
+            LGR.warning('Decision tree {} used additional metrics not declared '
                      'as necessary: {}'.format(self.tree, not_declared))
         if len(not_used) > 0:
-            LGR.warn('Decision tree {} failed to use metrics that were '
+            LGR.warning('Decision tree {} failed to use metrics that were '
                      'declared as necessary: {}'.format(self.tree, not_used))
