@@ -14,7 +14,7 @@ from tedana.selection import selection_nodes
 from tedana.io import load_json
 from tedana.utils import get_resource_path
 
-LGR = logging.getLogger(__name__)
+LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger('REPORT')
 RefLGR = logging.getLogger('REFERENCES')
 

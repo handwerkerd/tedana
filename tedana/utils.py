@@ -12,7 +12,7 @@ from sklearn.utils import check_array
 
 from tedana.due import due, BibTeX
 
-LGR = logging.getLogger(__name__)
+LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger('REPORT')
 RefLGR = logging.getLogger('REFERENCES')
 

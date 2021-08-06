@@ -16,7 +16,7 @@ from tedana.selection._utils import (confirm_metrics_exist, selectcomps2use,
 
 
 # clean_dataframe, new_decision_node_info,
-LGR = logging.getLogger(__name__)
+LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger('REPORT')
 RefLGR = logging.getLogger('REFERENCES')
 
