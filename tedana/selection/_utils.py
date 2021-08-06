@@ -246,10 +246,12 @@ def log_classification_counts(decision_node_idx, comptable):
 
     (classification_labels, label_counts) = np.unique(
         comptable['classification'].values, return_counts=True)
-    out_str = 'Step {}: Total component classifications:'.format(
-        decision_node_idx)
-    for i, class_label in enumerate(classification_labels):
-        out_str = ' {} {} {}'.format(out_str, label_counts[i], class_label)
+    label_summaries = [
+        f'{label_counts[i]} {label}'
+        for i, label in enumerate(classification_labels)
+    ]
+    prelude = f'Step {decision_node_idx}: Total component classifications:'
+    out_str = f"{prelude} {', '.join(label_summaries)}"
     LGR.info(out_str)
 
 
