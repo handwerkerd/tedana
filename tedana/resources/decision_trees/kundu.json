@@ -180,7 +180,7 @@
                 "n_vols": null
             },
             "kwargs": {
-                "prev_X_steps": 0,
+                "prev_X_steps": 3,
                 "log_extra_info": "",
                 "log_extra_report": ""
             }

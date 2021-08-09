@@ -981,13 +981,18 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
                 comptable.loc[previous_provaccept_comps2use, 'variance explained'], high_perc)
 
         # get kappa ratio
-        acc_prov = previous_provaccept_comps2use
+        acc_prov = prev_classified_comps(
+            comptable, decision_node_idx,
+            ["provisionalaccept"], prev_X_steps=prev_X_steps)
         kappa_rate = (
             (np.nanmax(comptable.loc[acc_prov, "kappa"]) -
              np.nanmin(comptable.loc[acc_prov, "kappa"])) /
             (np.nanmax(comptable.loc[acc_prov, "variance explained"]) -
              np.nanmin(comptable.loc[acc_prov, "variance explained"])))
-        LGR.info(f"Kappa rate found to be {kappa_rate}")
+        LGR.info(
+            f"Kappa rate found to be {kappa_rate} from components "
+            f"{acc_prov}"
+        )
         comptable["kappa ratio"] = (
             kappa_rate * comptable["variance explained"] /
             comptable["kappa"]
