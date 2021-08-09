@@ -109,10 +109,10 @@ def validate_tree(tree):
     err_msg = ''
     tree_info = ['tree_id', 'info', 'report', 'refs', 'necessary_metrics', 'nodes']
     defaults = {'comptable', 'decision_node_idx'}
-    default_classifications = ['nochange', 'accepted', 'rejected', 'ignored',
-                               'provisionalaccept', 'provisionalreject', 'unclassified']
-    default_decide_comps = ['all', 'accepted', 'rejected', 'ignored',
-                            'provisionalaccept', 'provisionalreject', 'unclassified']
+    default_classifications = {'nochange', 'accepted', 'rejected', 'ignored',
+                               'provisionalaccept', 'provisionalreject', 'unclassified'}
+    default_decide_comps = {'all', 'accepted', 'rejected', 'ignored',
+                            'provisionalaccept', 'provisionalreject', 'unclassified'}
 
     for k in tree_info:
         try:
@@ -142,18 +142,30 @@ def validate_tree(tree):
             err_msg += ('Node {} has additional, undefined kwarg(s): {}\n'
                         .format(i, invalid_kwargs))
 
+        compclass = set()
         if 'ifTrue' in node.get('parameters').keys():
-            compclass = node['parameters']['ifTrue']
-            if compclass not in default_classifications:
-                LGR.warning('{} in node {} of the decision tree is not a standard label'.format(compclass, i))
+            tmp_comp = node['parameters']['ifTrue']
+            if isinstance(tmp_comp, str):
+                tmp_comp = [tmp_comp]
+            compclass = compclass | set(tmp_comp)
         if 'ifFalse' in node.get('parameters').keys():
-            compclass = node['parameters']['ifFalse']
-            if compclass not in default_classifications:
-                LGR.warning('{} in node {} of the decision tree is not a standard label'.format(compclass, i))
+            tmp_comp = node['parameters']['ifFalse']
+            if isinstance(tmp_comp, str):
+                tmp_comp = [tmp_comp]
+            compclass = compclass | set(tmp_comp)
+        nonstandard_labels = compclass.difference(default_classifications)
+        if nonstandard_labels:
+            LGR.warning(
+                '{} in node {} of the decision tree includes a nonstandard label'.format(compclass, i))
         if 'decide_comps' in node.get('parameters').keys():
-            compclass = node['parameters']['decide_comps']
-            if compclass not in default_decide_comps:
-                LGR.warning('{} in node {} of the decision tree is not a standard label'.format(compclass, i))
+            tmp_comp = node['parameters']['decide_comps']
+            if isinstance(tmp_comp, str):
+                tmp_comp = [tmp_comp]
+            compclass = set(tmp_comp)
+        nonstandard_labels = compclass.difference(default_decide_comps)
+        if nonstandard_labels:
+            LGR.warning(
+                '{} in node {} of the decision tree includes a nonstandard label'.format(compclass, i))
 
     if err_msg:
         raise TreeError('\n' + err_msg)
@@ -344,7 +356,7 @@ class DecisionTree:
         not_used = set(self.metrics) - set(used_metrics)
         if len(not_declared) > 0:
             LGR.warning('Decision tree {} used additional metrics not declared '
-                     'as necessary: {}'.format(self.tree, not_declared))
+                        'as necessary: {}'.format(self.tree, not_declared))
         if len(not_used) > 0:
             LGR.warning('Decision tree {} failed to use metrics that were '
-                     'declared as necessary: {}'.format(self.tree, not_used))
+                        'declared as necessary: {}'.format(self.tree, not_used))
