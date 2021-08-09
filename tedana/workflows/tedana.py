@@ -124,10 +124,10 @@ def _get_parser():
     optional.add_argument('--tree',
                           dest='tree',
                           help=('Decision tree to use. You may use a '
-                                'packaged tree (kundu, simple) or supply a JSON '
+                                'packaged tree (kundu, minimal) or supply a JSON '
                                 'file which matches the decision tree file '
                                 'specification.'),
-                          default='minimal')
+                          default='kundu')
     optional.add_argument('--seed',
                           dest='fixed_seed',
                           metavar='INT',
@@ -263,7 +263,7 @@ def _get_parser():
 def tedana_workflow(data, tes, out_dir='.', mask=None,
                     convention='bids', prefix='',
                     fittype='loglin', combmode='t2s', tedpca='mdl',
-                    tree='minimal',
+                    tree='kundu',
                     fixed_seed=42, maxit=500, maxrestart=10,
                     tedort=False, gscontrol=None,
                     no_reports=False, png_cmap='coolwarm',

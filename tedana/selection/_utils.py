@@ -140,11 +140,19 @@ def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
 
     if metrics_exist is False:
         if function_name is not None:
-            error_msg = ("Necessary metrics for " + function_name + " are not in comptable. "
-                         "Need to calculate the following metrics: " + str(missing_metrics))
+            error_msg = (
+                f"Necessary metrics for {function_name}: "
+                f"{necessary_metrics}. "
+                f"Comptable metrics: {set(comptable.columns)}. "
+                f"MISSING METRICS: {missing_metrics}."
+            )
         else:
-            error_msg = ("Necessary metrics are not in comptable (calling function unknown). "
-                         "Need to calculate the following metrics: " + str(missing_metrics))
+            error_msg = (
+                "Necessary metrics for unknown function: "
+                f"{necessary_metrics}. "
+                f"Comptable metrics: {set(comptable.columns)}. "
+                f"MISSING METRICS: {missing_metrics}."
+            )
 
         raise ValueError(error_msg)
 

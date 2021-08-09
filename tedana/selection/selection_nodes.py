@@ -918,7 +918,6 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
     """
 
     used_metrics = ['variance explained', 'kappa', 'rho', 'dice_FT2',
-                    'kappa ratio',
                     'signal-noise_t', 'countsigFT2',
                     'countnoise']
     if only_used_metrics:
@@ -980,6 +979,19 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
 
         varex_upper_thresh = scoreatpercentile(
                 comptable.loc[previous_provaccept_comps2use, 'variance explained'], high_perc)
+
+        # get kappa ratio
+        acc_prov = previous_provaccept_comps2use
+        kappa_rate = (
+            (np.nanmax(comptable.loc[acc_prov, "kappa"]) -
+             np.nanmin(comptable.loc[acc_prov, "kappa"])) /
+            (np.nanmax(comptable.loc[acc_prov, "variance explained"]) -
+             np.nanmin(comptable.loc[acc_prov, "variance explained"])))
+        LGR.info(f"Kappa rate found to be {kappa_rate}")
+        comptable["kappa ratio"] = (
+            kappa_rate * comptable["variance explained"] /
+            comptable["kappa"]
+        )
 
         conservative_guess = num_acc_guess / restrict_factor
         db_mmrank = meanmetricrank.loc[comps2use] > conservative_guess
