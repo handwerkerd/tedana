@@ -1025,7 +1025,7 @@ def highvariance_highmeanmetricrank_highkapparatio(comptable, decision_node_idx,
                                              n_vols=n_vols,
                                              varex_threshold=varex_upper_thresh,
                                              restrict_factor=2,
-                                             ignore_prev_X_steps=0,
+                                             prev_X_steps=prev_X_steps,
                                              max_good_meanmetricrank=conservative_guess,
                                              num_acc_guess=num_acc_guess,
                                              extend_factor=extend_factor)

@@ -268,7 +268,7 @@ def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, n
                          num_prov_accept=None, max_good_meanmetricrank=None,
                          varex_threshold=None, low_perc=None, high_perc=None,
                          extend_factor=None, restrict_factor=None,
-                         ignore_prex_X_steps=None, num_acc_guess=None
+                         prev_X_steps=None, num_acc_guess=None
                          ):
     """
     Take several parameters that should be output from each decision node function
@@ -337,8 +337,8 @@ def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, n
         dnode_outputs['outputs'].update({'num_prov_accept': num_prov_accept})
     if restrict_factor:
         dnode_outputs['outputs'].update({'restrict_factor': num_prov_accept})
-    if ignore_prex_X_steps:
-        dnode_outputs['outputs'].update({'ignore_prex_X_steps': num_prov_accept})
+    if prev_X_steps:
+        dnode_outputs['outputs'].update({'prev_X_steps': num_prov_accept})
     if num_acc_guess:
         dnode_outputs['outputs'].update({'num_acc_guess': num_prov_accept})
 
