@@ -9,8 +9,8 @@ from tedana.stats import getfbounds
 from tedana.metrics.dependence import generate_decision_table_score
 
 LGR = logging.getLogger("GENERAL")
-RepLGR = logging.getLogger('REPORT')
-RefLGR = logging.getLogger('REFERENCES')
+RepLGR = logging.getLogger("REPORT")
+RefLGR = logging.getLogger("REFERENCES")
 
 # Functions that are used for interacting with comptable
 
@@ -25,7 +25,7 @@ def selectcomps2use(comptable, decide_comps):
     """
     if type(decide_comps) == str:
         decide_comps = [decide_comps]
-    if decide_comps[0] == 'all':
+    if decide_comps[0] == "all":
         # All components with any string in the classification field
         # are set to True
         comps2use = list(range(comptable.shape[0]))
@@ -35,7 +35,8 @@ def selectcomps2use(comptable, decide_comps):
         comps2use = []
         for didx in range(len(decide_comps)):
             newcomps2use = comptable.index[
-                comptable['classification'] == decide_comps[didx]].tolist()
+                comptable["classification"] == decide_comps[didx]
+            ].tolist()
             comps2use = list(set(comps2use + newcomps2use))
     else:
         # decide_comps is already a string of indices
@@ -50,8 +51,9 @@ def selectcomps2use(comptable, decide_comps):
     return comps2use
 
 
-def change_comptable_classifications(comptable, ifTrue, ifFalse,
-                                     decision_boolean, decision_node_idx_str):
+def change_comptable_classifications(
+    comptable, ifTrue, ifFalse, decision_boolean, decision_node_idx_str
+):
     """
     Given information on whether a decision critereon is true or false for each component
     change or don't change the component classification
@@ -72,14 +74,18 @@ def change_comptable_classifications(comptable, ifTrue, ifFalse,
     # print(('ifTrue={}, ifFalse={}, decision_node_idx_str{}').format(
     #    ifTrue, ifFalse, decision_node_idx_str))
 
-    if ifTrue != 'nochange':
+    if ifTrue != "nochange":
         changeidx = decision_boolean.index[np.asarray(decision_boolean)]
-        comptable.loc[changeidx, 'classification'] = ifTrue
-        comptable.loc[changeidx, 'rationale'] += (decision_node_idx_str + ': ' + ifTrue + '; ')
-    if ifFalse != 'nochange':
+        comptable.loc[changeidx, "classification"] = ifTrue
+        comptable.loc[changeidx, "rationale"] += (
+            decision_node_idx_str + ": " + ifTrue + "; "
+        )
+    if ifFalse != "nochange":
         changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
-        comptable.loc[changeidx, 'classification'] = ifFalse
-        comptable.loc[changeidx, 'rationale'] += (decision_node_idx_str + ': ' + ifFalse + '; ')
+        comptable.loc[changeidx, "classification"] = ifFalse
+        comptable.loc[changeidx, "rationale"] += (
+            decision_node_idx_str + ": " + ifFalse + "; "
+        )
 
     # decision_tree_steps[-1]['numtrue'] = (decision_boolean is True).sum()
     # decision_tree_steps[-1]['numfalse'] = (decision_boolean is False).sum()
@@ -92,12 +98,14 @@ def clean_dataframe(comptable):
     Reorder columns in component table so "rationale" and "classification" are
     last and remove trailing semicolons from rationale column.
     """
-    cols_at_end = ['classification', 'rationale']
-    comptable = (
-        comptable[[c for c in comptable if c not in cols_at_end] + [c for c in cols_at_end
-                                                                    if c in comptable]])
-    comptable['rationale'] = comptable['rationale'].str.rstrip(';')
+    cols_at_end = ["classification", "rationale"]
+    comptable = comptable[
+        [c for c in comptable if c not in cols_at_end]
+        + [c for c in cols_at_end if c in comptable]
+    ]
+    comptable["rationale"] = comptable["rationale"].str.rstrip(";")
     return comptable
+
 
 # Functions that validate inputted parameters or other processing steps
 
@@ -196,39 +204,50 @@ def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
 # Functions that edit decision_tree_steps
 
 
-def new_decision_node_info(decision_tree_steps, function_name,
-                           metrics_used, ifTrue, ifFalse,
-                           additionalparameters=None):
+def new_decision_node_info(
+    decision_tree_steps,
+    function_name,
+    metrics_used,
+    ifTrue,
+    ifFalse,
+    additionalparameters=None,
+):
     """
     create a new node that logs steps in the decision tree
     """
 
     # ADD ERROR TESTING SO THAT A CRASH FROM A MISSING VARIABLE IS INTELLIGENTLY LOGGED
-    tmp_decision_tree = {'nodeidx': None,
-                         'function_name': function_name,
-                         'metrics_used': metrics_used,
-                         'ifTrue': ifTrue,
-                         'ifFalse': ifFalse,
-                         'additionalparameters': additionalparameters,
-                         'report_extra_log': [],  # optionally defined by user
-                         'numfalse': [],  # will be filled in at runtime
-                         'numtrue': [],  # will be filled in at runtime
-                         }
+    tmp_decision_tree = {
+        "nodeidx": None,
+        "function_name": function_name,
+        "metrics_used": metrics_used,
+        "ifTrue": ifTrue,
+        "ifFalse": ifFalse,
+        "additionalparameters": additionalparameters,
+        "report_extra_log": [],  # optionally defined by user
+        "numfalse": [],  # will be filled in at runtime
+        "numtrue": [],  # will be filled in at runtime
+    }
 
     if decision_tree_steps is None:
         decision_tree_steps = [tmp_decision_tree]
-        decision_tree_steps['nodeidx'] = 1
+        decision_tree_steps["nodeidx"] = 1
     else:
-        tmp_decision_tree['nodeidx'] = len(decision_tree_steps) + 1
+        tmp_decision_tree["nodeidx"] = len(decision_tree_steps) + 1
         decision_tree_steps.append(tmp_decision_tree)
 
     return decision_tree_steps
 
 
-def log_decision_tree_step(function_name_idx, comps2use,
-                           decide_comps=None,
-                           numTrue=None, numFalse=None,
-                           ifTrue=None, ifFalse=None):
+def log_decision_tree_step(
+    function_name_idx,
+    comps2use,
+    decide_comps=None,
+    numTrue=None,
+    numFalse=None,
+    ifTrue=None,
+    ifFalse=None,
+):
     """
         Logging text to add for every decision tree calculation
         If decide_comps is not None, then the output will be ugly
@@ -236,14 +255,20 @@ def log_decision_tree_step(function_name_idx, comps2use,
     """
 
     if comps2use is None:
-        LGR.info(('{} not applied because no remaining components were '
-                  'classified as {}').format(function_name_idx, decide_comps))
+        LGR.info(
+            (
+                "{} not applied because no remaining components were "
+                "classified as {}"
+            ).format(function_name_idx, decide_comps)
+        )
     else:
-        LGR.info(('{} applied to {} components. '
-                  '{} True -> {}. '
-                  '{} False -> {}.').format(
-                      function_name_idx, len(comps2use),
-            numTrue, ifTrue, numFalse, ifFalse))
+        LGR.info(
+            (
+                "{} applied to {} components. " "{} True -> {}. " "{} False -> {}."
+            ).format(
+                function_name_idx, len(comps2use), numTrue, ifTrue, numFalse, ifFalse
+            )
+        )
 
 
 def log_classification_counts(decision_node_idx, comptable):
@@ -253,23 +278,38 @@ def log_classification_counts(decision_node_idx, comptable):
     """
 
     (classification_labels, label_counts) = np.unique(
-        comptable['classification'].values, return_counts=True)
+        comptable["classification"].values, return_counts=True
+    )
     label_summaries = [
-        f'{label_counts[i]} {label}'
-        for i, label in enumerate(classification_labels)
+        f"{label_counts[i]} {label}" for i, label in enumerate(classification_labels)
     ]
-    prelude = f'Step {decision_node_idx}: Total component classifications:'
+    prelude = f"Step {decision_node_idx}: Total component classifications:"
     out_str = f"{prelude} {', '.join(label_summaries)}"
     LGR.info(out_str)
 
 
-def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, numFalse,
-                         n_echos=None, n_vols=None, kappa_elbow=None, rho_elbow=None,
-                         num_prov_accept=None, max_good_meanmetricrank=None,
-                         varex_threshold=None, low_perc=None, high_perc=None,
-                         extend_factor=None, restrict_factor=None,
-                         prev_X_steps=None, num_acc_guess=None
-                         ):
+def create_dnode_outputs(
+    decision_node_idx,
+    used_metrics,
+    node_label,
+    numTrue,
+    numFalse,
+    n_echos=None,
+    n_vols=None,
+    kappa_elbow=None,
+    rho_elbow=None,
+    kappa_only=None,
+    rho_only=None,
+    num_prov_accept=None,
+    max_good_meanmetricrank=None,
+    varex_threshold=None,
+    low_perc=None,
+    high_perc=None,
+    extend_factor=None,
+    restrict_factor=None,
+    prev_X_steps=None,
+    num_acc_guess=None,
+):
     """
     Take several parameters that should be output from each decision node function
     and put them in a dictionary under the key 'outputs' When the decision is output
@@ -302,6 +342,10 @@ def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, n
         The kappa threshold below which components should be rejected or ignored
     rho_elbow: :obj:`float`
         The rho threshold above which components should be rejected or ignored
+    kappa_only: :obj:`bool`, optional
+            Only use the kappa>kappa_elbow threshold. default=False
+    rho_only: :obj:`bool`, optional
+            Only use the rho>rho_elbow threshold. default=False
 
 
     Returns
@@ -310,39 +354,44 @@ def create_dnode_outputs(decision_node_idx, used_metrics, node_label, numTrue, n
         A dict that contains the inputted parameters that are not 'None'
     """
 
-    dnode_outputs = {'outputs': {
-        'decision_node_idx': decision_node_idx,
-        'used_metrics': used_metrics,
-        'node_label': node_label,
-        'numTrue': numTrue,
-        'numFalse': numFalse
-    }}
+    dnode_outputs = {
+        "outputs": {
+            "decision_node_idx": decision_node_idx,
+            "used_metrics": used_metrics,
+            "node_label": node_label,
+            "numTrue": numTrue,
+            "numFalse": numFalse,
+        }
+    }
     if n_echos:
-        dnode_outputs['outputs'].update({'n_echos': n_echos})
+        dnode_outputs["outputs"].update({"n_echos": n_echos})
     if n_vols:
-        dnode_outputs['outputs'].update({'n_vols': n_vols})
+        dnode_outputs["outputs"].update({"n_vols": n_vols})
     if kappa_elbow:
-        dnode_outputs['outputs'].update({'kappa_elbow': kappa_elbow})
+        dnode_outputs["outputs"].update({"kappa_elbow": kappa_elbow})
     if rho_elbow:
-        dnode_outputs['outputs'].update({'rho_elbow': rho_elbow})
+        dnode_outputs["outputs"].update({"rho_elbow": rho_elbow})
     if high_perc:
-        dnode_outputs['outputs'].update({'high_perc': high_perc})
+        dnode_outputs["outputs"].update({"high_perc": high_perc})
     if low_perc:
-        dnode_outputs['outputs'].update({'low_perc': low_perc})
+        dnode_outputs["outputs"].update({"low_perc": low_perc})
     if max_good_meanmetricrank:
-        dnode_outputs['outputs'].update({'max_good_meanmetricrank': max_good_meanmetricrank})
+        dnode_outputs["outputs"].update(
+            {"max_good_meanmetricrank": max_good_meanmetricrank}
+        )
     if varex_threshold:
-        dnode_outputs['outputs'].update({'varex_threshold': varex_threshold})
+        dnode_outputs["outputs"].update({"varex_threshold": varex_threshold})
     if num_prov_accept:
-        dnode_outputs['outputs'].update({'num_prov_accept': num_prov_accept})
+        dnode_outputs["outputs"].update({"num_prov_accept": num_prov_accept})
     if restrict_factor:
-        dnode_outputs['outputs'].update({'restrict_factor': num_prov_accept})
+        dnode_outputs["outputs"].update({"restrict_factor": num_prov_accept})
     if prev_X_steps:
-        dnode_outputs['outputs'].update({'prev_X_steps': num_prov_accept})
+        dnode_outputs["outputs"].update({"prev_X_steps": num_prov_accept})
     if num_acc_guess:
-        dnode_outputs['outputs'].update({'num_acc_guess': num_prov_accept})
+        dnode_outputs["outputs"].update({"num_acc_guess": num_prov_accept})
 
     return dnode_outputs
+
 
 # Calculations that are used in decision tree functions
 
@@ -365,11 +414,16 @@ def getelbow_cons(arr, return_val=False):
         elbow index (if return_val is False)
     """
     if arr.ndim != 1:
-        raise ValueError('Parameter arr should be 1d, not {0}d'.format(arr.ndim))
+        raise ValueError("Parameter arr should be 1d, not {0}d".format(arr.ndim))
     arr = np.sort(arr)[::-1]
     nk = len(arr)
-    temp1 = [(arr[nk - 5 - ii - 1] > arr[nk - 5 - ii:nk].mean() + 2 * arr[nk - 5 - ii:nk].std())
-             for ii in range(nk - 5)]
+    temp1 = [
+        (
+            arr[nk - 5 - ii - 1]
+            > arr[nk - 5 - ii : nk].mean() + 2 * arr[nk - 5 - ii : nk].std()
+        )
+        for ii in range(nk - 5)
+    ]
     ds = np.array(temp1[::-1], dtype=np.int)
     dsum = []
     c_ = 0
@@ -403,7 +457,7 @@ def getelbow(arr, return_val=False):
         elbow index (if return_val is False)
     """
     if arr.ndim != 1:
-        raise ValueError('Parameter arr should be 1d, not {0}d'.format(arr.ndim))
+        raise ValueError("Parameter arr should be 1d, not {0}d".format(arr.ndim))
     arr = np.sort(arr)[::-1]
     n_components = arr.shape[0]
     coords = np.array([np.arange(n_components), arr])
@@ -443,12 +497,35 @@ def kappa_elbow_kundu(comptable, n_echos):
     # low kappa threshold
     f05, _, f01 = getfbounds(n_echos)
     # get kappa values for components below a significance threshold
-    kappas_nonsig = comptable.loc[comptable['kappa'] < f01, 'kappa']
+    kappas_nonsig = comptable.loc[comptable["kappa"] < f01, "kappa"]
 
     # Would an elbow from all Kappa values *ever* be lower than one from
     # a subset of lower values?
-    kappa_elbow = np.min((getelbow(kappas_nonsig, return_val=True),
-                          getelbow(comptable['kappa'], return_val=True)))
+    # Note: Only use the subset of values if it includes at least 5 data point
+    #  That is enough to calculate an elbow of a curve
+    #  This is an arbitrary threshold not from the original meica as is
+    #  worth reconsidering at some point
+    if kappas_nonsig.size > 5:
+        kappa_elbow = np.min(
+            (
+                getelbow(kappas_nonsig, return_val=True),
+                getelbow(comptable["kappa"], return_val=True),
+            )
+        )
+        LGR.info(
+            (
+                "Calculating kappa elbow based min of all and nonsig "
+                f"components. Kappa elbow is {kappa_elbow}"
+            )
+        )
+    else:
+        kappa_elbow = getelbow(comptable["kappa"], return_val=True)
+        LGR.info(
+            (
+                "Calculating kappa elbow based on all components. "
+                f"Kappa elbow is {kappa_elbow}"
+            )
+        )
 
     return kappa_elbow
 
@@ -481,7 +558,7 @@ def get_extend_factor(n_vols=None, extend_factor=None):
     """
 
     if extend_factor:
-        LGR.info('extend_factor={}, as defined by user'.format(extend_factor))
+        LGR.info("extend_factor={}, as defined by user".format(extend_factor))
     elif n_vols:
         if n_vols < 90:
             extend_factor = 3
@@ -489,16 +566,19 @@ def get_extend_factor(n_vols=None, extend_factor=None):
             extend_factor = 2 + (n_vols - 90) / 20
         else:
             extend_factor = 2
-        LGR.info('extend_factor={}, based on number of fMRI volumes'.format(extend_factor))
+        LGR.info(
+            "extend_factor={}, based on number of fMRI volumes".format(extend_factor)
+        )
     else:
-        error_msg = 'get_extend_factor need n_vols or extend_factor as an input'
+        error_msg = "get_extend_factor need n_vols or extend_factor as an input"
         LGR.error(error_msg)
         ValueError(error_msg)
     return extend_factor
 
 
-def get_new_meanmetricrank(comptable, comps2use, decision_node_idx,
-                           calc_new_rank=False):
+def get_new_meanmetricrank(
+    comptable, comps2use, decision_node_idx, calc_new_rank=False
+):
     """
     If a revised d_table_score was already calculated, use that.
     If not, calculate a new d_table_score based on the components
@@ -519,18 +599,18 @@ def get_new_meanmetricrank(comptable, comps2use, decision_node_idx,
     meanmetricrank
     comptable
     """
-    rank_label = 'd_table_score' + str(decision_node_idx)
+    rank_label = "d_table_score" + str(decision_node_idx)
     if not calc_new_rank and (rank_label in comptable.columns):
         # go ahead and return existing
         return comptable[rank_label], comptable
     # get the array of ranks
     ranks = generate_decision_table_score(
-                comptable.loc[comps2use, 'kappa'],
-                comptable.loc[comps2use, 'dice_FT2'],
-                comptable.loc[comps2use, 'signal-noise_t'],
-                comptable.loc[comps2use, 'countnoise'],
-                comptable.loc[comps2use, 'countsigFT2']
-            )
+        comptable.loc[comps2use, "kappa"],
+        comptable.loc[comps2use, "dice_FT2"],
+        comptable.loc[comps2use, "signal-noise_t"],
+        comptable.loc[comps2use, "countnoise"],
+        comptable.loc[comps2use, "countsigFT2"],
+    )
     # see if we need to make a new column
     if rank_label not in comptable.columns:
         comptable[rank_label] = np.zeros(comptable.shape[0]) * np.nan
@@ -542,7 +622,9 @@ def get_new_meanmetricrank(comptable, comps2use, decision_node_idx,
     return comptable[rank_label], comptable
 
 
-def prev_classified_comps(comptable, decision_node_idx, classification_label, prev_X_steps=0):
+def prev_classified_comps(
+    comptable, decision_node_idx, classification_label, prev_X_steps=0
+):
     """
     Output a list of components with a specific label during the current or
     previous X steps of the decision tree. For example, if
@@ -575,21 +657,23 @@ def prev_classified_comps(comptable, decision_node_idx, classification_label, pr
     """
 
     full_comps2use = selectcomps2use(comptable, classification_label)
-    rationales = comptable['rationale']
+    rationales = comptable["rationale"]
 
     if prev_X_steps > 0:  # if checking classifications in prevision nodes
         for compidx in range(len(comptable)):
             tmp_rationale = rationales.values[compidx]
-            tmp_list = re.split(':|;| ', tmp_rationale)
-            while("" in tmp_list):  # remove blank strings after splitting rationale
+            tmp_list = re.split(":|;| ", tmp_rationale)
+            while "" in tmp_list:  # remove blank strings after splitting rationale
                 tmp_list.remove("")
             # Check the previous nodes
             # This is inefficient, but it should work
-            for didx in range(max(0, decision_node_idx - prev_X_steps), decision_node_idx):
+            for didx in range(
+                max(0, decision_node_idx - prev_X_steps), decision_node_idx
+            ):
                 if str(didx) in tmp_list:
                     didx_loc = tmp_list.index(str(didx))
-                    if(didx_loc > 1):
-                        tmp_classifier = (tmp_list[didx_loc - 1])
+                    if didx_loc > 1:
+                        tmp_classifier = tmp_list[didx_loc - 1]
                         if tmp_classifier in classification_label:
                             full_comps2use.append(compidx)
 

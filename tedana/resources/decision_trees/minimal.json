@@ -36,7 +36,7 @@
                 "metric2": "kappa"
             },
             "kwargs": {
-                "log_extra_info": "Reject if Kappa>Rho",
+                "log_extra_info": "Reject if Kappa<Rho",
                 "log_extra_report": "",
                 "metric2_scale": 1
             }
@@ -90,11 +90,44 @@
             "functionname": "kappa_rho_elbow_cutoffs_kundu",
             "parameters": {
                 "ifTrue": "provisionalaccept",
-                "ifFalse": "provisionalreject",
+                "ifFalse": "nochange",
                 "decide_comps": "unclassified",
                 "n_echos": null
             },
             "kwargs": {
+                "kappa_only": true,
+                "log_extra_info": "",
+                "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "metric1_greaterthan_metric2",
+            "parameters": {
+                "ifTrue": "accepted",
+                "ifFalse": "nochange",
+                "decide_comps": "provisionalaccept",
+                "metric1": "kappa",
+                "metric2": "rho"
+            },
+            "kwargs": {
+                "log_extra_info": "If kappa>elbow and kappa>3*rho accept even if rho>elbow",
+                "log_extra_report": "",
+                "metric2_scale": 3
+            }
+        },
+        {
+            "functionname": "kappa_rho_elbow_cutoffs_kundu",
+            "parameters": {
+                "ifTrue": "nochange",
+                "ifFalse": "provisionalreject",
+                "decide_comps": [
+                    "unclassified",
+                    "provisionalaccept"
+                ],
+                "n_echos": null
+            },
+            "kwargs": {
+                "rho_only": true,
                 "log_extra_info": "",
                 "log_extra_report": ""
             }
@@ -102,9 +135,12 @@
         {
             "functionname": "variance_lessthan_thresholds",
             "parameters": {
-                "ifTrue": "nochange",
-                "ifFalse": "ignored",
-                "decide_comps": "provisionalreject",
+                "ifTrue": "ignored",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalreject",
+                    "unclassified"
+                ],
                 "var_metric": "variance explained"
             },
             "kwargs": {
@@ -130,7 +166,10 @@
             "functionname": "manual_classify",
             "parameters": {
                 "new_classification": "rejected",
-                "decide_comps": "provisionalreject"
+                "decide_comps": [
+                    "provisionalreject",
+                    "unclassified"
+                ]
             },
             "kwargs": {
                 "log_extra_info": "",
