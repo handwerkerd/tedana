@@ -4,6 +4,23 @@ import pandas as pd
 
 UNCLASSIFIED = "Unclassified"
 
+
+def toy_comptable():
+    """Returns a toy comptable
+
+    Returns
+    -------
+    pd.DataFrame with Component, kappa, and rho for 5 components
+    """
+    return pd.DataFrame(
+        {
+            "Component": [i for i in range(5)],
+            "kappa": [10, 9, 8, 3, 1],
+            "rho": [1, 3, 8, 9, 10],
+        }
+    )
+
+
 class DecisionBoard:
     """A class for tracking decisions made about components.
 
@@ -63,3 +80,37 @@ class DecisionBoard:
         self._global_metrics = {}
         self._status_table = pd.DataFrame(self._component_table["Component"])
         self._status_table.insert(1, "Step 0", UNCLASSIFIED)
+    def select(self, metrics, status):
+        """Select and return a sub-table matching the metrics and status
+
+        Parameters
+        ----------
+        metrics: list(str)
+            The metrics to include in the returned sub-table
+        status: list(str)
+            The statuses to select
+
+        Returns
+        -------
+        pd.DataFrame with all matching components and metrics
+
+        Notes
+        -----
+        Requires metric specification to make sure that Nodes are
+        compliant with the comptable; if the entire component table were
+        returned, Nodes would not be forced to only use the metrics they
+        ask for and it would be possible to de facto require un-specified
+        metrics. This forces a RuntimeError instead, to aid in the
+        debugging of decision trees with incorrectly specified
+        dependencies.
+        """
+        if not isinstance(metrics, list):
+            raise TypeError("Metrics must be supplied as a list")
+        if not isinstance(status, list):
+            raise TypeError("Statuses must be supplied as a list")
+        if "Component" not in metrics:
+            metrics.insert(0, "Component")
+        tail_label = self._status_table.columns[-1]
+        status_matches = self._status_table[tail_label].isin(status)
+        # NOTE: status and component table must have same number of rows
+        return self._component_table[status_matches][metrics]
