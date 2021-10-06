@@ -271,27 +271,27 @@ class DecisionNode:
         self._required_global = None
         self._produces_metrics = []
         # Start pulling what we need
-        left = description["left"]
-        right = description["right"]
+        left = specification["left"]
+        right = specification["right"]
         self._required_metrics = [left, right]
-        op = description["op"]
+        op = specification["op"]
         legal_ops = (">", ">=", "==", "<=", "<")
         if op not in legal_ops:
             raise ValueError(f"{op} is not a binary comparison operator")
         # op should be legal after this
-        select = description["select"]
+        select = specification["select"]
         if not isinstance(select, list):
             select = [select]
         self._selects_from = select
-        true_status = description["set_true_status"]
-        self._sets_status = set_true_status
+        true_status = specification["set_true_status"]
+        self._sets_status = true_status
         # handle optionals
-        if "scale_left" in description:
-            scale_left = description["scale_left"]
+        if "scale_left" in specification:
+            scale_left = specification["scale_left"]
         else:
             scale_left = 1
-        if "scale_right" in description:
-            scale_right = description["scale_right"]
+        if "scale_right" in specification:
+            scale_right = specification["scale_right"]
         else:
             scale_right = 1
         # We have everything now
@@ -304,13 +304,15 @@ class DecisionNode:
             scale_left=scale_left,
             scale_right=scale_right,
         )
-    def _metric_left_op_right(left, op, right, select, true_status,
-            scale_left=1, scale_right=1):
+    def _metric_left_op_right(self, left, op, right, select, true_status, scale_left=1, scale_right=1):
         subtable = self._board.select([left, right], select)
-        left_col = subtable["left"]
-        right_col = subtable["right"]
-        eval(
-            f"matches = scale_left * left_col {op} scale_right * right_col"
+        left_col = subtable[left]
+        right_col = subtable[right]
+        matches = eval(
+            f"scale_left * left_col {op} scale_right * right_col"
         )
+        comps = [c for c in subtable[matches]["Component"]]
         # set status for matches
-        self._board.set_status(matches, true_status)
+        self._board.set_status(comps, true_status)
+    def run(self):
+        self._fn()
