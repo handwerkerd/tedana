@@ -21,6 +21,7 @@ def toy_comptable():
     )
 
 
+# TODO: implement label recording for each step
 class DecisionBoard:
     """A class for tracking decisions made about components.
 
@@ -183,3 +184,133 @@ class DecisionBoard:
         # TODO: discuss implementation, API for sensibility
         # TODO: implement
         raise RuntimeError("This function is unimplemented; sorry")
+
+
+class DecisionNode:
+    """A small Actor designed to interface with a DecisionBoard for
+    automatic decisions
+
+    Attributes
+    ----------
+    _board: DecisionBoard
+        The board that this node will interface with
+    _fn: function pointer
+        A function that will be run with this Node
+    _required_metrics: list(str)
+        The list of metrics this node requires
+    _required_global: None or str
+        The global this node requires
+    _produces_global: None or str
+        The global that this node produces
+    _sets_status: list(str)
+        The status that this node may set for some components
+    _produces_metrics: list(str)
+        The metrics that this node produces
+    _selects_from: list(str)
+        The status that this node selects from
+
+    Methods
+    -------
+    __init__
+    required_metrics
+    required_global
+    selects_from
+    produces_global
+    sets_status
+
+    Notes
+    -----
+    Node specification is done by a dictionary, which specifies all of the
+    parameters of the node. If the specification is not correct, you may
+    get a runtime error.
+    Specify the function with the name
+        function: the function name to use
+    There is currently only one function supported:
+        metric_left_op_right
+    with left the left-hand metric, op a binary comparison operator, and
+    right the right-hand metric. You must specify which components may be
+    operated on, and what the status will be set to if the condition is
+    met. You may optionally scale the left and right hand sides.
+    Required:
+        left: left-hand metric
+        right: right-hand metric
+        op: a binary comparison operator as a string
+        select: a list of statuses to be selected from the board
+        set_true_status: the status to set if the result is True
+    Optional:
+        set_false_status: the status to set if the result is False
+        scale_left: the scaling factor for the left metric
+        scale_right: the scaling factor for the right metric
+    For documentation purposes, any key name not relevant to the function
+    will be ignored, so you may include names such as "_comment" in order
+    to hack a comment if you generate this dictionary with a JSON.
+    """
+    def __init__(self, board, specification):
+        if not isinstance(board, DecisionBoard):
+            raise TypeError("Decision board must be a DecisionBoard")
+        if not isinstance(specification, dict):
+            raise TypeError("Nodes must be created from dicts")
+        if not "function" in specification:
+            raise ValueError("Specification dicts must have a function")
+        self._board = board
+        fn = specification["function"]
+        if fn == "metric_left_op_right":
+            self._build_metric_left_op_right(specification)
+        else:
+            raise ValueError(f"Function {fn} is not implemented")
+    def _build_metric_left_op_right(self, specification):
+        #TODO: think if there's a better way to do this
+        required_keys = (
+            "left", "right", "op", "select", "set_true_status"
+        )
+        for k in required_keys:
+            if k not in specification:
+                raise ValueError(f"metric_left_op_right requires {k}")
+        # We know that globals will not be created
+        self._produces_global = None
+        self._required_global = None
+        self._produces_metrics = []
+        # Start pulling what we need
+        left = description["left"]
+        right = description["right"]
+        self._required_metrics = [left, right]
+        op = description["op"]
+        legal_ops = (">", ">=", "==", "<=", "<")
+        if op not in legal_ops:
+            raise ValueError(f"{op} is not a binary comparison operator")
+        # op should be legal after this
+        select = description["select"]
+        if not isinstance(select, list):
+            select = [select]
+        self._selects_from = select
+        true_status = description["set_true_status"]
+        self._sets_status = set_true_status
+        # handle optionals
+        if "scale_left" in description:
+            scale_left = description["scale_left"]
+        else:
+            scale_left = 1
+        if "scale_right" in description:
+            scale_right = description["scale_right"]
+        else:
+            scale_right = 1
+        # We have everything now
+        self._fn = lambda : self._metric_left_op_right(
+            left,
+            op,
+            right,
+            select,
+            true_status,
+            scale_left=scale_left,
+            scale_right=scale_right,
+        )
+    def _metric_left_op_right(left, op, right, select, true_status,
+            scale_left=1, scale_right=1):
+        subtable = self._board.select([left, right], select)
+        left_col = subtable["left"]
+        right_col = subtable["right"]
+        eval(
+            f"matches = scale_left * left_col {op} scale_right * right_col"
+        )
+        # set status for matches
+        self._board.set_status(matches, true_status)
