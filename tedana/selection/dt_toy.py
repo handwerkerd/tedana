@@ -170,3 +170,16 @@ class DecisionBoard:
                 f"The name supplied {name} is already in use"
             )
         self._global_metrics[name] = value
+    def set_metrics(self, ids, values):
+        """Sets the entire component
+
+        Parameters
+        ----------
+        ids: list(int)
+            The components to set value of; unlisted will receive NaN
+        values: list(number)
+            The values to assign pairwise with components
+        """
+        # TODO: discuss implementation, API for sensibility
+        # TODO: implement
+        raise RuntimeError("This function is unimplemented; sorry")
