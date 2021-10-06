@@ -34,6 +34,8 @@ class DecisionBoard:
         A table with each component's status provenance.
     _n_steps: int
         The number of steps run so far
+    _labeler: function(int)
+        A pointer to a function to generate a label for a given step n
     _nodes: list(Node)
         The list of decision nodes to be run.
 
@@ -82,6 +84,7 @@ class DecisionBoard:
         self._global_metrics = {}
         self._status_table = pd.DataFrame(self._component_table["Component"])
         self._n_steps = 0
+        self._labeler = lambda x: f"Step {x}"
         self._status_table.insert(1, f"Step {self._n_steps}", UNCLASSIFIED)
     def select(self, metrics, status):
         """Select and return a sub-table matching the metrics and status
@@ -113,8 +116,24 @@ class DecisionBoard:
             raise TypeError("Statuses must be supplied as a list")
         if "Component" not in metrics:
             metrics.insert(0, "Component")
-        tail_label = f"Step {self._n_steps}"
+        tail_label = self._labeler(self._n_steps)
         status_matches = self._status_table[tail_label].isin(status)
         # NOTE: status and component table must have same number of rows
         return self._component_table[status_matches][metrics]
+    def set_status(self, components, status):
+        """Select a set of components and update their status
 
+        Parameters
+        ----------
+        components: list(int)
+            The list of integer component IDs to update status for
+        status: str
+            The status to update the components to
+        """
+        self._n_steps += 1
+        curr_label = self._labeler(self._n_steps)
+        prev_label = self._labeler(self._n_steps - 1)
+        self._status_table.insert(self._n_steps + 1, curr_label, "")
+        self._status_table[curr_label] = self._status_table[prev_label]
+        select_comps = self._status_table["Component"].isin(components)
+        self._status_table.loc[select_comps, curr_label] = status
