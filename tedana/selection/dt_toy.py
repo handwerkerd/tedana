@@ -130,6 +130,10 @@ class DecisionBoard:
         status: str
             The status to update the components to
         """
+        if not isinstance(components, list):
+            raise TypeError("Components to set status must be a list")
+        if not isinstance(status, str):
+            raise TypeError("Status must be a string")
         self._n_steps += 1
         curr_label = self._labeler(self._n_steps)
         prev_label = self._labeler(self._n_steps - 1)
@@ -137,3 +141,32 @@ class DecisionBoard:
         self._status_table[curr_label] = self._status_table[prev_label]
         select_comps = self._status_table["Component"].isin(components)
         self._status_table.loc[select_comps, curr_label] = status
+    def set_global(self, name, value):
+        """Set a component-wide global value
+
+        Parameters
+        ----------
+        name: str
+            The name of the global to set
+        value: float, int
+            The value of the global to set
+
+        Raises
+        ------
+        RuntimeError, if the global's name is already occupied
+        """
+        if not isinstance(name, str):
+            raise TypeError("Global values must be of type str")
+        if not isinstance(value, float) and not isinstance(value, int):
+            raise TypeError(
+                "Global values must be scalar numbers; got: "
+                f"{type(value)}"
+            )
+        if name in self._global_metrics:
+            # NOTE: when building from nodes this is already checked
+            # This is here to uphold DecisionBoard's contract in case
+            # manual manipulations of the board are performed.
+            raise RuntimeError(
+                f"The name supplied {name} is already in use"
+            )
+        self._global_metrics[name] = value
