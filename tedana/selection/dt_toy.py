@@ -1,8 +1,12 @@
 """Toy implementation of DecisionBoard, Node classes"""
 
+from collections import OrderedDict
+
 import pandas as pd
 
 UNCLASSIFIED = "Unclassified"
+REJECTED = "Rejected"
+ACCEPTED = "Accepted"
 
 
 def toy_comptable():
@@ -19,6 +23,38 @@ def toy_comptable():
             "rho": [1, 3, 8, 9, 10],
         }
     )
+
+def toy_nodeset():
+    """Returns a toy nodeset
+
+    Returns
+    -------
+    OrderedDict of nodes to be run
+    """
+    return OrderedDict([
+        (
+            "Reject low kappa",
+            {
+                "function": "metric_left_op_right",
+                "left": "kappa",
+                "op": "<",
+                "right": "rho",
+                "select": UNCLASSIFIED,
+                "set_true_status": REJECTED,
+            }
+        ), (
+            "Accept very high kappa",
+            {
+                "function": "metric_left_op_right",
+                "left": "kappa",
+                "op": ">",
+                "right": "rho",
+                "scale_right": 3,
+                "select": UNCLASSIFIED,
+                "set_true_status": ACCEPTED,
+            },
+        )
+    ])
 
 
 # TODO: implement label recording for each step
@@ -39,6 +75,8 @@ class DecisionBoard:
         A pointer to a function to generate a label for a given step n
     _nodes: list(Node)
         The list of decision nodes to be run.
+    _node_labels: list(str)
+        The list of node labels
 
     Methods
     -------
@@ -81,12 +119,40 @@ class DecisionBoard:
         TypeError, if types are not adhered to
         RuntimeError, if the specification is illegal
         """
+        # TODO: set so that component table is initially None, and added
+        # later so that we can get what metrics are required up-front.
         self._component_table = component_table
         self._global_metrics = {}
         self._status_table = pd.DataFrame(self._component_table["Component"])
         self._n_steps = 0
         self._labeler = lambda x: f"Step {x}"
         self._status_table.insert(1, f"Step {self._n_steps}", UNCLASSIFIED)
+        if len(specification) == 0:
+            raise ValueError("A specification is required to have steps")
+        self._nodes = []
+        self._node_labels = []
+        possible_statuses = set([UNCLASSIFIED])
+        available_metrics = set(self._component_table.columns)
+        self._required_metrics = set()
+        for label in specification:
+            self._node_labels.append(label)
+            function_spec = specification[label]
+            nd = DecisionNode(self, function_spec)
+            # TODO: add information about step label, number in errors
+            for status in nd.selects_statuses():
+                if status not in possible_statuses:
+                    # TODO: make warning
+                    print(
+                        f"Status {status} is selected but does not yet "
+                        "exist"
+                    )
+            for metric in nd.required_metrics():
+                if metric not in available_metrics:
+                    raise ValueError(
+                        f"Metric {metric} is not available"
+                    )
+                self._required_metrics.add(metric)
+            self._nodes.append(nd)
     def select(self, metrics, status):
         """Select and return a sub-table matching the metrics and status
 
@@ -184,6 +250,10 @@ class DecisionBoard:
         # TODO: discuss implementation, API for sensibility
         # TODO: implement
         raise RuntimeError("This function is unimplemented; sorry")
+    def run(self):
+        for node in self._nodes:
+            # TODO: log information
+            node.run()
 
 
 class DecisionNode:
@@ -314,5 +384,29 @@ class DecisionNode:
         comps = [c for c in subtable[matches]["Component"]]
         # set status for matches
         self._board.set_status(comps, true_status)
+    def selects_statuses(self):
+        """Returns the statuses this node selects
+
+        Returns
+        -------
+        list(str) the list of statuses this node selects
+        """
+        return self._selects_from
+    def sets_status(self):
+        """Returns the status this node may set
+
+        Returns
+        -------
+        str of the status this node may set
+        """
+        return self._sets_status
+    def required_metrics(self):
+        """Returns the metrics that this node requires
+
+        Returns
+        -------
+        list(str) of the metrics required to run
+        """
+        return self._required_metrics
     def run(self):
         self._fn()
