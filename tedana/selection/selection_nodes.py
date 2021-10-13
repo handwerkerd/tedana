@@ -365,7 +365,7 @@ def left_op_right(
             val2 = comptable.loc[comps2use, right]
         else:
             val2 = right  # should be a fixed number
-        decision_boolean = eval(f"({left_scale}*{val1}) {op} ({right_scale} * {val2})")
+        decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
         comptable = change_comptable_classifications(
             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)

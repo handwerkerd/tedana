@@ -92,7 +92,7 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if T2fitdiff_invsout_ICAmap_Tstat<0",
-                "log_extra_report": "",
+                "log_extra_report": ""
             }
         },
         {
