@@ -9,24 +9,24 @@ import logging
 from pkg_resources import resource_filename
 
 from tedana.selection._utils import (
-    clean_dataframe, confirm_metrics_exist, log_classification_counts)
+    clean_dataframe,
+    confirm_metrics_exist,
+    log_classification_counts,
+)
 from tedana.selection import selection_nodes
 from tedana.io import load_json
 from tedana.utils import get_resource_path
 
 LGR = logging.getLogger("GENERAL")
-RepLGR = logging.getLogger('REPORT')
-RefLGR = logging.getLogger('REFERENCES')
+RepLGR = logging.getLogger("REPORT")
+RefLGR = logging.getLogger("REFERENCES")
 
 # These are the names of the json files containing decision
 # trees that are stored in the ./selection/data/ directory
 # A user can run the desision tree either using one of these
 # names or by giving the full path to a tree in a different
 # location
-DEFAULT_TREES = [
-    'minimal',
-    'kundu'
-]
+DEFAULT_TREES = ["minimal", "kundu"]
 
 
 class TreeError(Exception):
@@ -65,9 +65,7 @@ def load_config(tree):
         `kwargs`: Optional parameters for the function
     """
     if tree in DEFAULT_TREES:
-        fname = op.join(
-            get_resource_path(), 'decision_trees', tree + '.json'
-        )
+        fname = op.join(get_resource_path(), "decision_trees", tree + ".json")
     else:
         fname = tree
 
@@ -75,13 +73,13 @@ def load_config(tree):
         dectree = load_json(fname)
     except FileNotFoundError:
         raise ValueError(
-            f'Cannot find tree {tree}. Please check your path or use a '
-            f'default tree ({DEFAULT_TREES}).'
+            f"Cannot find tree {tree}. Please check your path or use a "
+            f"default tree ({DEFAULT_TREES})."
         )
     except IsADirectoryError:
         raise ValueError(
-            f'Tree {tree} is a directory. Please supply a JSON file or '
-            f'default tree ({DEFAULT_TREES}).'
+            f"Tree {tree} is a directory. Please supply a JSON file or "
+            f"default tree ({DEFAULT_TREES})."
         )
 
     return validate_tree(dectree)
@@ -106,69 +104,111 @@ def validate_tree(tree):
     TreeError
     """
 
-    err_msg = ''
-    tree_info = ['tree_id', 'info', 'report', 'refs', 'necessary_metrics', 'nodes']
-    defaults = {'comptable', 'decision_node_idx'}
-    default_classifications = {'nochange', 'accepted', 'rejected', 'ignored',
-                               'provisionalaccept', 'provisionalreject', 'unclassified'}
-    default_decide_comps = {'all', 'accepted', 'rejected', 'ignored',
-                            'provisionalaccept', 'provisionalreject', 'unclassified'}
+    # Set the fields that should always be present
+    err_msg = ""
+    tree_info = [
+        "tree_id",
+        "info",
+        "report",
+        "refs",
+        "necessary_metrics",
+        "intermediate_classifications",
+        "classification_tags",
+        "nodes",
+    ]
+    defaults = {"comptable", "decision_node_idx"}
+    default_classifications = {"nochange", "accepted", "rejected", "unclassified"}
+    default_decide_comps = {"all", "accepted", "rejected", "unclassified"}
 
+    # Confirm that the required fields exist
     for k in tree_info:
         try:
             assert tree.get(k) is not None
         except AssertionError:
-            err_msg += 'Decision tree missing required info: {}\n'.format(k)
+            err_msg += "Decision tree missing required info: {}\n".format(k)
 
-    for i, node in enumerate(tree['nodes']):
+    # Combine the default classificaitons with the user inputted classifications
+    all_classifications = set(tree.get("intermediate_classifications")) | set(
+        default_classifications
+    )
+    all_decide_comps = set(tree.get("intermediate_classifications")) | set(
+        default_decide_comps
+    )
+    for i, node in enumerate(tree["nodes"]):
+        # Make sure each function defined in a node exists
         try:
-            fcn = getattr(selection_nodes, node.get('functionname'))
+            fcn = getattr(selection_nodes, node.get("functionname"))
             sig = inspect.signature(fcn)
         except (AttributeError, TypeError):
-            err_msg += ('Node {} has invalid functionname parameter: {}\n'
-                        .format(i, node.get('functionname')))
+            err_msg += "Node {} has invalid functionname parameter: {}\n".format(
+                i, node.get("functionname")
+            )
             continue
 
-        sig = inspect.signature(fcn)
-        pos = set([p for p, i in sig.parameters.items() if i.default is inspect.Parameter.empty])
+        # Get a functions parameters and compare to parameters defined in the tree
+        pos = set(
+            [
+                p
+                for p, i in sig.parameters.items()
+                if i.default is inspect.Parameter.empty
+            ]
+        )
         kwargs = set(sig.parameters.keys()) - pos
 
-        missing_pos = pos - set(node.get('parameters').keys()) - defaults
+        missing_pos = pos - set(node.get("parameters").keys()) - defaults
         if len(missing_pos) > 0:
-            err_msg += ('Node {} is missing required parameter(s): {}\n'
-                        .format(i, missing_pos))
-        invalid_kwargs = set(node.get('kwargs').keys()) - kwargs
+            err_msg += "Node {} is missing required parameter(s): {}\n".format(
+                i, missing_pos
+            )
+        invalid_kwargs = set(node.get("kwargs").keys()) - kwargs
         if len(invalid_kwargs) > 0:
-            err_msg += ('Node {} has additional, undefined kwarg(s): {}\n'
-                        .format(i, invalid_kwargs))
+            err_msg += "Node {} has additional, undefined optional parameters (kwargs): {}\n".format(
+                i, invalid_kwargs
+            )
 
+        # Gather all the classification labels used in each tree both for
+        # changing classifications and for decide_comps which defines which
+        # component classifications to use in each node then make sure these
+        # classifications are in the predefined list.
+        # It's important to require a predefined list of classifications
+        # beccuse spelling inconsistencies cause problems and are hard to
+        # catch. For example if a node is applied to "provisionalaccept"
+        # nodes, but a previous node classified components as
+        # "provisionalaccepted" they won't be included and there might not
+        # be any other warnings
         compclass = set()
-        if 'ifTrue' in node.get('parameters').keys():
-            tmp_comp = node['parameters']['ifTrue']
+        if "ifTrue" in node.get("parameters").keys():
+            tmp_comp = node["parameters"]["ifTrue"]
             if isinstance(tmp_comp, str):
                 tmp_comp = [tmp_comp]
             compclass = compclass | set(tmp_comp)
-        if 'ifFalse' in node.get('parameters').keys():
-            tmp_comp = node['parameters']['ifFalse']
+        if "ifFalse" in node.get("parameters").keys():
+            tmp_comp = node["parameters"]["ifFalse"]
             if isinstance(tmp_comp, str):
                 tmp_comp = [tmp_comp]
             compclass = compclass | set(tmp_comp)
-        nonstandard_labels = compclass.difference(default_classifications)
+        nonstandard_labels = compclass.difference(all_classifications)
         if nonstandard_labels:
             LGR.warning(
-                '{} in node {} of the decision tree includes a nonstandard label'.format(compclass, i))
-        if 'decide_comps' in node.get('parameters').keys():
-            tmp_comp = node['parameters']['decide_comps']
+                "{} in node {} of the decision tree includes a nonstandard label".format(
+                    compclass, i
+                )
+            )
+        if "decide_comps" in node.get("parameters").keys():
+            tmp_comp = node["parameters"]["decide_comps"]
             if isinstance(tmp_comp, str):
                 tmp_comp = [tmp_comp]
             compclass = set(tmp_comp)
-        nonstandard_labels = compclass.difference(default_decide_comps)
+        nonstandard_labels = compclass.difference(all_decide_comps)
         if nonstandard_labels:
             LGR.warning(
-                '{} in node {} of the decision tree includes a nonstandard label'.format(compclass, i))
+                "{} in node {} of the decision tree includes a nonstandard label".format(
+                    compclass, i
+                )
+            )
 
     if err_msg:
-        raise TreeError('\n' + err_msg)
+        raise TreeError("\n" + err_msg)
 
     return tree
 
@@ -256,13 +296,13 @@ class DecisionTree:
         self.__dict__.update(kwargs)
         self.config = load_config(self.tree)
 
-        LGR.info('Performing component selection with ' + self.config['tree_id'])
-        LGR.info(self.config.get('info', ''))
-        RepLGR.info(self.config.get('report', ''))
-        RefLGR.info(self.config.get('refs', ''))
+        LGR.info("Performing component selection with " + self.config["tree_id"])
+        LGR.info(self.config.get("info", ""))
+        RepLGR.info(self.config.get("report", ""))
+        RefLGR.info(self.config.get("refs", ""))
 
-        self.nodes = self.config['nodes']
-        self.metrics = self.config['necessary_metrics']
+        self.nodes = self.config["nodes"]
+        self.metrics = self.config["necessary_metrics"]
         self.used_metrics = []
 
     def run(self):
@@ -290,17 +330,21 @@ class DecisionTree:
 
         used_metrics = set()
         for ii, node in enumerate(self.nodes):
-            fcn = getattr(selection_nodes, node['functionname'])
+            fcn = getattr(selection_nodes, node["functionname"])
 
-            params, kwargs = node['parameters'], node['kwargs']
-            params = self.check_null(params, node['functionname'])
-            kwargs = self.check_null(kwargs, node['functionname'])
+            params, kwargs = node["parameters"], node["kwargs"]
+            params = self.check_null(params, node["functionname"])
+            kwargs = self.check_null(kwargs, node["functionname"])
 
-            LGR.info('Step {}: Running function {} with parameters: {}'
-                     .format(ii, node['functionname'], {**params, **kwargs}))
+            LGR.info(
+                "Step {}: Running function {} with parameters: {}".format(
+                    ii, node["functionname"], {**params, **kwargs}
+                )
+            )
             self.comptable, dnode_outputs = fcn(
-                self.comptable, decision_node_idx=ii, **params, **kwargs)
-            used_metrics.update(dnode_outputs['outputs']['used_metrics'])
+                self.comptable, decision_node_idx=ii, **params, **kwargs
+            )
+            used_metrics.update(dnode_outputs["outputs"]["used_metrics"])
 
             # print(list(self.comptable['rationale']))
             # dnode_outputs is a dict that should always include fields for
@@ -318,19 +362,26 @@ class DecisionTree:
     def check_necessary_metrics(self):
         used_metrics = set()
         for ii, node in enumerate(self.nodes):
-            fcn = getattr(selection_nodes, node['functionname'])
+            fcn = getattr(selection_nodes, node["functionname"])
 
-            params, kwargs = node['parameters'], node['kwargs']
-            params = self.check_null(params, node['functionname'])
-            kwargs = self.check_null(kwargs, node['functionname'])
+            params, kwargs = node["parameters"], node["kwargs"]
+            params = self.check_null(params, node["functionname"])
+            kwargs = self.check_null(kwargs, node["functionname"])
 
-            LGR.info('Checking necessary metrics for function {} with parameters: {}'
-                     .format(node['functionname'], {**params, **kwargs}))
+            LGR.info(
+                "Checking necessary metrics for function {} with parameters: {}".format(
+                    node["functionname"], {**params, **kwargs}
+                )
+            )
             func_used_metrics = fcn(
-                self.comptable, decision_node_idx=ii, **params, **kwargs,
-                only_used_metrics=True)
+                self.comptable,
+                decision_node_idx=ii,
+                **params,
+                **kwargs,
+                only_used_metrics=True,
+            )
             used_metrics.update(func_used_metrics)
-        LGR.info('Used metrics: {}'.format(used_metrics))
+        LGR.info("Used metrics: {}".format(used_metrics))
         return used_metrics
 
     def check_null(self, params, fcn):
@@ -339,12 +390,16 @@ class DecisionTree:
                 try:
                     params[key] = getattr(self, key)
                 except AttributeError:
-                    raise ValueError('Parameter {} is required in node {}, but not defined. '
-                                     .format(key, fcn) + 'If {} is dataset specific, it should be '
-                                     'defined in the '.format(key) + ' initialization of '
-                                     'DecisionTree. If it is fixed regardless of dataset, it '
-                                     'should be defined in the json file that defines the '
-                                     'decision tree.')
+                    raise ValueError(
+                        "Parameter {} is required in node {}, but not defined. ".format(
+                            key, fcn
+                        )
+                        + "If {} is dataset specific, it should be "
+                        "defined in the ".format(key) + " initialization of "
+                        "DecisionTree. If it is fixed regardless of dataset, it "
+                        "should be defined in the json file that defines the "
+                        "decision tree."
+                    )
 
         return params
 
@@ -355,8 +410,13 @@ class DecisionTree:
         not_declared = set(used_metrics) - set(self.metrics)
         not_used = set(self.metrics) - set(used_metrics)
         if len(not_declared) > 0:
-            LGR.warning('Decision tree {} used additional metrics not declared '
-                        'as necessary: {}'.format(self.tree, not_declared))
+            LGR.warning(
+                "Decision tree {} used additional metrics not declared "
+                "as necessary: {}".format(self.tree, not_declared)
+            )
         if len(not_used) > 0:
-            LGR.warning('Decision tree {} failed to use metrics that were '
-                        'declared as necessary: {}'.format(self.tree, not_used))
+            LGR.warning(
+                "Decision tree {} failed to use metrics that were "
+                "declared as necessary: {}".format(self.tree, not_used)
+            )
+

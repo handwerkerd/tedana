@@ -13,6 +13,15 @@
         "signal-noise_t",
         "variance explained"
     ],
+    "intermediate_classifications": [
+        "lowvariance",
+        "provisionalaccept",
+        "provisionalreject"
+    ],
+    "classification_tags": [
+        "Likely BOLD",
+        "Low variance"
+    ],
     "nodes": [
         {
             "functionname": "manual_classify",
@@ -135,7 +144,7 @@
         {
             "functionname": "variance_lessthan_thresholds",
             "parameters": {
-                "ifTrue": "ignored",
+                "ifTrue": "lowvariance",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalreject",
