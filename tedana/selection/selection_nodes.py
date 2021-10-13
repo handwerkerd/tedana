@@ -44,7 +44,8 @@ decison_node_idx : :obj: `int`
 ifTrue : :obj:`str`
     If the condition in this step is true, give the component
     the label in this string. Options are 'accepted', 'rejected',
-    'provisionalaccept', 'provisionalreject', 'ignored', or 'nochange'
+    'nochange', or intermediate_classification labels predefined in the
+    decision tree
     If 'nochange' then don't change the current component classification\
 """,
     "ifFalse": """\
@@ -91,8 +92,8 @@ comptable: (C x M) :obj:`pandas.DataFrame`
     decide_comps may change depending on the the ifTrue and ifFalse instructions.
     When a classification changes, the 'rationale' column is appended to include
     and additional decision node index and change. For example, if this function
-    is the 5th decision node run and a component is reclassified as 'ignored',
-    the string in 'rationale' is appended to include '5: ignored;'
+    is the 5th decision node run and a component is reclassified as 'accepted',
+    the string in 'rationale' is appended to include '5: accepted;'
     comptable is only only returned if only_used_metrics=False
 dnode_outputs: :obj:`dict`
     Several parameters that should be output from each decision node function
@@ -139,12 +140,12 @@ prev_X_steps: :obj:`int`
         """,
     "kappa_elbow": """\
 kappa_elbow: :obj:`float`
-    The kappa threshold below which components should be rejected or ignored
+    The kappa threshold below which components are less likely to contain T2* signal
         \
 """,
     "rho_elbow": """\
 rho_elbow: :obj:`float`
-    The rho threshold above which components should be rejected or ignored
+    The rho threshold above which components are likely to contain nontrivial S0 signal
         \
 """,
 }
@@ -181,8 +182,9 @@ def manual_classify(
     {decide_comps}
     new_classification: :obj: `str`
         Assign all components identified in decide_comps the classification
-        in new_classification. Options are 'accepted', 'rejected',
-        'provisionalaccept', 'provisionalreject', or 'ignored'
+        in new_classification. Options are 'unclassified', 'accepted', 
+        'rejected', or intermediate_classification labels predefined in the
+        decision tree
     clear_rationale: :obj: `bool`
         If True, reset all values in the 'rationale' column to empty strings
         If False, do nothing
@@ -259,25 +261,28 @@ def manual_classify(
 manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
 
 
-def metric1_greaterthan_metric2(
+def left_op_right(
     comptable,
     decision_node_idx,
     ifTrue,
     ifFalse,
     decide_comps,
-    metric1,
-    metric2,
-    metric2_scale=1,
+    op,
+    left,
+    right,
+    right_scale=1,
+    left_scale=1,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
     only_used_metrics=False,
 ):
     """
-    Is metric1 > (metric2_scale*metric2)?
+    Tests a relationship between (left_scale*)left and (right_scale*right)
+    using an operator, like >, defined with op
     This can be used to directly compare any 2 metrics and use that info
-    to change component classification. If either metric is an number,
-    this can also compare a metric again a fixed threshold.
+    to change component classification. If either metric is a number,
+    this can also compare a metric against a fixed threshold.
 
     Parameters
     ----------
@@ -286,16 +291,21 @@ def metric1_greaterthan_metric2(
     {ifTrue}
     {ifFalse}
     {decide_comps}
-    metric1, metric2: :obj:`str` or :obj:`float`
+
+    op: :ojb:`str`
+        Must be one of: ">", ">=", "==", "<=", "<"
+        Applied the user defined operator to left op right
+    left, right: :obj:`str` or :obj:`float`
         The labels for the two metrics to be used for comparision.
-        for example, metric1='rho' and metric2='kappa' means this
-        function will test rho>kappa. One of the two can also be a number.
+        for example: left='kappa', right='rho' and op='>' means this
+        function will test kappa>rho. One of the two can also be a number.
         In that case a metric would be compared against a fixed threshold.
-        For example metric1=0 and metric2='T2fitdiff_invsout_ICAmap_Tstat'
-        means this function will test 0>T2fitdiff_invsout_ICAmap_Tstat
-    metric2_scale: :obj:`float`, optional
-            Multiple a metric2's value by metric2_scale before testing if it
-            is greater than the metric1 value. default=1
+        For example left='T2fitdiff_invsout_ICAmap_Tstat', right=0, and op='>'
+        means this function will test T2fitdiff_invsout_ICAmap_Tstat>0
+    left_scale, right_scale: :obj:`float`, optional
+            Multiply the left or right metrics value by a constant. For example
+            if left='kappa', right='rho', right_scale=2, and op='>' this tests
+            kappa>(2*rho). default=1
     {log_extra}
     {custom_node_label}
     {only_used_metrics}
@@ -306,20 +316,30 @@ def metric1_greaterthan_metric2(
     """
 
     used_metrics = []
-    if isinstance(metric1, str):
-        used_metrics.append(metric1)
-    if isinstance(metric2, str):
-        used_metrics.append(metric2)
+    if isinstance(left, str):
+        used_metrics.append(left)
+    if isinstance(right, str):
+        used_metrics.append(right)
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = "Step {}: metric1_greaterthan_metric2".format(decision_node_idx)
+    legal_ops = (">", ">=", "==", "<=", "<")
+    if op not in legal_ops:
+        raise ValueError(f"{op} is not a binary comparison operator, like > or <")
+
+    function_name_idx = f"Step {decision_node_idx}: left_op_right"
     if custom_node_label:
         node_label = custom_node_label
-    elif metric2_scale == 1:
-        node_label = str(metric1) + ">" + str(metric2)
     else:
-        node_label = str(metric1) + ">(" + str(metric2_scale) + "*" + str(metric2) + ")"
+        if left_scale == 1:
+            tmp_left_scale = ""
+        else:
+            tmp_left_scale = f"{left_scale}*"
+        if right_scale == 1:
+            tmp_right_scale = ""
+        else:
+            tmp_right_scale = f"{right_scale}*"
+        node_label = f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right}"
 
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
@@ -330,11 +350,6 @@ def metric1_greaterthan_metric2(
 
     confirm_metrics_exist(comptable, used_metrics, function_name=function_name_idx)
 
-    # decision_tree_steps = new_decision_node_info(decision_tree_steps, function_name,
-    #                                             necessary_metrics, ifTrue, ifFalse,
-    #                                             additionalparameters=None)
-    # nodeidxstr = str(decision_tree_steps[-1]['nodeidx'])
-
     comps2use = selectcomps2use(comptable, decide_comps)
 
     if comps2use is None:
@@ -342,15 +357,15 @@ def metric1_greaterthan_metric2(
         numTrue = 0
         numFalse = 0
     else:
-        if isinstance(metric1, str):
-            val1 = comptable.loc[comps2use, metric1]
+        if isinstance(left, str):
+            val1 = comptable.loc[comps2use, left]
         else:
-            val1 = metric1  # should be a fixed number
-        if isinstance(metric2, str):
-            val2 = comptable.loc[comps2use, metric2]
+            val1 = left  # should be a fixed number
+        if isinstance(right, str):
+            val2 = comptable.loc[comps2use, right]
         else:
-            val2 = metric2  # should be a fixed number
-        decision_boolean = val1 > (metric2_scale * val2)
+            val2 = right  # should be a fixed number
+        decision_boolean = eval(f"({left_scale}*{val1}) {op} ({right_scale} * {val2})")
 
         comptable = change_comptable_classifications(
             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
@@ -375,9 +390,7 @@ def metric1_greaterthan_metric2(
     return comptable, dnode_outputs
 
 
-metric1_greaterthan_metric2.__doc__ = metric1_greaterthan_metric2.__doc__.format(
-    **decision_docs
-)
+left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
 
 
 def classification_exists(
@@ -935,7 +948,7 @@ def lowvariance_highmeanmetricrank_lowkappa(
     Finds components with variance below a threshold,
     a mean metric rank above a threshold, and kappa below a threshold.
     This would typically be used to identify remaining components that would
-    otherwise be rejected & put them in ignore due to their low variance
+    otherwise be rejected & put them in accept with a 'low variance' tag
 
     Parameters
     ----------
