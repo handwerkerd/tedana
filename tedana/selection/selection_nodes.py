@@ -202,18 +202,27 @@ def manual_classify(
     since the same classification is assigned to all components listed in
     decide_comps
     """
-    used_metrics = []
+
+    # predefine all outputs that should be logged
+    outputs = {
+        "decision_node_idx": decision_node_idx,
+        "used_metrics": [],
+        "node_label": None,
+        "numTrue": None,
+        "numFalse": None,
+    }
+
     if only_used_metrics:
-        return used_metrics
+        return outputs["used_metrics"]
 
     ifTrue = new_classification
     ifFalse = "nochange"
 
     function_name_idx = "Step {}: manual_classify".format((decision_node_idx))
     if custom_node_label:
-        node_label = custom_node_label
+        outputs["node_label"] = custom_node_label
     else:
-        node_label = "Set " + str(decide_comps) + " to " + new_classification
+        outputs["node_label"] = "Set " + str(decide_comps) + " to " + new_classification
 
     if log_extra_info:
         LGR.info(log_extra_info)
@@ -224,15 +233,15 @@ def manual_classify(
 
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-        numTrue = 0
-        numFalse = 0
+        outputs["numTrue"] = 0
+        outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
         comptable = change_comptable_classifications(
             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
-        numTrue = decision_boolean.sum()
-        numFalse = np.logical_not(decision_boolean).sum()
+        outputs["numTrue"] = decision_boolean.sum()
+        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(
@@ -251,9 +260,7 @@ def manual_classify(
             + " component classification 'rationale' values are set to empty strings"
         )
 
-    dnode_outputs = create_dnode_outputs(
-        decision_node_idx, used_metrics, node_label, numTrue, numFalse
-    )
+    dnode_outputs = {"outputs": outputs}
 
     return comptable, dnode_outputs
 
@@ -315,13 +322,21 @@ def left_op_right(
     {basicreturns}
     """
 
-    used_metrics = []
+    # predefine all outputs that should be logged
+    outputs = {
+        "decision_node_idx": decision_node_idx,
+        "used_metrics": [],
+        "node_label": None,
+        "numTrue": None,
+        "numFalse": None,
+    }
+
     if isinstance(left, str):
-        used_metrics.append(left)
+        outputs["used_metrics"].append(left)
     if isinstance(right, str):
-        used_metrics.append(right)
+        outputs["used_metrics"].append(right)
     if only_used_metrics:
-        return used_metrics
+        return outputs["used_metrics"]
 
     legal_ops = (">", ">=", "==", "<=", "<")
     if op not in legal_ops:
@@ -329,7 +344,7 @@ def left_op_right(
 
     function_name_idx = f"Step {decision_node_idx}: left_op_right"
     if custom_node_label:
-        node_label = custom_node_label
+        outputs["node_label"] = custom_node_label
     else:
         if left_scale == 1:
             tmp_left_scale = ""
@@ -339,7 +354,7 @@ def left_op_right(
             tmp_right_scale = ""
         else:
             tmp_right_scale = f"{right_scale}*"
-        node_label = f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right}"
+        outputs["node_label"] = f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right}"
 
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
@@ -348,14 +363,16 @@ def left_op_right(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    confirm_metrics_exist(comptable, used_metrics, function_name=function_name_idx)
+    confirm_metrics_exist(
+        comptable, outputs["used_metrics"], function_name=function_name_idx
+    )
 
     comps2use = selectcomps2use(comptable, decide_comps)
 
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-        numTrue = 0
-        numFalse = 0
+        outputs["numTrue"] = 0
+        outputs["numFalse"] = 0
     else:
         if isinstance(left, str):
             val1 = comptable.loc[comps2use, left]
@@ -370,22 +387,20 @@ def left_op_right(
         comptable = change_comptable_classifications(
             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
-        numTrue = np.asarray(decision_boolean).sum()
-        numFalse = np.logical_not(decision_boolean).sum()
+        outputs["numTrue"] = np.asarray(decision_boolean).sum()
+        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(
             function_name_idx,
             comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
+            numTrue=outputs["numTrue"],
+            numFalse=outputs["numFalse"],
             ifTrue=ifTrue,
             ifFalse=ifFalse,
         )
 
-    dnode_outputs = create_dnode_outputs(
-        decision_node_idx, used_metrics, node_label, numTrue, numFalse
-    )
+    dnode_outputs = {"outputs": outputs}
 
     return comptable, dnode_outputs
 
