@@ -247,8 +247,8 @@ def manual_classify(
         log_decision_tree_step(
             function_name_idx,
             comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
+            numTrue=outputs["numTrue"],
+            numFalse=outputs["numFalse"],
             ifTrue=ifTrue,
             ifFalse=ifFalse,
         )
@@ -675,7 +675,7 @@ def variance_lessthan_thresholds(
     {ifTrue}
     {ifFalse}
     {decide_comps}
-    varmetric: :obj:`str`
+    var_metric: :obj:`str`
         The name of the metric in comptable for variance. default=varexp
         This is an option so that it is possible to set this to normvarexp
         or some other variance measure
@@ -693,16 +693,23 @@ def variance_lessthan_thresholds(
     {basicreturns}
     """
 
-    used_metrics = [var_metric]
+    outputs = {
+        "decision_node_idx": decision_node_idx,
+        "used_metrics": [var_metric],
+        "node_label": None,
+        "numTrue": None,
+        "numFalse": None,
+    }
+
     if only_used_metrics:
-        return used_metrics
+        return outputs["used_metrics"]
 
     function_name_idx = "Step {}: variance_lt_thresholds".format(decision_node_idx)
     if custom_node_label:
-        node_label = custom_node_label
+        outputs["node_label"] = custom_node_label
     else:
-        node_label = ("{}<{}. All variance<{}").format(
-            used_metrics, single_comp_threshold, all_comp_threshold
+        outputs["node_label"] = ("{}<{}. All variance<{}").format(
+            outputs["used_metrics"], single_comp_threshold, all_comp_threshold
         )
 
     if log_extra_info:
@@ -710,14 +717,14 @@ def variance_lessthan_thresholds(
     if log_extra_report:
         RepLGR.info(log_extra_report)
     metrics_exist, missing_metrics = confirm_metrics_exist(
-        comptable, used_metrics, function_name=function_name_idx
+        comptable, outputs["used_metrics"], function_name=function_name_idx
     )
 
     comps2use = selectcomps2use(comptable, decide_comps)
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-        numTrue = 0
-        numFalse = 0
+        outputs["numTrue"] = 0
+        outputs["numFalse"] = 0
     else:
         variance = comptable.loc[comps2use, var_metric]
         decision_boolean = variance < single_comp_threshold
@@ -732,22 +739,20 @@ def variance_lessthan_thresholds(
         comptable = change_comptable_classifications(
             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
-        numTrue = np.asarray(decision_boolean).sum()
-        numFalse = np.logical_not(decision_boolean).sum()
+        outputs["numTrue"] = np.asarray(decision_boolean).sum()
+        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #    numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(
             function_name_idx,
             comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
+            numTrue=outputs["numTrue"],
+            numFalse=outputs["numFalse"],
             ifTrue=ifTrue,
             ifFalse=ifFalse,
         )
 
-    dnode_outputs = create_dnode_outputs(
-        decision_node_idx, used_metrics, node_label, numTrue, numFalse
-    )
+    dnode_outputs = {"outputs": outputs}
 
     return comptable, dnode_outputs
 
@@ -810,23 +815,36 @@ def kappa_rho_elbow_cutoffs_kundu(
 
     # If kappa_only or rho_only is true kappa or rho might not actually be
     # used, but, as of now, both are required to run this function
-    used_metrics = ["kappa", "rho"]
+
+    outputs = {
+        "decision_node_idx": decision_node_idx,
+        "used_metrics": ["kappa", "rho"],
+        "node_label": None,
+        "numTrue": None,
+        "numFalse": None,
+        "n_echos": n_echos,
+        "varex_upper_p": None,
+        "kappa_elbow": None,
+        "rho_elbow": None,
+        "kappa_only": kappa_only,
+        "rho_only": rho_only,
+    }
 
     if only_used_metrics:
-        return used_metrics
+        return outputs["used_metrics"]
 
     function_name_idx = "Step {}: kappa_rho_elbow_cutoffs_kundu".format(
         decision_node_idx
     )
     if custom_node_label:
-        node_label = custom_node_label
+        outputs["node_label"] = custom_node_label
     else:
         if kappa_only:
-            node_label = "Kappa Elbow Thresholding"
+            outputs["node_label"] = "Kappa Elbow Thresholding"
         elif rho_only:
-            node_label = "Rho Elbow Thresholding"
+            outputs["node_label"] = "Rho Elbow Thresholding"
         else:
-            node_label = "Kappa&Rho Elbow Thresholding"
+            outputs["node_label"] = "Kappa&Rho Elbow Thresholding"
 
     LGR.info(
         "Note: This matches the elbow selecton criteria in Kundu's MEICA v2.7"
@@ -840,7 +858,7 @@ def kappa_rho_elbow_cutoffs_kundu(
         RepLGR.info(log_extra_report)
 
     metrics_exist, missing_metrics = confirm_metrics_exist(
-        comptable, used_metrics, function_name=function_name_idx
+        comptable, outputs["used_metrics"], function_name=function_name_idx
     )
 
     comps2use = selectcomps2use(comptable, decide_comps)
@@ -855,10 +873,10 @@ def kappa_rho_elbow_cutoffs_kundu(
             log_decision_tree_step(
                 function_name_idx, comps2use, decide_comps="unclassified"
             )
-        numTrue = 0
-        numFalse = 0
+        outputs["numTrue"] = 0
+        outputs["numFalse"] = 0
     else:
-        kappa_elbow = kappa_elbow_kundu(comptable, n_echos)
+        outputs["kappa_elbow"] = kappa_elbow_kundu(comptable, n_echos)
 
         # The first elbow used to be for rho values of the unclassified components
         # excluding a few based on differences of variance. Now it's all unclassified
@@ -866,7 +884,7 @@ def kappa_rho_elbow_cutoffs_kundu(
         # Upper limit for variance explained is median across components with high
         # Kappa values. High Kappa is defined as Kappa above Kappa elbow.
         f05, _, f01 = getfbounds(n_echos)
-        varex_upper_p = np.median(
+        outputs["varex_upper_p"] = np.median(
             comptable.loc[
                 comptable["kappa"] > getelbow(comptable["kappa"], return_val=True),
                 "variance explained",
@@ -880,7 +898,7 @@ def kappa_rho_elbow_cutoffs_kundu(
             )
             diff_vals = temp_comptable["variance explained"].diff(-1)
             diff_vals = diff_vals.fillna(0)
-            ncls = temp_comptable.loc[diff_vals < varex_upper_p].index.values
+            ncls = temp_comptable.loc[diff_vals < outputs["varex_upper_p"]].index.values
         # kappa_elbow was altready calculated in kappa_elbow_kundu above
         # kappas_nonsig = comptable.loc[comptable["kappa"] < f01, "kappa"]
         # kappa_elbow = np.min(
@@ -889,7 +907,7 @@ def kappa_rho_elbow_cutoffs_kundu(
         #         getelbow(comptable["kappa"], return_val=True),
         #     )
         # )
-        rho_elbow = np.mean(
+        outputs["rho_elbow"] = np.mean(
             (
                 getelbow(comptable.loc[ncls, "rho"], return_val=True),
                 getelbow(comptable["rho"], return_val=True),
@@ -898,43 +916,33 @@ def kappa_rho_elbow_cutoffs_kundu(
         )
 
         if kappa_only:
-            decision_boolean = comptable.loc[comps2use, "kappa"] >= kappa_elbow
-        elif rho_only:
-            decision_boolean = comptable.loc[comps2use, "rho"] < rho_elbow
-        else:
-            decision_boolean = (comptable.loc[comps2use, "kappa"] >= kappa_elbow) & (
-                comptable.loc[comps2use, "rho"] < rho_elbow
+            decision_boolean = (
+                comptable.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
             )
+        elif rho_only:
+            decision_boolean = comptable.loc[comps2use, "rho"] < outputs["rho_elbow"]
+        else:
+            decision_boolean = (
+                comptable.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
+            ) & (comptable.loc[comps2use, "rho"] < outputs["rho_elbow"])
 
         comptable = change_comptable_classifications(
             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
-        numTrue = np.asarray(decision_boolean).sum()
-        numFalse = np.logical_not(decision_boolean).sum()
+        outputs["numTrue"] = np.asarray(decision_boolean).sum()
+        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #        numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(
             function_name_idx,
             comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
+            numTrue=outputs["numTrue"],
+            numFalse=outputs["numFalse"],
             ifTrue=ifTrue,
             ifFalse=ifFalse,
         )
 
-    dnode_outputs = create_dnode_outputs(
-        decision_node_idx,
-        used_metrics,
-        node_label,
-        numTrue,
-        numFalse,
-        n_echos=n_echos,
-        varex_threshold=varex_upper_p,
-        kappa_elbow=kappa_elbow,
-        rho_elbow=rho_elbow,
-        kappa_only=kappa_only,
-        rho_only=rho_only,
-    )
+    dnode_outputs = {"outputs": outputs}
 
     return comptable, dnode_outputs
 
