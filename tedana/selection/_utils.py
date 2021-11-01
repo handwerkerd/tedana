@@ -15,27 +15,31 @@ RefLGR = logging.getLogger("REFERENCES")
 # Functions that are used for interacting with comptable
 
 
-def selectcomps2use(comptable, decide_comps):
+def selectcomps2use(DT_class, decide_comps):
     """
-    Give a list of components that fit a classification types
+    Give a list of component numbers that fit the classification types in
+    decide_comps. Also pulls out and returns component_table from within
+    DT_class
     Since 'all' converts string to boolean, it will miss components with
     no classification. This means, in the initialization of comptree, all
     components need to be labeled as unclassified, NOT empty
-    WILL NEED TO ADD NUMBER INDEXING TO selectcomps2use
+    MAY WANT TO ADD NUMBER INDEXING TO selectcomps2use SO THAT USERS CAN
+    SELECT COMPONENTS BY NUMBER RATHER THAN LABEL
     """
+    component_table = DT_class.component_table
     if type(decide_comps) == str:
         decide_comps = [decide_comps]
     if decide_comps[0] == "all":
         # All components with any string in the classification field
         # are set to True
-        comps2use = list(range(comptable.shape[0]))
+        comps2use = list(range(component_table.shape[0]))
     # elif (type(decide_comps) == str):
     #    comps2use = comptable.index[comptable['classification'] == decide_comps].tolist()
     elif (type(decide_comps) == list) and (type(decide_comps[0]) == str):
         comps2use = []
         for didx in range(len(decide_comps)):
-            newcomps2use = comptable.index[
-                comptable["classification"] == decide_comps[didx]
+            newcomps2use = component_table.index[
+                component_table["classification"] == decide_comps[didx]
             ].tolist()
             comps2use = list(set(comps2use + newcomps2use))
     else:
@@ -48,7 +52,7 @@ def selectcomps2use(comptable, decide_comps):
     if not comps2use:
         comps2use = None
 
-    return comps2use
+    return comps2use, component_table
 
 
 def change_comptable_classifications(
@@ -249,9 +253,9 @@ def log_decision_tree_step(
     ifFalse=None,
 ):
     """
-        Logging text to add for every decision tree calculation
-        If decide_comps is not None, then the output will be ugly
-        if numTrue, numFalse, ifTrue, and ifFalse are not defined
+    Logging text to add for every decision tree calculation
+    If decide_comps is not None, then the output will be ugly
+    if numTrue, numFalse, ifTrue, and ifFalse are not defined
     """
 
     if comps2use is None:

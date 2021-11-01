@@ -152,7 +152,7 @@ rho_elbow: :obj:`float`
 
 
 def manual_classify(
-    comptable,
+    DT_class,
     decision_node_idx,
     decide_comps,
     new_classification,
@@ -182,7 +182,7 @@ def manual_classify(
     {decide_comps}
     new_classification: :obj: `str`
         Assign all components identified in decide_comps the classification
-        in new_classification. Options are 'unclassified', 'accepted', 
+        in new_classification. Options are 'unclassified', 'accepted',
         'rejected', or intermediate_classification labels predefined in the
         decision tree
     clear_rationale: :obj: `bool`
@@ -229,7 +229,7 @@ def manual_classify(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use = selectcomps2use(comptable, decide_comps)
+    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
 
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
@@ -237,8 +237,8 @@ def manual_classify(
         outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
-        comptable = change_comptable_classifications(
-            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        component_table = change_comptable_classifications(
+            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
         outputs["numTrue"] = decision_boolean.sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -254,22 +254,23 @@ def manual_classify(
         )
 
     if clear_rationale:
-        comptable["rationale"] = ""
+        component_table["rationale"] = ""
         LGR.info(
             function_name_idx
             + " component classification 'rationale' values are set to empty strings"
         )
 
     dnode_outputs = {"outputs": outputs}
+    DT_class.component_table = component_table
 
-    return comptable, dnode_outputs
+    return DT_class, dnode_outputs
 
 
 manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
 
 
 def left_op_right(
-    comptable,
+    DT_class,
     decision_node_idx,
     ifTrue,
     ifFalse,
@@ -363,11 +364,11 @@ def left_op_right(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    confirm_metrics_exist(
-        comptable, outputs["used_metrics"], function_name=function_name_idx
-    )
+    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
 
-    comps2use = selectcomps2use(comptable, decide_comps)
+    confirm_metrics_exist(
+        component_table, outputs["used_metrics"], function_name=function_name_idx
+    )
 
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
@@ -375,17 +376,17 @@ def left_op_right(
         outputs["numFalse"] = 0
     else:
         if isinstance(left, str):
-            val1 = comptable.loc[comps2use, left]
+            val1 = component_table.loc[comps2use, left]
         else:
             val1 = left  # should be a fixed number
         if isinstance(right, str):
-            val2 = comptable.loc[comps2use, right]
+            val2 = component_table.loc[comps2use, right]
         else:
             val2 = right  # should be a fixed number
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
         comptable = change_comptable_classifications(
-            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -401,8 +402,8 @@ def left_op_right(
         )
 
     dnode_outputs = {"outputs": outputs}
-
-    return comptable, dnode_outputs
+    DT_class.component_table = component_table
+    return DT_class, dnode_outputs
 
 
 left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
@@ -564,8 +565,10 @@ def meanmetricrank_and_variance_greaterthan_thresh(
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = "Step {}: meanmetricrank_and_variance_greaterthan_thresh".format(
-        decision_node_idx
+    function_name_idx = (
+        "Step {}: meanmetricrank_and_variance_greaterthan_thresh".format(
+            decision_node_idx
+        )
     )
     if custom_node_label:
         node_label = custom_node_label
@@ -643,13 +646,13 @@ def meanmetricrank_and_variance_greaterthan_thresh(
     return comptable, dnode_outputs
 
 
-meanmetricrank_and_variance_greaterthan_thresh.__doc__ = meanmetricrank_and_variance_greaterthan_thresh.__doc__.format(
-    **decision_docs
+meanmetricrank_and_variance_greaterthan_thresh.__doc__ = (
+    meanmetricrank_and_variance_greaterthan_thresh.__doc__.format(**decision_docs)
 )
 
 
 def variance_lessthan_thresholds(
-    comptable,
+    DT_class,
     decision_node_idx,
     ifTrue,
     ifFalse,
@@ -716,17 +719,18 @@ def variance_lessthan_thresholds(
         LGR.info(log_extra_info)
     if log_extra_report:
         RepLGR.info(log_extra_report)
+
+    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
     metrics_exist, missing_metrics = confirm_metrics_exist(
-        comptable, outputs["used_metrics"], function_name=function_name_idx
+        component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
-    comps2use = selectcomps2use(comptable, decide_comps)
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
     else:
-        variance = comptable.loc[comps2use, var_metric]
+        variance = component_table.loc[comps2use, var_metric]
         decision_boolean = variance < single_comp_threshold
         # if all the low variance components sum above all_comp_threshold
         # keep removing the highest remaining variance component until
@@ -736,8 +740,8 @@ def variance_lessthan_thresholds(
             while variance[decision_boolean].sum() > all_comp_threshold:
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
-        comptable = change_comptable_classifications(
-            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        component_table = change_comptable_classifications(
+            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -753,8 +757,8 @@ def variance_lessthan_thresholds(
         )
 
     dnode_outputs = {"outputs": outputs}
-
-    return comptable, dnode_outputs
+    DT_class.component_table = component_table
+    return DT_class, dnode_outputs
 
 
 variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.format(
@@ -763,7 +767,7 @@ variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.form
 
 
 def kappa_rho_elbow_cutoffs_kundu(
-    comptable,
+    DT_class,
     decision_node_idx,
     ifTrue,
     ifFalse,
@@ -857,12 +861,12 @@ def kappa_rho_elbow_cutoffs_kundu(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
+    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
     metrics_exist, missing_metrics = confirm_metrics_exist(
-        comptable, outputs["used_metrics"], function_name=function_name_idx
+        component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
-    comps2use = selectcomps2use(comptable, decide_comps)
-    unclassified_comps2use = selectcomps2use(comptable, "unclassified")
+    unclassified_comps2use = selectcomps2use(DT_class, "unclassified")[0]
 
     if (comps2use is None) or (unclassified_comps2use is None):
         if comps2use is None:
@@ -876,7 +880,7 @@ def kappa_rho_elbow_cutoffs_kundu(
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
     else:
-        outputs["kappa_elbow"] = kappa_elbow_kundu(comptable, n_echos)
+        outputs["kappa_elbow"] = kappa_elbow_kundu(component_table, n_echos)
 
         # The first elbow used to be for rho values of the unclassified components
         # excluding a few based on differences of variance. Now it's all unclassified
@@ -885,15 +889,16 @@ def kappa_rho_elbow_cutoffs_kundu(
         # Kappa values. High Kappa is defined as Kappa above Kappa elbow.
         f05, _, f01 = getfbounds(n_echos)
         outputs["varex_upper_p"] = np.median(
-            comptable.loc[
-                comptable["kappa"] > getelbow(comptable["kappa"], return_val=True),
+            component_table.loc[
+                component_table["kappa"]
+                > getelbow(component_table["kappa"], return_val=True),
                 "variance explained",
             ]
         )
 
         ncls = unclassified_comps2use.copy()
         for i_loop in range(3):
-            temp_comptable = comptable.loc[ncls].sort_values(
+            temp_comptable = component_table.loc[ncls].sort_values(
                 by=["variance explained"], ascending=False
             )
             diff_vals = temp_comptable["variance explained"].diff(-1)
@@ -909,25 +914,27 @@ def kappa_rho_elbow_cutoffs_kundu(
         # )
         outputs["rho_elbow"] = np.mean(
             (
-                getelbow(comptable.loc[ncls, "rho"], return_val=True),
-                getelbow(comptable["rho"], return_val=True),
+                getelbow(component_table.loc[ncls, "rho"], return_val=True),
+                getelbow(component_table["rho"], return_val=True),
                 f05,
             )
         )
 
         if kappa_only:
             decision_boolean = (
-                comptable.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
+                component_table.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
             )
         elif rho_only:
-            decision_boolean = comptable.loc[comps2use, "rho"] < outputs["rho_elbow"]
+            decision_boolean = (
+                component_table.loc[comps2use, "rho"] < outputs["rho_elbow"]
+            )
         else:
             decision_boolean = (
-                comptable.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
-            ) & (comptable.loc[comps2use, "rho"] < outputs["rho_elbow"])
+                component_table.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
+            ) & (component_table.loc[comps2use, "rho"] < outputs["rho_elbow"])
 
-        comptable = change_comptable_classifications(
-            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        component_table = change_comptable_classifications(
+            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -943,8 +950,8 @@ def kappa_rho_elbow_cutoffs_kundu(
         )
 
     dnode_outputs = {"outputs": outputs}
-
-    return comptable, dnode_outputs
+    DT_class.component_table = component_table
+    return DT_class, dnode_outputs
 
 
 kappa_rho_elbow_cutoffs_kundu.__doc__ = kappa_rho_elbow_cutoffs_kundu.__doc__.format(
@@ -1086,8 +1093,8 @@ def lowvariance_highmeanmetricrank_lowkappa(
     return comptable, dnode_outputs
 
 
-lowvariance_highmeanmetricrank_lowkappa.__doc__ = lowvariance_highmeanmetricrank_lowkappa.__doc__.format(
-    **decision_docs
+lowvariance_highmeanmetricrank_lowkappa.__doc__ = (
+    lowvariance_highmeanmetricrank_lowkappa.__doc__.format(**decision_docs)
 )
 
 
@@ -1146,8 +1153,10 @@ def highvariance_highmeanmetricrank_highkapparatio(
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = "Step {}: highvariance_highmeanmetricrank_highkapparatio".format(
-        decision_node_idx
+    function_name_idx = (
+        "Step {}: highvariance_highmeanmetricrank_highkapparatio".format(
+            decision_node_idx
+        )
     )
     if custom_node_label:
         node_label = custom_node_label
@@ -1279,8 +1288,8 @@ def highvariance_highmeanmetricrank_highkapparatio(
     return comptable, dnode_outputs
 
 
-highvariance_highmeanmetricrank_highkapparatio.__doc__ = highvariance_highmeanmetricrank_highkapparatio.__doc__.format(
-    **decision_docs
+highvariance_highmeanmetricrank_highkapparatio.__doc__ = (
+    highvariance_highmeanmetricrank_highkapparatio.__doc__.format(**decision_docs)
 )
 
 
@@ -1339,8 +1348,10 @@ def highvariance_highmeanmetricrank(
     if only_used_metrics:
         return used_metrics
 
-    function_name_idx = "Step {}: highvariance_highmeanmetricrank_highkapparatio".format(
-        (decision_node_idx)
+    function_name_idx = (
+        "Step {}: highvariance_highmeanmetricrank_highkapparatio".format(
+            (decision_node_idx)
+        )
     )
     if custom_node_label:
         node_label = custom_node_label
@@ -1462,8 +1473,8 @@ def highvariance_highmeanmetricrank(
     return comptable, dnode_outputs
 
 
-highvariance_highmeanmetricrank.__doc__ = highvariance_highmeanmetricrank.__doc__.format(
-    **decision_docs
+highvariance_highmeanmetricrank.__doc__ = (
+    highvariance_highmeanmetricrank.__doc__.format(**decision_docs)
 )
 
 
@@ -1579,4 +1590,3 @@ def highvariance_lowkappa(
 
 
 highvariance_lowkappa.__doc__ = highvariance_lowkappa.__doc__.format(**decision_docs)
-

@@ -116,7 +116,7 @@ def validate_tree(tree):
         "classification_tags",
         "nodes",
     ]
-    defaults = {"comptable", "decision_node_idx"}
+    defaults = {"DT_class", "decision_node_idx"}
     default_classifications = {"nochange", "accepted", "rejected", "unclassified"}
     default_decide_comps = {"all", "accepted", "rejected", "unclassified"}
 
@@ -258,9 +258,19 @@ class DecisionTree:
 
     Returns
     -------
-    comptable : :obj:`pandas.DataFrame`
+    component_table : :obj:`pandas.DataFrame`
         Updated component table with additional metrics and with classifications
         (i.e., accepted, rejected, or ignored) for each component
+    cross_component_metrics : :obj:`Dict`
+        A dictionary of metrics that are each a single value calculated across
+        components. For example, kappa and rho. For each metric name key, the
+        value is a dict containing the following keys:
+        "value" The metric's value
+        "node calculated" The node index where the value was calculated
+        "comment" Text explaining the meaning or purpose of this value
+    component_status_table : :obj:`pandas.DataFrame`
+        A dataframe where each column lists the classification status of
+        each component after each node was run
     nodes : :obj:`dict`
         Nodes used in decision tree. This includes the decision tree dict
         from the json file in the `tree` input. For every dict in the list of
@@ -286,13 +296,20 @@ class DecisionTree:
     def __init__(self, tree, comptable, **kwargs):
         # initialize stuff based on the info in specified `tree`
         self.tree = tree
-        self.comptable = comptable.copy()
+        self.component_table = comptable.copy()
 
         # To run a decision tree, each component needs to have an initial classification
         # If the classification column doesn't exist, create it and label all components
         # as unclassified
-        if "classification" not in self.comptable:
-            self.comptable["classification"] = "unclassified"
+        if "classification" not in self.component_table:
+            self.component_table["classification"] = "unclassified"
+        self.component_status_table = self.component_table[
+            ["Component", "classification"]
+        ].copy()
+        self.component_status_table = self.component_status_table.rename(
+            columns={"classification": "initialized classification"}
+        )
+
         self.__dict__.update(kwargs)
         self.config = load_config(self.tree)
 
@@ -302,7 +319,8 @@ class DecisionTree:
         RefLGR.info(self.config.get("refs", ""))
 
         self.nodes = self.config["nodes"]
-        self.metrics = self.config["necessary_metrics"]
+        self.necessary_metrics = self.config["necessary_metrics"]
+        self.cross_component_metrics = dict()
         self.used_metrics = []
 
     def run(self):
@@ -314,19 +332,26 @@ class DecisionTree:
 
         Returns
         -------
-        comptable : :obj:`pandas.DataFrame`
+        component_table : :obj:`pandas.DataFrame`
             Updated component table with additional metrics and with classifications
-            (i.e., accepted, rejected, or ignored) for each component
+            (i.e., accepted, rejected) for each component
+        cross_component_metrics : :obj:`Dict`
+            A dictionary of metrics that are each a single value calculated across
+            components. For example, kappa and rho. For each metric name key, the
+            value is a dict containing the following keys:
+            "value" The metric's value
+            "node calculated" The node index where the value was calculated
+            "comment" Text explaining the meaning or purpose of this value
+        component_status_table : :obj:`pandas.DataFrame`
+            A dataframe where each column lists the classification status of
+            each component after each node was run
         nodes : :obj:`dict`
             Nodes used in decision tree with updated information from run-time
-
-
-
         """
 
         # this will crash the program with an error message if not all
         # necessary_metrics are in the comptable
-        confirm_metrics_exist(self.comptable, self.metrics, self.tree)
+        confirm_metrics_exist(self.component_table, self.necessary_metrics, self.tree)
 
         used_metrics = set()
         for ii, node in enumerate(self.nodes):
@@ -341,23 +366,26 @@ class DecisionTree:
                     ii, node["functionname"], {**params, **kwargs}
                 )
             )
-            self.comptable, dnode_outputs = fcn(
-                self.comptable, decision_node_idx=ii, **params, **kwargs
-            )
+            self, dnode_outputs = fcn(self, decision_node_idx=ii, **params, **kwargs)
             used_metrics.update(dnode_outputs["outputs"]["used_metrics"])
 
-            # print(list(self.comptable['rationale']))
+            # print(list(self.component_table['rationale']))
             # dnode_outputs is a dict that should always include fields for
             #   decision_node_idx, numTrue, numFalse, used_metrics, and node_label
             #   any other fields will also be logged in this output
             self.nodes[ii].update(dnode_outputs)
-            log_classification_counts(ii, self.comptable)
+            log_classification_counts(ii, self.component_table)
 
         # Move decision columns to end
-        self.comptable = clean_dataframe(self.comptable)
+        self.component_table = clean_dataframe(self.component_table)
         self.are_only_necessary_metrics_used(used_metrics)
         print(self.nodes)
-        return self.comptable, self.nodes
+        return (
+            self.component_table,
+            self.cross_component_metrics,
+            self.component_status_table,
+            self.nodes,
+        )
 
     def check_necessary_metrics(self):
         used_metrics = set()
@@ -374,7 +402,7 @@ class DecisionTree:
                 )
             )
             func_used_metrics = fcn(
-                self.comptable,
+                self.component_table,
                 decision_node_idx=ii,
                 **params,
                 **kwargs,
@@ -407,8 +435,8 @@ class DecisionTree:
         # This function checks if all metrics that are declared as necessary
         # are actually used and if any used_metrics weren't explicitly declared
         # If either of these happen, a warning is added to the logger
-        not_declared = set(used_metrics) - set(self.metrics)
-        not_used = set(self.metrics) - set(used_metrics)
+        not_declared = set(used_metrics) - set(self.necessary_metrics)
+        not_used = set(self.necessary_metrics) - set(used_metrics)
         if len(not_declared) > 0:
             LGR.warning(
                 "Decision tree {} used additional metrics not declared "
@@ -419,4 +447,3 @@ class DecisionTree:
                 "Decision tree {} failed to use metrics that were "
                 "declared as necessary: {}".format(self.tree, not_used)
             )
-
