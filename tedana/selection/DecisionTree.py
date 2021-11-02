@@ -106,7 +106,7 @@ def validate_tree(tree):
 
     # Set the fields that should always be present
     err_msg = ""
-    tree_info = [
+    tree_expected_keys = [
         "tree_id",
         "info",
         "report",
@@ -121,11 +121,19 @@ def validate_tree(tree):
     default_decide_comps = {"all", "accepted", "rejected", "unclassified"}
 
     # Confirm that the required fields exist
-    for k in tree_info:
-        try:
-            assert tree.get(k) is not None
-        except AssertionError:
-            err_msg += "Decision tree missing required info: {}\n".format(k)
+    missing_keys = set(tree_expected_keys) - set(tree.keys())
+    if missing_keys:
+        # If there are missing keys, this function may crash before the end.
+        # End function here with a clear error message rather than adding
+        # `if assert tree.get()` statements before every section
+        raise TreeError("\n" + f"Decision tree missing required fields: {missing_keys}")
+
+    # Warn if unused fields exist
+    unused_keys = set(tree.keys()) - set(tree_expected_keys)
+    if unused_keys:
+        LGR.warning(
+            f"Decision tree includes fields that are not used or logged {unused_keys}"
+        )
 
     # Combine the default classifications with the user inputted classifications
     all_classifications = set(tree.get("intermediate_classifications")) | set(
