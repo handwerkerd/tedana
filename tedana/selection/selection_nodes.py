@@ -237,8 +237,8 @@ def manual_classify(
         outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
-        component_table = change_comptable_classifications(
-            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        DT_class = change_comptable_classifications(
+            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = decision_boolean.sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -384,8 +384,8 @@ def left_op_right(
             val2 = right  # should be a fixed number
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
-        comptable = change_comptable_classifications(
-            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        DT_class = change_comptable_classifications(
+            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -739,8 +739,8 @@ def variance_lessthan_thresholds(
             while variance[decision_boolean].sum() > all_comp_threshold:
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
-        component_table = change_comptable_classifications(
-            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        DT_class = change_comptable_classifications(
+            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -931,8 +931,8 @@ def kappa_rho_elbow_cutoffs_kundu(
                 component_table.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
             ) & (component_table.loc[comps2use, "rho"] < outputs["rho_elbow"])
 
-        component_table = change_comptable_classifications(
-            component_table, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        DT_class = change_comptable_classifications(
+            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()

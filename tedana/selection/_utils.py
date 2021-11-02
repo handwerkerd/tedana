@@ -56,7 +56,7 @@ def selectcomps2use(DT_class, decide_comps):
 
 
 def change_comptable_classifications(
-    comptable, ifTrue, ifFalse, decision_boolean, decision_node_idx_str
+    DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
 ):
     """
     Given information on whether a decision critereon is true or false for each component
@@ -80,21 +80,24 @@ def change_comptable_classifications(
 
     if ifTrue != "nochange":
         changeidx = decision_boolean.index[np.asarray(decision_boolean)]
-        comptable.loc[changeidx, "classification"] = ifTrue
-        comptable.loc[changeidx, "rationale"] += (
-            decision_node_idx_str + ": " + ifTrue + "; "
-        )
+        DT_class.component_table.loc[changeidx, "classification"] = ifTrue
+        # comptable.loc[changeidx, "rationale"] += (
+        #     decision_node_idx_str + ": " + ifTrue + "; "
+        # )
     if ifFalse != "nochange":
         changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
-        comptable.loc[changeidx, "classification"] = ifFalse
-        comptable.loc[changeidx, "rationale"] += (
-            decision_node_idx_str + ": " + ifFalse + "; "
-        )
+        DT_class.component_table.loc[changeidx, "classification"] = ifFalse
+        # comptable.loc[changeidx, "rationale"] += (
+        #     decision_node_idx_str + ": " + ifFalse + "; "
+        # )
+    DT_class.component_status_table[
+        f"Node {decision_node_idx}"
+    ] = DT_class.component_table["classification"]
 
     # decision_tree_steps[-1]['numtrue'] = (decision_boolean is True).sum()
     # decision_tree_steps[-1]['numfalse'] = (decision_boolean is False).sum()
 
-    return comptable  # , decision_tree_steps
+    return DT_class  # , decision_tree_steps
 
 
 def clean_dataframe(comptable):
