@@ -6,7 +6,7 @@ import numpy as np
 from scipy import stats
 
 from tedana.stats import getfbounds
-from tedana.selection.DecisionTree import DecisionTree
+from tedana.selection.ComponentSelector import ComponentSelector
 from tedana.selection._utils import clean_dataframe
 from tedana.metrics import collect
 
@@ -95,7 +95,7 @@ def automatic_selection(comptable, n_echos, n_vols, tree="simple"):
     n_echos: int
         The number of echoes in this dataset
     tree: str
-        The type of tree to use for the DecisionTree object
+        The type of tree to use for the ComponentSelector object
 
     Returns
     -------
@@ -104,17 +104,17 @@ def automatic_selection(comptable, n_echos, n_vols, tree="simple"):
 
     See Also
     --------
-    DecisionTree, the class used to represent the classification process
+    ComponentSelector, the class used to represent the classification process
     """
     comptable["rationale"] = ""
-    dt = DecisionTree(tree, comptable, n_echos=n_echos, n_vols=n_vols)
-    dt.run()
-    dt.metadata = collect.get_metadata(dt.component_table)
+    selector = ComponentSelector(tree, comptable, n_echos=n_echos, n_vols=n_vols)
+    selector.component_select()
+    selector.metadata = collect.get_metadata(selector.component_table)
 
-    # TODO: Eventually return just dt
+    # TODO: Eventually return just selector
     return (
-        dt.component_table,
-        dt.cross_component_metrics,
-        dt.component_status_table,
-        dt.metadata,
+        selector.component_table,
+        selector.cross_component_metrics,
+        selector.component_status_table,
+        selector.metadata,
     )

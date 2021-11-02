@@ -152,7 +152,7 @@ rho_elbow: :obj:`float`
 
 
 def manual_classify(
-    DT_class,
+    selector,
     decision_node_idx,
     decide_comps,
     new_classification,
@@ -229,7 +229,7 @@ def manual_classify(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
+    comps2use, component_table = selectcomps2use(selector, decide_comps)
 
     if comps2use is None:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
@@ -237,8 +237,8 @@ def manual_classify(
         outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
-        DT_class = change_comptable_classifications(
-            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
+        selector = change_comptable_classifications(
+            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = decision_boolean.sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -262,14 +262,14 @@ def manual_classify(
 
     dnode_outputs = {"outputs": outputs}
 
-    return DT_class, dnode_outputs
+    return selector, dnode_outputs
 
 
 manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
 
 
 def left_op_right(
-    DT_class,
+    selector,
     decision_node_idx,
     ifTrue,
     ifFalse,
@@ -363,7 +363,7 @@ def left_op_right(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
+    comps2use, component_table = selectcomps2use(selector, decide_comps)
 
     confirm_metrics_exist(
         component_table, outputs["used_metrics"], function_name=function_name_idx
@@ -384,8 +384,8 @@ def left_op_right(
             val2 = right  # should be a fixed number
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
-        DT_class = change_comptable_classifications(
-            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
+        selector = change_comptable_classifications(
+            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -402,14 +402,14 @@ def left_op_right(
 
     dnode_outputs = {"outputs": outputs}
 
-    return DT_class, dnode_outputs
+    return selector, dnode_outputs
 
 
 left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
 
 
 def variance_lessthan_thresholds(
-    DT_class,
+    selector,
     decision_node_idx,
     ifTrue,
     ifFalse,
@@ -477,7 +477,7 @@ def variance_lessthan_thresholds(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
+    comps2use, component_table = selectcomps2use(selector, decide_comps)
     metrics_exist, missing_metrics = confirm_metrics_exist(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
@@ -497,8 +497,8 @@ def variance_lessthan_thresholds(
             while variance[decision_boolean].sum() > all_comp_threshold:
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
-        DT_class = change_comptable_classifications(
-            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
+        selector = change_comptable_classifications(
+            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -514,7 +514,7 @@ def variance_lessthan_thresholds(
         )
 
     dnode_outputs = {"outputs": outputs}
-    return DT_class, dnode_outputs
+    return selector, dnode_outputs
 
 
 variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.format(
@@ -523,7 +523,7 @@ variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.form
 
 
 def kappa_rho_elbow_cutoffs_kundu(
-    DT_class,
+    selector,
     decision_node_idx,
     ifTrue,
     ifFalse,
@@ -617,12 +617,12 @@ def kappa_rho_elbow_cutoffs_kundu(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(DT_class, decide_comps)
+    comps2use, component_table = selectcomps2use(selector, decide_comps)
     metrics_exist, missing_metrics = confirm_metrics_exist(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
-    unclassified_comps2use = selectcomps2use(DT_class, "unclassified")[0]
+    unclassified_comps2use = selectcomps2use(selector, "unclassified")[0]
 
     if (comps2use is None) or (unclassified_comps2use is None):
         if comps2use is None:
@@ -689,8 +689,8 @@ def kappa_rho_elbow_cutoffs_kundu(
                 component_table.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
             ) & (component_table.loc[comps2use, "rho"] < outputs["rho_elbow"])
 
-        DT_class = change_comptable_classifications(
-            DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
+        selector = change_comptable_classifications(
+            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -707,7 +707,7 @@ def kappa_rho_elbow_cutoffs_kundu(
 
     dnode_outputs = {"outputs": outputs}
 
-    return DT_class, dnode_outputs
+    return selector, dnode_outputs
 
 
 kappa_rho_elbow_cutoffs_kundu.__doc__ = kappa_rho_elbow_cutoffs_kundu.__doc__.format(

@@ -116,7 +116,7 @@ def validate_tree(tree):
         "classification_tags",
         "nodes",
     ]
-    defaults = {"DT_class", "decision_node_idx"}
+    defaults = {"selector", "decision_node_idx"}
     default_classifications = {"nochange", "accepted", "rejected", "unclassified"}
     default_decide_comps = {"all", "accepted", "rejected", "unclassified"}
 
@@ -221,7 +221,7 @@ def validate_tree(tree):
     return tree
 
 
-class DecisionTree:
+class ComponentSelector:
     """
     Classifies components based on specified `tree` when the class is initialized
     and then the `run` function is called.
@@ -250,7 +250,7 @@ class DecisionTree:
     Additional Parameters
     ---------------------
     Any parameter that is used by a decision tree node function can be passed
-    as a parameter of DecisionTree class initialization function or can be
+    as a parameter of ComponentSelector class initialization function or can be
     included in the json file that defines the decision tree. If a parameter
     is set in the json file, that will take precedence. As a style rule, a
     parameter that is the same regardless of the inputted data should be
@@ -333,7 +333,7 @@ class DecisionTree:
         self.cross_component_metrics = dict()
         self.used_metrics = []
 
-    def run(self):
+    def component_select(self):
         """
         Parse the parameters used to call each function in the component
         selection decision tree and run the functions to classify components
@@ -428,7 +428,7 @@ class DecisionTree:
                         )
                         + "If {} is dataset specific, it should be "
                         "defined in the ".format(key) + " initialization of "
-                        "DecisionTree. If it is fixed regardless of dataset, it "
+                        "ComponentSelector. If it is fixed regardless of dataset, it "
                         "should be defined in the json file that defines the "
                         "decision tree."
                     )
