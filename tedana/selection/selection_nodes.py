@@ -261,7 +261,6 @@ def manual_classify(
         )
 
     dnode_outputs = {"outputs": outputs}
-    DT_class.component_table = component_table
 
     return DT_class, dnode_outputs
 
@@ -402,7 +401,7 @@ def left_op_right(
         )
 
     dnode_outputs = {"outputs": outputs}
-    DT_class.component_table = component_table
+
     return DT_class, dnode_outputs
 
 
@@ -757,7 +756,6 @@ def variance_lessthan_thresholds(
         )
 
     dnode_outputs = {"outputs": outputs}
-    DT_class.component_table = component_table
     return DT_class, dnode_outputs
 
 
@@ -950,7 +948,7 @@ def kappa_rho_elbow_cutoffs_kundu(
         )
 
     dnode_outputs = {"outputs": outputs}
-    DT_class.component_table = component_table
+
     return DT_class, dnode_outputs
 
 
