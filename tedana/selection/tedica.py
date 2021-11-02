@@ -108,7 +108,13 @@ def automatic_selection(comptable, n_echos, n_vols, tree="simple"):
     """
     comptable["rationale"] = ""
     dt = DecisionTree(tree, comptable, n_echos=n_echos, n_vols=n_vols)
-    component_table, cross_component_metrics, component_status_table, _ = dt.run()
-    metadata = collect.get_metadata(component_table)
+    dt.run()
+    dt.metadata = collect.get_metadata(dt.component_table)
 
-    return component_table, cross_component_metrics, component_status_table, metadata
+    # TODO: Eventually return just dt
+    return (
+        dt.component_table,
+        dt.cross_component_metrics,
+        dt.component_status_table,
+        dt.metadata,
+    )

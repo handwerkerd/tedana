@@ -319,15 +319,17 @@ class DecisionTree:
         )
 
         self.__dict__.update(kwargs)
-        self.config = load_config(self.tree)
+        tree_config = load_config(self.tree)
 
-        LGR.info("Performing component selection with " + self.config["tree_id"])
-        LGR.info(self.config.get("info", ""))
-        RepLGR.info(self.config.get("report", ""))
-        RefLGR.info(self.config.get("refs", ""))
+        LGR.info("Performing component selection with " + tree_config["tree_id"])
+        LGR.info(tree_config.get("info", ""))
+        RepLGR.info(tree_config.get("report", ""))
+        RefLGR.info(tree_config.get("refs", ""))
 
-        self.nodes = self.config["nodes"]
-        self.necessary_metrics = self.config["necessary_metrics"]
+        self.nodes = tree_config["nodes"]
+        self.necessary_metrics = tree_config["necessary_metrics"]
+        self.intermediate_classifications = tree_config["intermediate_classifications"]
+        self.classification_tags = tree_config["classification_tags"]
         self.cross_component_metrics = dict()
         self.used_metrics = []
 
@@ -388,12 +390,6 @@ class DecisionTree:
         self.component_table = clean_dataframe(self.component_table)
         self.are_only_necessary_metrics_used(used_metrics)
         print(self.nodes)
-        return (
-            self.component_table,
-            self.cross_component_metrics,
-            self.component_status_table,
-            self.nodes,
-        )
 
     def check_necessary_metrics(self):
         used_metrics = set()
