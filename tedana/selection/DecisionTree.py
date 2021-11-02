@@ -127,7 +127,7 @@ def validate_tree(tree):
         except AssertionError:
             err_msg += "Decision tree missing required info: {}\n".format(k)
 
-    # Combine the default classificaitons with the user inputted classifications
+    # Combine the default classifications with the user inputted classifications
     all_classifications = set(tree.get("intermediate_classifications")) | set(
         default_classifications
     )

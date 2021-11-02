@@ -408,248 +408,6 @@ def left_op_right(
 left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
 
 
-def classification_exists(
-    comptable,
-    decision_node_idx,
-    ifTrue,
-    ifFalse,
-    decide_comps,
-    class_comp_exists,
-    log_extra_report="",
-    log_extra_info="",
-    custom_node_label="",
-    only_used_metrics=False,
-):
-    """
-    If there are not compontents with a classification specified in class_comp_exists,
-    change the classification of all components in decide_comps
-    Parameters
-    ----------
-    {comptable}
-    {decision_node_idx}
-    {ifTrue}
-    {ifFalse}
-    {decide_comps}
-    class_comp_exists: :obj:`str` or :obj:`list[str]` or :obj:`int` or :obj:`list[int]`
-        This has the same structure options as decide_comps. This function tests
-        whether any components have the classifications defined in this variable.
-    {log_extra}
-    {custom_node_label}
-    {only_used_metrics}
-
-    Returns
-    -------
-    {basicreturns}
-
-    """
-
-    used_metrics = []
-    if only_used_metrics:
-        return used_metrics
-
-    function_name_idx = "Step {}: classification_exists".format(decision_node_idx)
-    if custom_node_label:
-        node_label = custom_node_label
-    else:
-        node_label = "Change {} if {} doesn't exist".format(
-            decide_comps, classification_exists
-        )
-
-    # Might want to add additional default logging to functions here
-    # The function input will be logged before the function call
-    if log_extra_info:
-        LGR.info(log_extra_info)
-    if log_extra_report:
-        RepLGR.info(log_extra_report)
-
-    comps2use = selectcomps2use(comptable, decide_comps)
-    do_comps_exist = selectcomps2use(comptable, class_comp_exists)
-
-    if comps2use is None:
-        log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-        numTrue = 0
-        numFalse = 0
-    elif do_comps_exist is None:
-        # should be false for all components
-        decision_boolean = comptable.loc[comps2use, "component"] < -100
-        comptable = change_comptable_classifications(
-            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
-        )
-        numTrue = np.asarray(decision_boolean).sum()
-        # numtrue should always be 0 in this situation
-        numFalse = np.logical_not(decision_boolean).sum()
-        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-        #    numTrue, numFalse, len(comps2use))))
-        log_decision_tree_step(
-            function_name_idx,
-            comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
-            ifTrue=ifTrue,
-            ifFalse=ifFalse,
-        )
-    else:
-        numTrue = len(comps2use)
-        numFalse = 0
-        log_decision_tree_step(
-            function_name_idx,
-            comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
-            ifTrue=ifTrue,
-            ifFalse=ifFalse,
-        )
-
-    dnode_outputs = create_dnode_outputs(
-        decision_node_idx, used_metrics, node_label, numTrue, numFalse
-    )
-
-    return comptable, dnode_outputs
-
-
-def meanmetricrank_and_variance_greaterthan_thresh(
-    comptable,
-    decision_node_idx,
-    ifTrue,
-    ifFalse,
-    decide_comps,
-    n_vols,
-    high_perc=90,
-    extend_factor=None,
-    log_extra_report="",
-    log_extra_info="",
-    custom_node_label="",
-    only_used_metrics=False,
-):
-    """
-    The 'mean metric rank' (formerly d_table) is the mean of rankings of 5 metrics:
-        'kappa', 'dice_FT2', 'signal-noise_t',
-        and 'countnoise', 'countsigFT2'
-    For these 5 metrics, a lower rank (smaller number) is less likely to be
-    T2* weighted.
-    This function tests of meanmetricrank is above a threshold based on the number
-    of provisionally accepted components & variance based on a threshold related
-    to the variance of provisionally accepted components. This is indented to
-    reject components that are greater than both of these thresholds
-
-    Parameters
-    ----------
-    {comptable}
-    {decision_node_idx}
-    {ifTrue}
-    {ifFalse}
-    {decide_comps}
-    {n_vols}
-    high_perc: :obj:`int`
-        A percentile threshold to apply to components to set the variance
-        threshold. default=90
-    {extend_factor}
-    {log_extra}
-    {custom_node_label}
-    {only_used_metrics}
-
-    Returns
-    -------
-    {basicreturns}
-    dnode_ouputs also contains:
-    num_prov_accept: :obj:`int`
-        Number of provisionally accepted components
-    max_good_meanmetricrank: :obj:`float`
-        The threshold used meanmetricrank
-    varex_threshold: :obj:`float`
-        The threshold used for variance
-    """
-
-    used_metrics = ["d_table_score", "variance explained"]
-    if only_used_metrics:
-        return used_metrics
-
-    function_name_idx = (
-        "Step {}: meanmetricrank_and_variance_greaterthan_thresh".format(
-            decision_node_idx
-        )
-    )
-    if custom_node_label:
-        node_label = custom_node_label
-    else:
-        node_label = "MeanRank & Variance Thresholding"
-
-    if log_extra_info:
-        LGR.info(log_extra_info)
-    if log_extra_report:
-        RepLGR.info(log_extra_report)
-
-    metrics_exist, missing_metrics = confirm_metrics_exist(
-        comptable, used_metrics, function_name=function_name_idx
-    )
-
-    comps2use = selectcomps2use(comptable, decide_comps)
-    provaccept_comps2use = selectcomps2use(comptable, ["provisionalaccept"])
-    if (comps2use is None) or (provaccept_comps2use is None):
-        if comps2use is None:
-            log_decision_tree_step(
-                function_name_idx, comps2use, decide_comps=decide_comps
-            )
-        if provaccept_comps2use is None:
-            log_decision_tree_step(
-                function_name_idx, comps2use, decide_comps="provisionalaccept"
-            )
-        dnode_outputs = create_dnode_outputs(
-            decision_node_idx, used_metrics, node_label, 0, 0
-        )
-    else:
-        num_prov_accept = len(provaccept_comps2use)
-        varex_upper_thresh = scoreatpercentile(
-            comptable.loc[provaccept_comps2use, "variance explained"], high_perc
-        )
-
-        extend_factor = get_extend_factor(n_vols=n_vols, extend_factor=extend_factor)
-        max_good_meanmetricrank = extend_factor * num_prov_accept
-
-        decision_boolean1 = (
-            comptable.loc[comps2use, "d_table_score"] > max_good_meanmetricrank
-        )
-        decision_boolean2 = (
-            comptable.loc[comps2use, "variance explained"] > varex_upper_thresh
-        )
-        decision_boolean = decision_boolean1 & decision_boolean2
-
-        comptable = change_comptable_classifications(
-            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
-        )
-        numTrue = np.asarray(decision_boolean).sum()
-        numFalse = np.logical_not(decision_boolean).sum()
-        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-        #    numTrue, numFalse, len(comps2use))))
-        log_decision_tree_step(
-            function_name_idx,
-            comps2use,
-            numTrue=numTrue,
-            numFalse=numFalse,
-            ifTrue=ifTrue,
-            ifFalse=ifFalse,
-        )
-
-        dnode_outputs = create_dnode_outputs(
-            decision_node_idx,
-            used_metrics,
-            node_label,
-            numTrue,
-            numFalse,
-            num_prov_accept=num_prov_accept,
-            varex_threshold=varex_upper_thresh,
-            max_good_meanmetricrank=max_good_meanmetricrank,
-            extend_factor=extend_factor,
-        )
-
-    return comptable, dnode_outputs
-
-
-meanmetricrank_and_variance_greaterthan_thresh.__doc__ = (
-    meanmetricrank_and_variance_greaterthan_thresh.__doc__.format(**decision_docs)
-)
-
-
 def variance_lessthan_thresholds(
     DT_class,
     decision_node_idx,
@@ -954,6 +712,248 @@ def kappa_rho_elbow_cutoffs_kundu(
 
 kappa_rho_elbow_cutoffs_kundu.__doc__ = kappa_rho_elbow_cutoffs_kundu.__doc__.format(
     **decision_docs
+)
+
+
+def classification_exists(
+    comptable,
+    decision_node_idx,
+    ifTrue,
+    ifFalse,
+    decide_comps,
+    class_comp_exists,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    If there are not compontents with a classification specified in class_comp_exists,
+    change the classification of all components in decide_comps
+    Parameters
+    ----------
+    {comptable}
+    {decision_node_idx}
+    {ifTrue}
+    {ifFalse}
+    {decide_comps}
+    class_comp_exists: :obj:`str` or :obj:`list[str]` or :obj:`int` or :obj:`list[int]`
+        This has the same structure options as decide_comps. This function tests
+        whether any components have the classifications defined in this variable.
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+
+    """
+
+    used_metrics = []
+    if only_used_metrics:
+        return used_metrics
+
+    function_name_idx = "Step {}: classification_exists".format(decision_node_idx)
+    if custom_node_label:
+        node_label = custom_node_label
+    else:
+        node_label = "Change {} if {} doesn't exist".format(
+            decide_comps, classification_exists
+        )
+
+    # Might want to add additional default logging to functions here
+    # The function input will be logged before the function call
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    comps2use = selectcomps2use(comptable, decide_comps)
+    do_comps_exist = selectcomps2use(comptable, class_comp_exists)
+
+    if comps2use is None:
+        log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
+        numTrue = 0
+        numFalse = 0
+    elif do_comps_exist is None:
+        # should be false for all components
+        decision_boolean = comptable.loc[comps2use, "component"] < -100
+        comptable = change_comptable_classifications(
+            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        )
+        numTrue = np.asarray(decision_boolean).sum()
+        # numtrue should always be 0 in this situation
+        numFalse = np.logical_not(decision_boolean).sum()
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            numTrue=numTrue,
+            numFalse=numFalse,
+            ifTrue=ifTrue,
+            ifFalse=ifFalse,
+        )
+    else:
+        numTrue = len(comps2use)
+        numFalse = 0
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            numTrue=numTrue,
+            numFalse=numFalse,
+            ifTrue=ifTrue,
+            ifFalse=ifFalse,
+        )
+
+    dnode_outputs = create_dnode_outputs(
+        decision_node_idx, used_metrics, node_label, numTrue, numFalse
+    )
+
+    return comptable, dnode_outputs
+
+
+def meanmetricrank_and_variance_greaterthan_thresh(
+    comptable,
+    decision_node_idx,
+    ifTrue,
+    ifFalse,
+    decide_comps,
+    n_vols,
+    high_perc=90,
+    extend_factor=None,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    The 'mean metric rank' (formerly d_table) is the mean of rankings of 5 metrics:
+        'kappa', 'dice_FT2', 'signal-noise_t',
+        and 'countnoise', 'countsigFT2'
+    For these 5 metrics, a lower rank (smaller number) is less likely to be
+    T2* weighted.
+    This function tests of meanmetricrank is above a threshold based on the number
+    of provisionally accepted components & variance based on a threshold related
+    to the variance of provisionally accepted components. This is indented to
+    reject components that are greater than both of these thresholds
+
+    Parameters
+    ----------
+    {comptable}
+    {decision_node_idx}
+    {ifTrue}
+    {ifFalse}
+    {decide_comps}
+    {n_vols}
+    high_perc: :obj:`int`
+        A percentile threshold to apply to components to set the variance
+        threshold. default=90
+    {extend_factor}
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+    dnode_ouputs also contains:
+    num_prov_accept: :obj:`int`
+        Number of provisionally accepted components
+    max_good_meanmetricrank: :obj:`float`
+        The threshold used meanmetricrank
+    varex_threshold: :obj:`float`
+        The threshold used for variance
+    """
+
+    used_metrics = ["d_table_score", "variance explained"]
+    if only_used_metrics:
+        return used_metrics
+
+    function_name_idx = (
+        "Step {}: meanmetricrank_and_variance_greaterthan_thresh".format(
+            decision_node_idx
+        )
+    )
+    if custom_node_label:
+        node_label = custom_node_label
+    else:
+        node_label = "MeanRank & Variance Thresholding"
+
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    metrics_exist, missing_metrics = confirm_metrics_exist(
+        comptable, used_metrics, function_name=function_name_idx
+    )
+
+    comps2use = selectcomps2use(comptable, decide_comps)
+    provaccept_comps2use = selectcomps2use(comptable, ["provisionalaccept"])
+    if (comps2use is None) or (provaccept_comps2use is None):
+        if comps2use is None:
+            log_decision_tree_step(
+                function_name_idx, comps2use, decide_comps=decide_comps
+            )
+        if provaccept_comps2use is None:
+            log_decision_tree_step(
+                function_name_idx, comps2use, decide_comps="provisionalaccept"
+            )
+        dnode_outputs = create_dnode_outputs(
+            decision_node_idx, used_metrics, node_label, 0, 0
+        )
+    else:
+        num_prov_accept = len(provaccept_comps2use)
+        varex_upper_thresh = scoreatpercentile(
+            comptable.loc[provaccept_comps2use, "variance explained"], high_perc
+        )
+
+        extend_factor = get_extend_factor(n_vols=n_vols, extend_factor=extend_factor)
+        max_good_meanmetricrank = extend_factor * num_prov_accept
+
+        decision_boolean1 = (
+            comptable.loc[comps2use, "d_table_score"] > max_good_meanmetricrank
+        )
+        decision_boolean2 = (
+            comptable.loc[comps2use, "variance explained"] > varex_upper_thresh
+        )
+        decision_boolean = decision_boolean1 & decision_boolean2
+
+        comptable = change_comptable_classifications(
+            comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
+        )
+        numTrue = np.asarray(decision_boolean).sum()
+        numFalse = np.logical_not(decision_boolean).sum()
+        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
+        #    numTrue, numFalse, len(comps2use))))
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            numTrue=numTrue,
+            numFalse=numFalse,
+            ifTrue=ifTrue,
+            ifFalse=ifFalse,
+        )
+
+        dnode_outputs = create_dnode_outputs(
+            decision_node_idx,
+            used_metrics,
+            node_label,
+            numTrue,
+            numFalse,
+            num_prov_accept=num_prov_accept,
+            varex_threshold=varex_upper_thresh,
+            max_good_meanmetricrank=max_good_meanmetricrank,
+            extend_factor=extend_factor,
+        )
+
+    return comptable, dnode_outputs
+
+
+meanmetricrank_and_variance_greaterthan_thresh.__doc__ = (
+    meanmetricrank_and_variance_greaterthan_thresh.__doc__.format(**decision_docs)
 )
 
 
