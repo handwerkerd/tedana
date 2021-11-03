@@ -23,8 +23,8 @@ def selectcomps2use(selector, decide_comps):
     Since 'all' converts string to boolean, it will miss components with
     no classification. This means, in the initialization of comptree, all
     components need to be labeled as unclassified, NOT empty
-    MAY WANT TO ADD NUMBER INDEXING TO selectcomps2use SO THAT USERS CAN
-    SELECT COMPONENTS BY NUMBER RATHER THAN LABEL
+    TODO: May want to add number indexing to selectcomps2use so that users
+    can selection componetnes by number rather than label
     """
     component_table = selector.component_table
     if type(decide_comps) == str:
@@ -252,6 +252,7 @@ def log_decision_tree_step(
     numFalse=None,
     ifTrue=None,
     ifFalse=None,
+    calc_outputs=None,
 ):
     """
     Logging text to add for every decision tree calculation
@@ -261,29 +262,31 @@ def log_decision_tree_step(
 
     if comps2use is None:
         LGR.info(
-            (
-                "{} not applied because no remaining components were "
-                "classified as {}"
-            ).format(function_name_idx, decide_comps)
+            f"{function_name_idx} not applied because no remaining components were "
+            "classified as {decide_comps}"
         )
-    else:
+    if ifTrue or ifFalse:
         LGR.info(
-            (
-                "{} applied to {} components. " "{} True -> {}. " "{} False -> {}."
-            ).format(
-                function_name_idx, len(comps2use), numTrue, ifTrue, numFalse, ifFalse
-            )
+            f"{function_name_idx} applied to {len(comps2use)} components. "
+            "{numTrue} True -> {ifTrue}. "
+            "{numFalse} False -> {ifFalse}."
         )
+    if calc_outputs:
+        calc_summaries = [
+            f"{metric_name}={calc_outputs[metric_name]}"
+            for metric_name in calc_outputs["calc_cross_comp_metrics"]
+        ]
+        LGR.info(f"{function_name_idx} calculated: {', '.join(calc_summaries)}")
 
 
-def log_classification_counts(decision_node_idx, comptable):
+def log_classification_counts(decision_node_idx, component_table):
     """
     Log the total counts for each component classification in the comptable
     That is something like 'Total component classifications: 10 accepted, 5 ignored, 8 rejected'
     """
 
     (classification_labels, label_counts) = np.unique(
-        comptable["classification"].values, return_counts=True
+        component_table["classification"].values, return_counts=True
     )
     label_summaries = [
         f"{label_counts[i]} {label}" for i, label in enumerate(classification_labels)
@@ -517,20 +520,10 @@ def kappa_elbow_kundu(comptable, n_echos):
                 getelbow(comptable["kappa"], return_val=True),
             )
         )
-        LGR.info(
-            (
-                "Calculating kappa elbow based min of all and nonsig "
-                f"components. Kappa elbow is {kappa_elbow}"
-            )
-        )
+        LGR.info(("Calculating kappa elbow based on min of all and nonsig components."))
     else:
         kappa_elbow = getelbow(comptable["kappa"], return_val=True)
-        LGR.info(
-            (
-                "Calculating kappa elbow based on all components. "
-                f"Kappa elbow is {kappa_elbow}"
-            )
-        )
+        LGR.info(("Calculating kappa elbow based on all components."))
 
     return kappa_elbow
 

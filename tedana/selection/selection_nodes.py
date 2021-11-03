@@ -337,14 +337,19 @@ def dec_left_op_right(
             outputs["used_cross_component_metrics"].update([left])
             left = selector.cross_component_metrics[left]
         else:
-            raise ValueError(f"{left} is neither a metric in component_table nor selector.cross_component_metrics")
+            raise ValueError(
+                f"{left} is neither a metric in component_table nor selector.cross_component_metrics"
+            )
     if isinstance(right, str):
-        outputs["used_metrics"].update([right])
+        if right in selector.component_table.columns:
+            outputs["used_metrics"].update([right])
         elif right in selector.cross_component_metrics:
             outputs["used_cross_component_metrics"].update([right])
             right = selector.cross_component_metrics[right]
         else:
-            raise ValueError(f"{left} is neither a metric in component_table nor selector.cross_component_metrics")
+            raise ValueError(
+                f"{right} is neither a metric in component_table nor selector.cross_component_metrics"
+            )
 
     if only_used_metrics:
         return outputs["used_metrics"]
@@ -588,6 +593,11 @@ def calc_kappa_rho_elbows_kundu(
     outputs = {
         "decision_node_idx": selector.current_node_idx,
         "used_metrics": set(["kappa", "rho"]),
+        "calc_cross_comp_metrics": [
+            "kappa_elbow_kundu",
+            "rho_elbow_kundu",
+            "varex_upper_p",
+        ],
         "node_label": None,
         "n_echos": n_echos,
         "varex_upper_p": None,
@@ -689,7 +699,7 @@ def calc_kappa_rho_elbows_kundu(
         #         getelbow(comptable["kappa"], return_val=True),
         #     )
         # )
-        outputs["rho_elbow"] = np.mean(
+        outputs["rho_elbow_kundu"] = np.mean(
             (
                 getelbow(component_table.loc[ncls, "rho"], return_val=True),
                 getelbow(component_table["rho"], return_val=True),
@@ -700,7 +710,7 @@ def calc_kappa_rho_elbows_kundu(
 
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #        numTrue, numFalse, len(comps2use))))
-        log_decision_tree_step(function_name_idx, comps2use)
+        log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
 
     selector.nodes[selector.current_node_idx]["outputs"] = outputs
 
