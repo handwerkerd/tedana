@@ -267,7 +267,7 @@ def manual_classify(
 manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
 
 
-def left_op_right(
+def dec_left_op_right(
     selector,
     ifTrue,
     ifFalse,
@@ -324,15 +324,28 @@ def left_op_right(
     outputs = {
         "decision_node_idx": selector.current_node_idx,
         "used_metrics": set(),
+        "used_cross_component_metrics": set(),
         "node_label": None,
         "numTrue": None,
         "numFalse": None,
     }
 
     if isinstance(left, str):
-        outputs["used_metrics"].update([left])
+        if left in selector.component_table.columns:
+            outputs["used_metrics"].update([left])
+        elif left in selector.cross_component_metrics:
+            outputs["used_cross_component_metrics"].update([left])
+            left = selector.cross_component_metrics[left]
+        else:
+            raise ValueError(f"{left} is neither a metric in component_table nor selector.cross_component_metrics")
     if isinstance(right, str):
         outputs["used_metrics"].update([right])
+        elif right in selector.cross_component_metrics:
+            outputs["used_cross_component_metrics"].update([right])
+            right = selector.cross_component_metrics[right]
+        else:
+            raise ValueError(f"{left} is neither a metric in component_table nor selector.cross_component_metrics")
+
     if only_used_metrics:
         return outputs["used_metrics"]
 
@@ -403,10 +416,10 @@ def left_op_right(
     return selector
 
 
-left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
+dec_left_op_right.__doc__ = dec_left_op_right.__doc__.format(**decision_docs)
 
 
-def variance_lessthan_thresholds(
+def dec_variance_lessthan_thresholds(
     selector,
     ifTrue,
     ifFalse,
@@ -516,15 +529,13 @@ def variance_lessthan_thresholds(
     return selector
 
 
-variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.format(
-    **decision_docs
+dec_variance_lessthan_thresholds.__doc__ = (
+    dec_variance_lessthan_thresholds.__doc__.format(**decision_docs)
 )
 
 
-def kappa_rho_elbow_cutoffs_kundu(
+def calc_kappa_rho_elbows_kundu(
     selector,
-    ifTrue,
-    ifFalse,
     decide_comps,
     n_echos,
     log_extra_report="",
@@ -578,12 +589,10 @@ def kappa_rho_elbow_cutoffs_kundu(
         "decision_node_idx": selector.current_node_idx,
         "used_metrics": set(["kappa", "rho"]),
         "node_label": None,
-        "numTrue": None,
-        "numFalse": None,
         "n_echos": n_echos,
         "varex_upper_p": None,
-        "kappa_elbow": None,
-        "rho_elbow": None,
+        "kappa_elbow_kundu": None,
+        "rho_elbow_kundu": None,
         "kappa_only": kappa_only,
         "rho_only": rho_only,
     }
@@ -591,18 +600,30 @@ def kappa_rho_elbow_cutoffs_kundu(
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    function_name_idx = "Step {}: kappa_rho_elbow_cutoffs_kundu".format(
-        selector.current_node_idx
-    )
+    function_name_idx = f"Step {selector.current_node_idx}: calc_kappa_rho_elbows_kundu"
+
+    if "kappa_elbow_kundu" in selector.cross_component_metrics:
+        LRG.warning(
+            f"kappa_elbow_kundu already calculated. Overwriting previous value in {function_name_idx}"
+        )
+    if "rho_elbow_kundu" in selector.cross_component_metrics:
+        LRG.warning(
+            f"rho_elbow_kundu already calculated. Overwriting previous value in {function_name_idx}"
+        )
+    if "varex_upper_p" in selector.cross_component_metrics:
+        LRG.warning(
+            f"varex_upper_p already calculated. Overwriting previous value in {function_name_idx}"
+        )
+
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
         if kappa_only:
-            outputs["node_label"] = "Kappa Elbow Thresholding"
+            outputs["node_label"] = "Calc Kappa Elbow"
         elif rho_only:
-            outputs["node_label"] = "Rho Elbow Thresholding"
+            outputs["node_label"] = "Calc Rho Elbow"
         else:
-            outputs["node_label"] = "Kappa&Rho Elbow Thresholding"
+            outputs["node_label"] = "Calc Kappa & Rho Elbows"
 
     LGR.info(
         "Note: This matches the elbow selecton criteria in Kundu's MEICA v2.7"
@@ -631,10 +652,11 @@ def kappa_rho_elbow_cutoffs_kundu(
             log_decision_tree_step(
                 function_name_idx, comps2use, decide_comps="unclassified"
             )
-        outputs["numTrue"] = 0
-        outputs["numFalse"] = 0
     else:
-        outputs["kappa_elbow"] = kappa_elbow_kundu(component_table, n_echos)
+        outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, n_echos)
+        selector.cross_component_metrics["kappa_elbow_kundu"] = outputs[
+            "kappa_elbow_kundu"
+        ]
 
         # The first elbow used to be for rho values of the unclassified components
         # excluding a few based on differences of variance. Now it's all unclassified
@@ -649,6 +671,7 @@ def kappa_rho_elbow_cutoffs_kundu(
                 "variance explained",
             ]
         )
+        selector.cross_component_metrics["varex_upper_p"] = outputs["varex_upper_p"]
 
         ncls = unclassified_comps2use.copy()
         for i_loop in range(3):
@@ -673,42 +696,18 @@ def kappa_rho_elbow_cutoffs_kundu(
                 f05,
             )
         )
+        selector.cross_component_metrics["rho_elbow_kundu"] = outputs["rho_elbow_kundu"]
 
-        if kappa_only:
-            decision_boolean = (
-                component_table.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
-            )
-        elif rho_only:
-            decision_boolean = (
-                component_table.loc[comps2use, "rho"] < outputs["rho_elbow"]
-            )
-        else:
-            decision_boolean = (
-                component_table.loc[comps2use, "kappa"] >= outputs["kappa_elbow"]
-            ) & (component_table.loc[comps2use, "rho"] < outputs["rho_elbow"])
-
-        selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean
-        )
-        outputs["numTrue"] = np.asarray(decision_boolean).sum()
-        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #        numTrue, numFalse, len(comps2use))))
-        log_decision_tree_step(
-            function_name_idx,
-            comps2use,
-            numTrue=outputs["numTrue"],
-            numFalse=outputs["numFalse"],
-            ifTrue=ifTrue,
-            ifFalse=ifFalse,
-        )
+        log_decision_tree_step(function_name_idx, comps2use)
 
     selector.nodes[selector.current_node_idx]["outputs"] = outputs
 
     return selector
 
 
-kappa_rho_elbow_cutoffs_kundu.__doc__ = kappa_rho_elbow_cutoffs_kundu.__doc__.format(
+calc_kappa_rho_elbows_kundu.__doc__ = calc_kappa_rho_elbows_kundu.__doc__.format(
     **decision_docs
 )
 

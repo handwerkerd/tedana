@@ -36,7 +36,7 @@
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -51,7 +51,7 @@
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -66,7 +66,7 @@
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -81,7 +81,7 @@
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -96,21 +96,33 @@
             }
         },
         {
-            "functionname": "kappa_rho_elbow_cutoffs_kundu",
+            "functionname": "calc_kappa_rho_elbows_kundu",
             "parameters": {
-                "ifTrue": "provisionalaccept",
-                "ifFalse": "nochange",
                 "decide_comps": "unclassified",
                 "n_echos": null
             },
             "kwargs": {
-                "kappa_only": true,
                 "log_extra_info": "",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "provisionalaccept",
+                "ifFalse": "nochange",
+                "decide_comps": "unclassified",
+                "op": ">",
+                "left": "kappa",
+                "right": "kappa_elbow_kundu"
+            },
+            "kwargs": {
+                "log_extra_info": "kappa>elbow",
+                "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "accepted",
                 "ifFalse": "nochange",
@@ -126,7 +138,7 @@
             }
         },
         {
-            "functionname": "kappa_rho_elbow_cutoffs_kundu",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "nochange",
                 "ifFalse": "provisionalreject",
@@ -134,16 +146,17 @@
                     "unclassified",
                     "provisionalaccept"
                 ],
-                "n_echos": null
+                "op": ">",
+                "left": "rho",
+                "right": "rho_elbow_kundu"
             },
             "kwargs": {
-                "rho_only": true,
-                "log_extra_info": "",
+                "log_extra_info": "rho>elbow",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "variance_lessthan_thresholds",
+            "functionname": "dec_variance_lessthan_thresholds",
             "parameters": {
                 "ifTrue": "lowvariance",
                 "ifFalse": "nochange",
