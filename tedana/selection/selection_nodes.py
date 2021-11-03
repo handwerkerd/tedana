@@ -153,7 +153,6 @@ rho_elbow: :obj:`float`
 
 def manual_classify(
     selector,
-    decision_node_idx,
     decide_comps,
     new_classification,
     clear_rationale=False,
@@ -205,8 +204,8 @@ def manual_classify(
 
     # predefine all outputs that should be logged
     outputs = {
-        "decision_node_idx": decision_node_idx,
-        "used_metrics": [],
+        "decision_node_idx": selector.current_node_idx,
+        "used_metrics": set(),
         "node_label": None,
         "numTrue": None,
         "numFalse": None,
@@ -218,7 +217,7 @@ def manual_classify(
     ifTrue = new_classification
     ifFalse = "nochange"
 
-    function_name_idx = "Step {}: manual_classify".format((decision_node_idx))
+    function_name_idx = "Step {}: manual_classify".format((selector.current_node_idx))
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
@@ -238,7 +237,7 @@ def manual_classify(
     else:
         decision_boolean = pd.Series(True, index=comps2use)
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
+            selector, ifTrue, ifFalse, decision_boolean
         )
         outputs["numTrue"] = decision_boolean.sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -260,9 +259,9 @@ def manual_classify(
             + " component classification 'rationale' values are set to empty strings"
         )
 
-    dnode_outputs = {"outputs": outputs}
+    selector.nodes[selector.current_node_idx]["outputs"] = outputs
 
-    return selector, dnode_outputs
+    return selector
 
 
 manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
@@ -270,7 +269,6 @@ manual_classify.__doc__ = manual_classify.__doc__.format(**decision_docs)
 
 def left_op_right(
     selector,
-    decision_node_idx,
     ifTrue,
     ifFalse,
     decide_comps,
@@ -324,17 +322,17 @@ def left_op_right(
 
     # predefine all outputs that should be logged
     outputs = {
-        "decision_node_idx": decision_node_idx,
-        "used_metrics": [],
+        "decision_node_idx": selector.current_node_idx,
+        "used_metrics": set(),
         "node_label": None,
         "numTrue": None,
         "numFalse": None,
     }
 
     if isinstance(left, str):
-        outputs["used_metrics"].append(left)
+        outputs["used_metrics"].update([left])
     if isinstance(right, str):
-        outputs["used_metrics"].append(right)
+        outputs["used_metrics"].update([right])
     if only_used_metrics:
         return outputs["used_metrics"]
 
@@ -342,7 +340,7 @@ def left_op_right(
     if op not in legal_ops:
         raise ValueError(f"{op} is not a binary comparison operator, like > or <")
 
-    function_name_idx = f"Step {decision_node_idx}: left_op_right"
+    function_name_idx = f"Step {selector.current_node_idx}: left_op_right"
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
@@ -385,7 +383,7 @@ def left_op_right(
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
+            selector, ifTrue, ifFalse, decision_boolean
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -400,9 +398,9 @@ def left_op_right(
             ifFalse=ifFalse,
         )
 
-    dnode_outputs = {"outputs": outputs}
+    selector.nodes[selector.current_node_idx]["outputs"] = outputs
 
-    return selector, dnode_outputs
+    return selector
 
 
 left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
@@ -410,7 +408,6 @@ left_op_right.__doc__ = left_op_right.__doc__.format(**decision_docs)
 
 def variance_lessthan_thresholds(
     selector,
-    decision_node_idx,
     ifTrue,
     ifFalse,
     decide_comps,
@@ -454,8 +451,8 @@ def variance_lessthan_thresholds(
     """
 
     outputs = {
-        "decision_node_idx": decision_node_idx,
-        "used_metrics": [var_metric],
+        "decision_node_idx": selector.current_node_idx,
+        "used_metrics": set([var_metric]),
         "node_label": None,
         "numTrue": None,
         "numFalse": None,
@@ -464,7 +461,9 @@ def variance_lessthan_thresholds(
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    function_name_idx = "Step {}: variance_lt_thresholds".format(decision_node_idx)
+    function_name_idx = "Step {}: variance_lt_thresholds".format(
+        selector.current_node_idx
+    )
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
@@ -498,7 +497,7 @@ def variance_lessthan_thresholds(
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
+            selector, ifTrue, ifFalse, decision_boolean
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -513,8 +512,8 @@ def variance_lessthan_thresholds(
             ifFalse=ifFalse,
         )
 
-    dnode_outputs = {"outputs": outputs}
-    return selector, dnode_outputs
+    selector.nodes[selector.current_node_idx]["outputs"] = outputs
+    return selector
 
 
 variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.format(
@@ -524,7 +523,6 @@ variance_lessthan_thresholds.__doc__ = variance_lessthan_thresholds.__doc__.form
 
 def kappa_rho_elbow_cutoffs_kundu(
     selector,
-    decision_node_idx,
     ifTrue,
     ifFalse,
     decide_comps,
@@ -577,8 +575,8 @@ def kappa_rho_elbow_cutoffs_kundu(
     # used, but, as of now, both are required to run this function
 
     outputs = {
-        "decision_node_idx": decision_node_idx,
-        "used_metrics": ["kappa", "rho"],
+        "decision_node_idx": selector.current_node_idx,
+        "used_metrics": set(["kappa", "rho"]),
         "node_label": None,
         "numTrue": None,
         "numFalse": None,
@@ -594,7 +592,7 @@ def kappa_rho_elbow_cutoffs_kundu(
         return outputs["used_metrics"]
 
     function_name_idx = "Step {}: kappa_rho_elbow_cutoffs_kundu".format(
-        decision_node_idx
+        selector.current_node_idx
     )
     if custom_node_label:
         outputs["node_label"] = custom_node_label
@@ -690,7 +688,7 @@ def kappa_rho_elbow_cutoffs_kundu(
             ) & (component_table.loc[comps2use, "rho"] < outputs["rho_elbow"])
 
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean, decision_node_idx
+            selector, ifTrue, ifFalse, decision_boolean
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -705,9 +703,9 @@ def kappa_rho_elbow_cutoffs_kundu(
             ifFalse=ifFalse,
         )
 
-    dnode_outputs = {"outputs": outputs}
+    selector.nodes[selector.current_node_idx]["outputs"] = outputs
 
-    return selector, dnode_outputs
+    return selector
 
 
 kappa_rho_elbow_cutoffs_kundu.__doc__ = kappa_rho_elbow_cutoffs_kundu.__doc__.format(

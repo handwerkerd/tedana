@@ -327,11 +327,10 @@ class ComponentSelector:
         RefLGR.info(tree_config.get("refs", ""))
 
         self.nodes = tree_config["nodes"]
-        self.necessary_metrics = tree_config["necessary_metrics"]
+        self.necessary_metrics = set(tree_config["necessary_metrics"])
         self.intermediate_classifications = tree_config["intermediate_classifications"]
         self.classification_tags = tree_config["classification_tags"]
         self.cross_component_metrics = dict()
-        self.used_metrics = []
 
     def component_select(self):
         """
@@ -363,8 +362,7 @@ class ComponentSelector:
         # necessary_metrics are in the comptable
         confirm_metrics_exist(self.component_table, self.necessary_metrics, self.tree)
 
-        used_metrics = set()
-        for ii, node in enumerate(self.nodes):
+        for self.current_node_idx, node in enumerate(self.nodes):
             fcn = getattr(selection_nodes, node["functionname"])
 
             params, kwargs = node["parameters"], node["kwargs"]
@@ -373,27 +371,28 @@ class ComponentSelector:
 
             LGR.info(
                 "Step {}: Running function {} with parameters: {}".format(
-                    ii, node["functionname"], {**params, **kwargs}
+                    self.current_node_idx, node["functionname"], {**params, **kwargs}
                 )
             )
-            self, dnode_outputs = fcn(self, decision_node_idx=ii, **params, **kwargs)
-            used_metrics.update(dnode_outputs["outputs"]["used_metrics"])
+            self = fcn(self, **params, **kwargs)
 
             # print(list(self.component_table['rationale']))
             # dnode_outputs is a dict that should always include fields for
             #   decision_node_idx, numTrue, numFalse, used_metrics, and node_label
             #   any other fields will also be logged in this output
-            self.nodes[ii].update(dnode_outputs)
-            log_classification_counts(ii, self.component_table)
+
+            # self.nodes[self.current_node_idx].update(dnode_outputs)
+            log_classification_counts(self.current_node_idx, self.component_table)
 
         # Move decision columns to end
         self.component_table = clean_dataframe(self.component_table)
-        self.are_only_necessary_metrics_used(used_metrics)
+        self.are_only_necessary_metrics_used()
+        print(f"Used metrics: {self.used_metrics}")
         print(self.nodes)
 
     def check_necessary_metrics(self):
         used_metrics = set()
-        for ii, node in enumerate(self.nodes):
+        for self.current_node_idx, node in enumerate(self.nodes):
             fcn = getattr(selection_nodes, node["functionname"])
 
             params, kwargs = node["parameters"], node["kwargs"]
@@ -407,7 +406,6 @@ class ComponentSelector:
             )
             func_used_metrics = fcn(
                 self.component_table,
-                decision_node_idx=ii,
                 **params,
                 **kwargs,
                 only_used_metrics=True,
@@ -435,12 +433,18 @@ class ComponentSelector:
 
         return params
 
-    def are_only_necessary_metrics_used(self, used_metrics):
-        # This function checks if all metrics that are declared as necessary
+    def are_only_necessary_metrics_used(self):
+        # Go through all the nodes and put the used metrics into a single set
+        # Then check if all metrics that are declared as necessary
         # are actually used and if any used_metrics weren't explicitly declared
         # If either of these happen, a warning is added to the logger
-        not_declared = set(used_metrics) - set(self.necessary_metrics)
-        not_used = set(self.necessary_metrics) - set(used_metrics)
+
+        self.used_metrics = set()
+        for ii, node in enumerate(self.nodes):
+            self.used_metrics.update(node["outputs"]["used_metrics"])
+
+        not_declared = self.used_metrics - set(self.necessary_metrics)
+        not_used = set(self.necessary_metrics) - self.used_metrics
         if len(not_declared) > 0:
             LGR.warning(
                 "Decision tree {} used additional metrics not declared "

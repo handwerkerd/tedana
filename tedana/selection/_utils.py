@@ -15,18 +15,18 @@ RefLGR = logging.getLogger("REFERENCES")
 # Functions that are used for interacting with comptable
 
 
-def selectcomps2use(DT_class, decide_comps):
+def selectcomps2use(selector, decide_comps):
     """
     Give a list of component numbers that fit the classification types in
     decide_comps. Also pulls out and returns component_table from within
-    DT_class
+    selector
     Since 'all' converts string to boolean, it will miss components with
     no classification. This means, in the initialization of comptree, all
     components need to be labeled as unclassified, NOT empty
     MAY WANT TO ADD NUMBER INDEXING TO selectcomps2use SO THAT USERS CAN
     SELECT COMPONENTS BY NUMBER RATHER THAN LABEL
     """
-    component_table = DT_class.component_table
+    component_table = selector.component_table
     if type(decide_comps) == str:
         decide_comps = [decide_comps]
     if decide_comps[0] == "all":
@@ -55,9 +55,7 @@ def selectcomps2use(DT_class, decide_comps):
     return comps2use, component_table
 
 
-def change_comptable_classifications(
-    DT_class, ifTrue, ifFalse, decision_boolean, decision_node_idx
-):
+def change_comptable_classifications(selector, ifTrue, ifFalse, decision_boolean):
     """
     Given information on whether a decision critereon is true or false for each component
     change or don't change the component classification
@@ -80,24 +78,24 @@ def change_comptable_classifications(
 
     if ifTrue != "nochange":
         changeidx = decision_boolean.index[np.asarray(decision_boolean)]
-        DT_class.component_table.loc[changeidx, "classification"] = ifTrue
+        selector.component_table.loc[changeidx, "classification"] = ifTrue
         # comptable.loc[changeidx, "rationale"] += (
         #     decision_node_idx_str + ": " + ifTrue + "; "
         # )
     if ifFalse != "nochange":
         changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
-        DT_class.component_table.loc[changeidx, "classification"] = ifFalse
+        selector.component_table.loc[changeidx, "classification"] = ifFalse
         # comptable.loc[changeidx, "rationale"] += (
         #     decision_node_idx_str + ": " + ifFalse + "; "
         # )
-    DT_class.component_status_table[
-        f"Node {decision_node_idx}"
-    ] = DT_class.component_table["classification"]
+    selector.component_status_table[
+        f"Node {selector.current_node_idx}"
+    ] = selector.component_table["classification"]
 
     # decision_tree_steps[-1]['numtrue'] = (decision_boolean is True).sum()
     # decision_tree_steps[-1]['numfalse'] = (decision_boolean is False).sum()
 
-    return DT_class  # , decision_tree_steps
+    return selector  # , decision_tree_steps
 
 
 def clean_dataframe(comptable):
@@ -127,7 +125,7 @@ def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
     comptable : (C x M) :obj:`pandas.DataFrame`
             Component metric table. One row for each component, with a column for
             each metric. The index should be the component number.
-    necessary_metrics : :obj:`list` a 1D list of strings of metrics
+    necessary_metrics : :obj:`set` a set of strings of metrics
     function_name : :obj:`str`
         Text identifying the function name that called this function
 
@@ -150,7 +148,7 @@ def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
     of the metrics in necessary_metrics and the column labels in comptable
     """
 
-    missing_metrics = set(necessary_metrics) - set(comptable.columns)
+    missing_metrics = necessary_metrics - set(comptable.columns)
     metrics_exist = len(missing_metrics) == 0
 
     if metrics_exist is False:
