@@ -331,6 +331,7 @@ class ComponentSelector:
         self.intermediate_classifications = tree_config["intermediate_classifications"]
         self.classification_tags = tree_config["classification_tags"]
         self.cross_component_metrics = dict()
+        self.used_metrics = set()
 
     def component_select(self):
         """
@@ -375,7 +376,9 @@ class ComponentSelector:
                 )
             )
             self = fcn(self, **params, **kwargs)
-
+            self.used_metrics.update(
+                self.nodes[self.current_node_idx]["outputs"]["used_metrics"]
+            )
             # print(list(self.component_table['rationale']))
             # dnode_outputs is a dict that should always include fields for
             #   decision_node_idx, numTrue, numFalse, used_metrics, and node_label
@@ -387,32 +390,7 @@ class ComponentSelector:
         # Move decision columns to end
         self.component_table = clean_dataframe(self.component_table)
         self.are_only_necessary_metrics_used()
-        print(f"Used metrics: {self.used_metrics}")
         print(self.nodes)
-
-    def check_necessary_metrics(self):
-        used_metrics = set()
-        for self.current_node_idx, node in enumerate(self.nodes):
-            fcn = getattr(selection_nodes, node["functionname"])
-
-            params, kwargs = node["parameters"], node["kwargs"]
-            params = self.check_null(params, node["functionname"])
-            kwargs = self.check_null(kwargs, node["functionname"])
-
-            LGR.info(
-                "Checking necessary metrics for function {} with parameters: {}".format(
-                    node["functionname"], {**params, **kwargs}
-                )
-            )
-            func_used_metrics = fcn(
-                self.component_table,
-                **params,
-                **kwargs,
-                only_used_metrics=True,
-            )
-            used_metrics.update(func_used_metrics)
-        LGR.info("Used metrics: {}".format(used_metrics))
-        return used_metrics
 
     def check_null(self, params, fcn):
         for key, val in params.items():
@@ -439,19 +417,19 @@ class ComponentSelector:
         # are actually used and if any used_metrics weren't explicitly declared
         # If either of these happen, a warning is added to the logger
 
-        self.used_metrics = set()
-        for ii, node in enumerate(self.nodes):
-            self.used_metrics.update(node["outputs"]["used_metrics"])
+        unused_metrics = self.necessary_metrics - self.used_metrics
+        if len(unused_metrics) > 0:
+            LGR.warning(
+                f"The following metrics were declared necessary by not actually used: {unused_metrics}"
+            )
 
-        not_declared = self.used_metrics - set(self.necessary_metrics)
-        not_used = set(self.necessary_metrics) - self.used_metrics
+        not_declared = self.used_metrics - self.necessary_metrics
+        not_used = self.necessary_metrics - self.used_metrics
         if len(not_declared) > 0:
             LGR.warning(
-                "Decision tree {} used additional metrics not declared "
-                "as necessary: {}".format(self.tree, not_declared)
+                f"Decision tree {self.tree} used the following metrics that were not declared as necessary: {not_declared}"
             )
         if len(not_used) > 0:
             LGR.warning(
-                "Decision tree {} failed to use metrics that were "
-                "declared as necessary: {}".format(self.tree, not_used)
+                f"Decision tree {self.tree} failed to use the following metrics that were declared as necessary: {not_used}"
             )

@@ -149,9 +149,8 @@ def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
     """
 
     missing_metrics = necessary_metrics - set(comptable.columns)
-    metrics_exist = len(missing_metrics) == 0
-
-    if metrics_exist is False:
+    metrics_exist = len(missing_metrics) > 0
+    if metrics_exist is True:
         if function_name is not None:
             error_msg = (
                 f"Necessary metrics for {function_name}: "
