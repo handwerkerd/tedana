@@ -1,5 +1,5 @@
 """
-Functions that include workflows to identify
+Functions that include workflows to identify and label
 TE-dependent and TE-independent components.
 """
 import os.path as op
@@ -22,7 +22,7 @@ RepLGR = logging.getLogger("REPORT")
 RefLGR = logging.getLogger("REFERENCES")
 
 # These are the names of the json files containing decision
-# trees that are stored in the ./selection/data/ directory
+# trees that are stored in the ./resouces/decision_trees/ directory
 # A user can run the desision tree either using one of these
 # names or by giving the full path to a tree in a different
 # location
@@ -46,24 +46,31 @@ def load_config(tree):
     Returns
     -------
     tree : :obj:`dict`
-        A validated decision tree for the component selection process.::|br|
-        The `dict` has several required fields to describe the entire tree ::|br|
-        `tree_id`: The name of the tree|br|
-        `info`: A brief description of the tree to be used in info logging|br|
-        `report`: A narrative description of the tree that could be used in report logging|br|
-        `refs`: Publications that should be referenced, when this tree is used|br|
-        `necessary_metrics`: The metrics in `comptable` that will be used by this tree|br|
-        `nodes`: A list of dictionaries where each dictionary includes the information<br>
-        to run one node in the decision tree. This includes:<br>
-        `functionname`: The name of the function to be called<br>
-        `parameters`: Required parameters for the function<br>
-        The only parameter that is used in all functions is `decidecomps`.
-        This is a list of component classifications, that this function should
-        operate on. Most functions also include `ifTrue` and `ifFalse` which
-        define how to to change the classification of a component if the
-        criteria in the function is true or false.<br>
-        `kwargs`: Optional parameters for the function
+        A validated decision tree for the component selection process.
+        The `dict` has several required fields to describe the entire tree
+        `tree_id`: :obj:`str` The name of the tree
+        `info`: :obj:`str` A brief description of the tree for info logging
+        `report`: :obj:`str` A narrative description of the tree that could be used in report logging
+        `refs`: :obj:`str` Publications that should be referenced, when this tree is used
+        `necessary_metrics`: :obj:`list[str]` The metrics in `component_table` that will be used by this tree
+        `intermediate_classifications`: :obj:`list[str]` User specified component classification labels. 'accepted', 'rejected', and 'unclassified' are defaults that don't need to be included here
+        `classification_tags`: :obj:`list[str]` Descriptive labels that can be used to explain why a component was accepted or rejected. For example, ["Likely BOLD","Low variance"]
+        `nodes`: :obj:`list[dict]` Each dictionary includes the information
+        to run one node in the decision tree. Each node should either be able
+        to change component classifications (function names starting with dec_)
+        or calculate values using information from multiple components
+        (function names starting with calc_)
+        nodes includes:
+            `functionname`: :obj:`str` The name of the function to be called
+            `parameters`: :obj:`dict` Required parameters for the function
+            The only parameter that is used in all functions is `decidecomps`,
+            which are the component classifications the function should run on.
+            Most dec_ functions also include `ifTrue` and `ifFalse` which
+            define how to to change the classification of a component if the
+            criteria in the function is true or false.
+            `kwargs`: :obj:`dict` Optional parameters for the function
     """
+
     if tree in DEFAULT_TREES:
         fname = op.join(get_resource_path(), "decision_trees", tree + ".json")
     else:
@@ -224,12 +231,12 @@ def validate_tree(tree):
 class ComponentSelector:
     """
     Classifies components based on specified `tree` when the class is initialized
-    and then the `run` function is called.
+    and then the `component_select` function is called.
     The expected output of running a decision tree is that every component
-    will be classified as 'accepted', 'rejected', or 'ignored'.
+    will be classified as 'accepted', or 'rejected'.
 
     The selection process uses previously calculated parameters listed in
-    `comptable` for each ICA component such as Kappa (a T2* weighting metric),
+    `component_table` for each ICA component such as Kappa (a T2* weighting metric),
     Rho (an S0 weighting metric), and variance explained. See tedana.metrics
     for more detail on the calculated metrics
 
@@ -237,10 +244,10 @@ class ComponentSelector:
     ----------
     tree : :obj:`str`
         A json file name without the '.json' extension that contains the decision tree to use
-    comptable : (C x M) :obj:`pandas.DataFrame`
+    component_table : (C x M) :obj:`pandas.DataFrame`
         Component metric table. One row for each component, with a column for
         each metric; the index should be the component number!
-    user_notes : str, optional
+    user_notes : :obj:`str, optional`
         Additional user notes about decision tree
     path : :obj:`str, optional`
         The directory path where `tree` is located.
@@ -267,44 +274,67 @@ class ComponentSelector:
     Returns
     -------
     component_table : :obj:`pandas.DataFrame`
-        Updated component table with additional metrics and with classifications
-        (i.e., accepted, rejected, or ignored) for each component
+        Updated component table with two extra columns:
+        classifications : :obj:`str` (i.e., accepted, rejected) for each component
+        classification_tags : :obj:`list[str]` descriptions explaining reasons for classification
     cross_component_metrics : :obj:`Dict`
-        A dictionary of metrics that are each a single value calculated across
-        components. For example, kappa and rho. For each metric name key, the
-        value is a dict containing the following keys:
-        "value" The metric's value
-        "node calculated" The node index where the value was calculated
-        "comment" Text explaining the meaning or purpose of this value
+        Metrics that are each a single value calculated across
+        components. For example, kappa and rho.
     component_status_table : :obj:`pandas.DataFrame`
         A dataframe where each column lists the classification status of
         each component after each node was run
-    nodes : :obj:`dict`
+    Information that was stored in the tree json file. This includes:
+        tree, classification_tags, intermediate_classifications, necessary_metrics
+    nodes : :obj:`list[dict]`
         Nodes used in decision tree. This includes the decision tree dict
-        from the json file in the `tree` input. For every dict in the list of
-        functions called in the decision tree, there is an added key `outputs`
-        which includes four values:
+        from the json file in the `tree` input. For every element in the list
+        there is an added dict key `outputs` which includes key information from
+        when the function was run. Some of this information is function-specific,
+        but there are common elements across most or all:
         decison_node_idx : :obj:`int`
-            The decision tree function are run as part of an ordered list.
-            This is the positional index for when this function has been run
+            The decision tree functions are run as part of an ordered list.
+            This is the positional index for when this function was been run
             as part of this list.
         used_metrics : :obj:`list[str]`
             A list of the metrics used in a node of the decision tree
+        used_cross_component_metrics : :obj:`list[str]`
+            A list of cross component metrics used in the node of a decisiont ree
         node_label : :obj:`str`
             A brief label for what happens in this node that can be used in a decision
             tree summary table or flow chart.
         numTrue, numFalse : :obj:`int`
-            The number of components that were classified as true or false respectively
-            in this decision tree step.
+            For decision (dec_) functions, the number of components that were classified
+            as true or false respectively in this decision tree step.
+        calc_cross_comp_metrics : :obj:`list[str]`
+            For calculation (calc_) functions, cross component metrics that were
+            calculated in this function. When this is included, each of those
+            metrics and the calculated values are also distinct keys in 'outputs'.
+            While cross_component_metrics does not include where each component
+            was calculated, that information is stored here.
+    current_node_idx : :obj:`int`
+        The index for the current node, which should be the last node in the decision tree
 
     Notes
     -----
     """
 
-    def __init__(self, tree, comptable, **kwargs):
-        # initialize stuff based on the info in specified `tree`
+    def __init__(self, tree, component_table, **kwargs):
+        """
+        Initialize the class using the info specified in the json file `tree`
+
+        Returns
+        -------
+        The class structure with the following fields loaded from tree:
+            nodes, necessary_metrics, intermediate_classificaitons,
+            classification_tags,
+        Adds to the class structure:
+            component_status_table: empty dataframe
+            cross_component_metrics: empty dict
+            used_metrics: empty set
+        """
+
         self.tree = tree
-        self.component_table = comptable.copy()
+        self.component_table = component_table.copy()
 
         # To run a decision tree, each component needs to have an initial classification
         # If the classification column doesn't exist, create it and label all components
@@ -342,57 +372,58 @@ class ComponentSelector:
 
         Returns
         -------
-        component_table : :obj:`pandas.DataFrame`
-            Updated component table with additional metrics and with classifications
-            (i.e., accepted, rejected) for each component
-        cross_component_metrics : :obj:`Dict`
-            A dictionary of metrics that are each a single value calculated across
-            components. For example, kappa and rho. For each metric name key, the
-            value is a dict containing the following keys:
-            "value" The metric's value
-            "node calculated" The node index where the value was calculated
-            "comment" Text explaining the meaning or purpose of this value
-        component_status_table : :obj:`pandas.DataFrame`
-            A dataframe where each column lists the classification status of
-            each component after each node was run
-        nodes : :obj:`dict`
-            Nodes used in decision tree with updated information from run-time
+        The following attributes are altered in this function are descibed in
+        the ComponentSelector class description:
+            component_table, cross_component_metrics, component_status_table,
+            cross_component_metrics, used_metrics, nodes (outputs field),
+            current_node_idx
         """
 
         # this will crash the program with an error message if not all
         # necessary_metrics are in the comptable
         confirm_metrics_exist(self.component_table, self.necessary_metrics, self.tree)
 
+        # for each node in the decision tree
         for self.current_node_idx, node in enumerate(self.nodes):
+            # parse the variables to use with the function
             fcn = getattr(selection_nodes, node["functionname"])
 
             params, kwargs = node["parameters"], node["kwargs"]
             params = self.check_null(params, node["functionname"])
             kwargs = self.check_null(kwargs, node["functionname"])
-
+            # log the function name and parameters used
             LGR.info(
                 "Step {}: Running function {} with parameters: {}".format(
                     self.current_node_idx, node["functionname"], {**params, **kwargs}
                 )
             )
+            # run the decision node function
             self = fcn(self, **params, **kwargs)
             self.used_metrics.update(
                 self.nodes[self.current_node_idx]["outputs"]["used_metrics"]
             )
-            # print(list(self.component_table['rationale']))
-            # dnode_outputs is a dict that should always include fields for
-            #   decision_node_idx, numTrue, numFalse, used_metrics, and node_label
-            #   any other fields will also be logged in this output
 
-            # self.nodes[self.current_node_idx].update(dnode_outputs)
+            # log the current counts for all classificatin labels
             log_classification_counts(self.current_node_idx, self.component_table)
 
-        # Move decision columns to end
+        # move decision columns to end
         self.component_table = clean_dataframe(self.component_table)
+        # warning anything called a necessary metric wasn't used and if
+        # anything not called a necessary metric was used
         self.are_only_necessary_metrics_used()
         print(self.nodes)
 
     def check_null(self, params, fcn):
+        """
+        Checks that all required parameters for selection node functions are
+        attributes in the class. Error if any are undefined
+
+        Returns
+        -------
+        params
+            The values for the inputted parameters
+        """
+
         for key, val in params.items():
             if val is None:
                 try:
@@ -412,11 +443,11 @@ class ComponentSelector:
         return params
 
     def are_only_necessary_metrics_used(self):
-        # Go through all the nodes and put the used metrics into a single set
-        # Then check if all metrics that are declared as necessary
-        # are actually used and if any used_metrics weren't explicitly declared
-        # If either of these happen, a warning is added to the logger
-
+        """
+        Check if all metrics that are declared as necessary are actually
+        used and if any used_metrics weren't explicitly declared necessary
+        If either of these happen, a warning is added to the logger
+        """
         unused_metrics = self.necessary_metrics - self.used_metrics
         if len(unused_metrics) > 0:
             LGR.warning(
