@@ -128,7 +128,7 @@ def clean_dataframe(comptable):
         [c for c in comptable if c not in cols_at_end]
         + [c for c in cols_at_end if c in comptable]
     ]
-    comptable["rationale"] = comptable["rationale"].str.rstrip(";")
+    # comptable["rationale"] = comptable["rationale"].str.rstrip(";")
     return comptable
 
 

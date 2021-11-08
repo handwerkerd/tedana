@@ -47,10 +47,10 @@ def manual_selection(comptable, acc=None, rej=None):
         and "original_classification" not in comptable.columns
     ):
         comptable["original_classification"] = comptable["classification"]
-        comptable["original_rationale"] = comptable["rationale"]
+        # comptable["original_rationale"] = comptable["rationale"]
 
     comptable["classification"] = "accepted"
-    comptable["rationale"] = ""
+    # comptable["rationale"] = ""
 
     all_comps = comptable.index.values
     if acc is not None:
@@ -106,7 +106,7 @@ def automatic_selection(comptable, n_echos, n_vols, tree="simple"):
     --------
     ComponentSelector, the class used to represent the classification process
     """
-    comptable["rationale"] = ""
+    comptable["classification_tags"] = ""
     selector = ComponentSelector(tree, comptable, n_echos=n_echos, n_vols=n_vols)
     selector.component_select()
     selector.metadata = collect.get_metadata(selector.component_table)

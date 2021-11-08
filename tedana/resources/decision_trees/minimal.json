@@ -30,7 +30,7 @@
                 "decide_comps": "all"
             },
             "kwargs": {
-                "log_extra_info": "Initializing all classifications as unclassified and all rationales as blank",
+                "log_extra_info": "Initializing all classifications as unclassified and all classification tags as blank",
                 "log_extra_report": "",
                 "clear_classification_tags": true
             }
