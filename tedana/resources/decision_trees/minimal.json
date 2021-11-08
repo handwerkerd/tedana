@@ -14,7 +14,6 @@
         "variance explained"
     ],
     "intermediate_classifications": [
-        "lowvariance",
         "provisionalaccept",
         "provisionalreject"
     ],

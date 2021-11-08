@@ -306,12 +306,12 @@ class ComponentSelector:
         but there are common elements across most or all:
         decison_node_idx : :obj:`int`
             The decision tree functions are run as part of an ordered list.
-            This is the positional index for when this function was been run
+            This is the positional index for when this function was run
             as part of this list.
         used_metrics : :obj:`list[str]`
             A list of the metrics used in a node of the decision tree
         used_cross_component_metrics : :obj:`list[str]`
-            A list of cross component metrics used in the node of a decisiont ree
+            A list of cross component metrics used in the node of a decision tree
         node_label : :obj:`str`
             A brief label for what happens in this node that can be used in a decision
             tree summary table or flow chart.
