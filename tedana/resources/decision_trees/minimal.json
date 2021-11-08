@@ -102,8 +102,7 @@
         {
             "functionname": "calc_kappa_rho_elbows_kundu",
             "parameters": {
-                "decide_comps": "unclassified",
-                "n_echos": null
+                "decide_comps": "unclassified"
             },
             "kwargs": {
                 "log_extra_info": "",

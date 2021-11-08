@@ -335,6 +335,13 @@ class ComponentSelector:
         """
         Initialize the class using the info specified in the json file `tree`
 
+        Any optional variables defined in the function call will be added to
+        the class structure. Several trees expect n_echos to be defined.
+        The full kundu tree also require n_vols (number of volumes) to be
+        defined. An example initialization with these options would look like
+        selector = ComponentSelector(tree, comptable, n_echos=n_echos,
+        n_vols=n_vols)
+
         Returns
         -------
         The class structure with the following fields loaded from tree:
