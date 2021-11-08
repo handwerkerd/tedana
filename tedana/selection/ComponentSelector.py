@@ -205,7 +205,7 @@ def validate_tree(tree):
         nonstandard_labels = compclass.difference(all_classifications)
         if nonstandard_labels:
             LGR.warning(
-                "{} in node {} of the decision tree includes a nonstandard label".format(
+                "{} in node {} of the decision tree includes a classification label that was not predefined".format(
                     compclass, i
                 )
             )
@@ -217,9 +217,22 @@ def validate_tree(tree):
         nonstandard_labels = compclass.difference(all_decide_comps)
         if nonstandard_labels:
             LGR.warning(
-                "{} in node {} of the decision tree includes a nonstandard label".format(
-                    compclass, i
-                )
+                f"{complass} in node {i} of the decision tree includes a classification label that was not predefined"
+            )
+
+        tagset = set()
+        if "tag_ifTrue" in node.get("kwargs").keys():
+            tagset.update(set([node["kwargs"]["tag_ifTrue"]]))
+        if "tag_ifFalse" in node.get("kwargs").keys():
+            tagset.update(set([node["kwargs"]["tag_ifFalse"]]))
+        if "tag" in node.get("kwargs").keys():
+            tagset.update(set([node["kwargs"]["tag"]]))
+        undefined_classification_tags = tagset.difference(
+            set(tree.get("classification_tags"))
+        )
+        if undefined_classification_tags:
+            LGR.warning(
+                f"{tagset} in node {i} of the decision tree includes a classification tag that was not predefined"
             )
 
     if err_msg:
@@ -359,7 +372,7 @@ class ComponentSelector:
         self.nodes = tree_config["nodes"]
         self.necessary_metrics = set(tree_config["necessary_metrics"])
         self.intermediate_classifications = tree_config["intermediate_classifications"]
-        self.classification_tags = tree_config["classification_tags"]
+        self.classification_tags = set(tree_config["classification_tags"])
         self.cross_component_metrics = dict()
         self.used_metrics = set()
 

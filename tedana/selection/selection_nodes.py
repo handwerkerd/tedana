@@ -155,11 +155,12 @@ def manual_classify(
     selector,
     decide_comps,
     new_classification,
-    clear_rationale=False,
+    clear_classification_tags=False,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
     only_used_metrics=False,
+    tag=None,
 ):
     """
     Explicitly assign a classifictation, defined in iffrue,
@@ -184,8 +185,8 @@ def manual_classify(
         in new_classification. Options are 'unclassified', 'accepted',
         'rejected', or intermediate_classification labels predefined in the
         decision tree
-    clear_rationale: :obj: `bool`
-        If True, reset all values in the 'rationale' column to empty strings
+    clear_classification_tags: :obj: `bool`
+        If True, reset all values in the 'classification_tags' column to empty strings
         If False, do nothing
     {log_extra}
     {custom_node_label}
@@ -237,7 +238,7 @@ def manual_classify(
     else:
         decision_boolean = pd.Series(True, index=comps2use)
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean
+            selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=tag
         )
         outputs["numTrue"] = decision_boolean.sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -252,12 +253,9 @@ def manual_classify(
             ifFalse=ifFalse,
         )
 
-    if clear_rationale:
-        component_table["rationale"] = ""
-        LGR.info(
-            function_name_idx
-            + " component classification 'rationale' values are set to empty strings"
-        )
+    if clear_classification_tags:
+        component_table["classification_tags"] = ""
+        LGR.info(function_name_idx + " component classification tags are cleared")
 
     selector.nodes[selector.current_node_idx]["outputs"] = outputs
 
@@ -281,6 +279,8 @@ def dec_left_op_right(
     log_extra_info="",
     custom_node_label="",
     only_used_metrics=False,
+    tag_ifTrue=None,
+    tag_ifFalse=None,
 ):
     """
     Tests a relationship between (left_scale*)left and (right_scale*right)
@@ -401,7 +401,12 @@ def dec_left_op_right(
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean
+            selector,
+            ifTrue,
+            ifFalse,
+            decision_boolean,
+            tag_ifTrue=tag_ifTrue,
+            tag_ifFalse=tag_ifFalse,
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -436,6 +441,8 @@ def dec_variance_lessthan_thresholds(
     log_extra_info="",
     custom_node_label="",
     only_used_metrics=False,
+    tag_ifTrue=None,
+    tag_ifFalse=None,
 ):
     """
     Finds components with variance<single_comp_threshold.
@@ -515,7 +522,12 @@ def dec_variance_lessthan_thresholds(
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
         selector = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean
+            selector,
+            ifTrue,
+            ifFalse,
+            decision_boolean,
+            tag_ifTrue=tag_ifTrue,
+            tag_ifFalse=tag_ifFalse,
         )
         outputs["numTrue"] = np.asarray(decision_boolean).sum()
         outputs["numFalse"] = np.logical_not(decision_boolean).sum()
@@ -720,6 +732,10 @@ def calc_kappa_rho_elbows_kundu(
 calc_kappa_rho_elbows_kundu.__doc__ = calc_kappa_rho_elbows_kundu.__doc__.format(
     **decision_docs
 )
+
+"""
+EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
+"""
 
 
 def classification_exists(

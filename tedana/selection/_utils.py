@@ -55,7 +55,9 @@ def selectcomps2use(selector, decide_comps):
     return comps2use, component_table
 
 
-def change_comptable_classifications(selector, ifTrue, ifFalse, decision_boolean):
+def change_comptable_classifications(
+    selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=None, tag_ifFalse=None
+):
     """
     Given information on whether a decision critereon is true or false for each component
     change or don't change the component classification
@@ -79,15 +81,33 @@ def change_comptable_classifications(selector, ifTrue, ifFalse, decision_boolean
     if ifTrue != "nochange":
         changeidx = decision_boolean.index[np.asarray(decision_boolean)]
         selector.component_table.loc[changeidx, "classification"] = ifTrue
-        # comptable.loc[changeidx, "rationale"] += (
-        #     decision_node_idx_str + ": " + ifTrue + "; "
-        # )
+        if tag_ifTrue:
+            for idx in changeidx:
+                tmpstr = selector.component_table.loc[idx, "classification_tags"]
+                if tmpstr != "":
+                    tmpset = set(tmpstr.split(","))
+                    tmpset.update([tag_ifTrue])
+                else:
+                    tmpset = set([tag_ifTrue])
+                selector.component_table.loc[idx, "classification_tags"] = ",".join(
+                    str(s) for s in tmpset
+                )
+
     if ifFalse != "nochange":
         changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
         selector.component_table.loc[changeidx, "classification"] = ifFalse
-        # comptable.loc[changeidx, "rationale"] += (
-        #     decision_node_idx_str + ": " + ifFalse + "; "
-        # )
+        if tag_ifFalse:
+            for idx in changeidx:
+                tmpstr = selector.component_table.loc[idx, "classification_tags"]
+                if tmpstr != "":
+                    tmpset = set(tmpstr.split(","))
+                    tmpset.update([tag_ifFalse])
+                else:
+                    tmpset = set([tag_ifFalse])
+                selector.component_table.loc[idx, "classification_tags"] = ",".join(
+                    str(s) for s in tmpset
+                )
+
     selector.component_status_table[
         f"Node {selector.current_node_idx}"
     ] = selector.component_table["classification"]

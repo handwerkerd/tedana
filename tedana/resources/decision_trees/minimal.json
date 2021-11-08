@@ -20,6 +20,7 @@
     ],
     "classification_tags": [
         "Likely BOLD",
+        "Unlikely BOLD",
         "Low variance"
     ],
     "nodes": [
@@ -32,7 +33,7 @@
             "kwargs": {
                 "log_extra_info": "Initializing all classifications as unclassified and all rationales as blank",
                 "log_extra_report": "",
-                "clear_rationale": true
+                "clear_classification_tags": true
             }
         },
         {
@@ -47,7 +48,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if Kappa<Rho",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -62,7 +64,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if countsig_in S0clusters > T2clusters",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -77,7 +80,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if dice S0>T2",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -92,7 +96,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if T2fitdiff_invsout_ICAmap_Tstat<0",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -134,7 +139,8 @@
             "kwargs": {
                 "log_extra_info": "If kappa>elbow and kappa>3*rho accept even if rho>elbow",
                 "log_extra_report": "",
-                "right_scale": 3
+                "right_scale": 3,
+                "tag_ifTrue": "Likely BOLD"
             }
         },
         {
@@ -158,7 +164,7 @@
         {
             "functionname": "dec_variance_lessthan_thresholds",
             "parameters": {
-                "ifTrue": "lowvariance",
+                "ifTrue": "accepted",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalreject",
@@ -170,7 +176,8 @@
                 "log_extra_info": "",
                 "log_extra_report": "",
                 "single_comp_threshold": 0.1,
-                "all_comp_threshold": 1.0
+                "all_comp_threshold": 1.0,
+                "tag_ifTrue": "Low variance"
             }
         },
         {
@@ -182,7 +189,7 @@
             "kwargs": {
                 "log_extra_info": "",
                 "log_extra_report": "",
-                "clear_rationale": false
+                "tag": "Likely BOLD"
             }
         },
         {
@@ -197,7 +204,7 @@
             "kwargs": {
                 "log_extra_info": "",
                 "log_extra_report": "",
-                "clear_rationale": false
+                "tag": "Unlikely BOLD"
             }
         }
     ]
