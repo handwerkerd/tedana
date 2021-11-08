@@ -7,6 +7,7 @@ import inspect
 import json
 import logging
 from pkg_resources import resource_filename
+from numpy import asarray
 
 from tedana.selection._utils import (
     clean_dataframe,
@@ -423,7 +424,7 @@ class ComponentSelector:
                 self.nodes[self.current_node_idx]["outputs"]["used_metrics"]
             )
 
-            # log the current counts for all classificatin labels
+            # log the current counts for all classification labels
             log_classification_counts(self.current_node_idx, self.component_table)
 
         # move decision columns to end
@@ -431,6 +432,9 @@ class ComponentSelector:
         # warning anything called a necessary metric wasn't used and if
         # anything not called a necessary metric was used
         self.are_only_necessary_metrics_used()
+
+        self.are_all_components_accepted_or_rejected()
+
         print(self.nodes)
 
     def check_null(self, params, fcn):
@@ -484,3 +488,24 @@ class ComponentSelector:
             LGR.warning(
                 f"Decision tree {self.tree} failed to use the following metrics that were declared as necessary: {not_used}"
             )
+
+    def are_all_components_accepted_or_rejected(self):
+        """
+        After the tree has finished executing, check if all component
+        classifications are either "accepted" or "rejected"
+        If any other component classifications remain, log a warning
+        """
+        component_classifications = set(
+            self.component_table["classification"].to_list()
+        )
+        nonfinal_classifications = component_classifications.difference(
+            {"accepted", "rejected"}
+        )
+        if nonfinal_classifications:
+            for nonfinal_class in nonfinal_classifications:
+                numcomp = asarray(
+                    self.component_table["classification"] == nonfinal_class
+                ).sum()
+                LGR.warning(
+                    f"{numcomp} components have a final classification of {nonfinal_class}. At the end of the selection process, all components are expected to be 'accepted' or 'rejected'"
+                )
