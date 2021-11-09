@@ -2,17 +2,17 @@
 Understanding and building a component selection process
 ########################################################
 
-``tedana`` involve transforming data into components via ICA, and then calculating metrics for each component.
+``tedana`` involves transforming data into components via ICA, and then calculating metrics for each component.
 Each metric has one value per component that is stored in a comptable or component_table dataframe. This structure
-is then pass to a "decision tree" which through a series of binary choices categories each component as accepted or
+is then passed to a "decision tree" which through a series of binary choices categories each component as accepted or
 rejected. The time series for the rejected components are regressed from the data in the final denoising step.
 
 There are several decision trees that are included by default in ``tedana`` but users can also build their own.
-This might be useful both if one of the default decision trees needs to be slightly altered due to the nature
+This might be useful if one of the default decision trees needs to be slightly altered due to the nature
 of a specific data set, if one has an idea for a new approach to multi-echo denoising, or if one wants to integrate
 non-multi-echo metrics into a single decision tree.
 
-Note: We use two terminologies interchangably. This whole process is called "component selection"
+Note: We use two terminologies interchangeably. The whole process is called "component selection"
 and much of the code uses variants of that phrase (i.e. the ComponentSelector class, selection_nodes for the functions used in selection).
 Instructions for how to classify components is called a "decision tree" since each step in the selection
 process branches components into different intermediate or final classifications
@@ -33,7 +33,7 @@ classification:
     While the decision table is bring running, there may also be intermediate
     classification labels. Note, nothing in the current code requires a tree to
     assign one of these two labels to every component. There will be a warning
-    if other labels remain
+    if other labels remain.
 
 classification_tags:
     Human readable tags that explain why a classification was reached. These can
@@ -60,19 +60,19 @@ used_metrics:
 classification_tags:
     A list of the pre-specified classification tags that could be used in a decision tree.
     Any reporting interface should use this field so that the tags that are possible are listed
-    even if no components are assigned a specific tag.
+    even if a given tag is not used by any components by the end of the selection process.
     
 **Outputs of each decision tree step**
 
-This includes all the information from the inputted decision tree under each "node" or function
+This includes all the information from the specified decision tree under each "node" or function
 call. For each node, there is also an "outputs" subfield with information from when the tree
-was executed
-(Currently also in selector, but should be saved as a json file)
+was executed.
+(Currently also in selector, but should be saved as a json file.)
 
 decison_node_idx:
     The decision tree functions are run as part of an ordered list.
     This is the positional index for when this function was run
-    as part of this list. (First index is 0)
+    as part of this list, starting with index 0.
     
 used_metrics:
     A list of the metrics used in a node of the decision tree
@@ -100,12 +100,12 @@ calc_cross_comp_metrics:
 Understanding the parts of a decision tree
 ******************************************
 
-Decision trees are stored in json files. The default trees are with the tedana code in ./resources/decision_trees
+Decision trees are stored in json files. The default trees are stored as part of the tedana code repository in ./resources/decision_trees
 The minimal tree, minimal.json is a good example highlighting the structure and steps in a tree. It may be helpful
 to look at that tree while reading this section.
 
 A user can specify another decision tree and link to the tree location when tedana is executed. The format is
-flexible to allow for future innovations, but that also means, it's flexible enough for someone who designs a tree
+flexible to allow for future innovations, but be advised that this also allows you to
 to create something with non-ideal results for the current code. Some criteria will result in an error
 if violated, but more will just give a warning. If you are designing or editing a tree, look carefully at the warnings.
 
@@ -117,10 +117,10 @@ Nothing prevents a function from both calculating new cross component values and
 **Key expectations**
 
 - All trees should start with a "manual_classification" node that should set all component classifications to "unclassified" and
-  have "clear_classification_tags" set to true. There might be special cases where someone might want to violate these rules
-  but, depending what else happens in preceding code, other functions will expect both of these columns to exist.
+  have "clear_classification_tags" set to true. There might be special cases where someone might want to violate these rules,
+  but depending what else happens in preceding code, other functions will expect both of these columns to exist.
   This manual_classification step will make sure those columns are created and initialized.
-- Every possible path through the tree should result in each component being classified as 'accepted' or 'rejected'
+- Every possible path through the tree should result in each component being classified as 'accepted' or 'rejected' by the time the tree is completed.
 - Three initialization variables will help prevent mistakes
   
   necessary_metrics:
@@ -147,16 +147,16 @@ There are  6 initial fields, necessary_metrics, intermediate_classification, and
 - "tree_id": a descriptive name for the tree that will be logged.
 - "info": A brief description of the tree for info logging
 - "report": A narrative description of the tree that could be used in report logging
-- "refs" Publications that should be referenced, when this tree is used
+- "refs" Publications that should be referenced when this tree is used
 
-The "nodes" field is a list of elements where each element defines a node the decision tree. There are several key fields for each of these nodes:
+The "nodes" field is a list of elements where each element defines a node in the decision tree. There are several key fields for each of these nodes:
 
 - "functionname": The exact function name in selection_nodes.py that will be called.
 - "parameters": Specifications of all required parameters for the function in functionname
 - "kwargs": Specification for optional parameters for the function in functionname
 
 The only parameter that is used in all functions is "decidecomps" which is used to identify, based on their classifications,
-the components a function should be applied to. It can be a single classification, or a comma separated string of classificaions.
+the components a function should be applied to. It can be a single classification, or a comma separated string of classifications.
 In addition to the intermediate and default ("accepted" "rejected" "unclassified") component classifications, this can be "all"
 for functions that should be applied to all components regardless of their classifications
 
@@ -205,7 +205,7 @@ Calculation nodes should check if the value they are calculating was already cal
 Code that adds the text log_extra_info and log_extra_report into the appropriate logs (if they are provided by the user)
 
 After the above information is included, all functions will call ``selectcomps2use`` which returns the components with classifications included in ``decide_comps``
-Then run ``confirm_metrics_exist`` which is an added check to make sure the metrics used by this function exist in the component table.
+and then run ``confirm_metrics_exist`` which is an added check to make sure the metrics used by this function exist in the component table.
 
 Nearly every function has a clause like:
 
@@ -243,7 +243,7 @@ Every function should end.
 
   functionname.__doc__ = (functionname.__doc__.format(**decision_docs))
 
-This returns makes sure the outputs from the function are saved in the class structure and the class structure is return.
+This returns makes sure the outputs from the function are saved in the class structure and the class structure is returned.
 The following line should include the function's name and is used to make sure repeated variable names are compiled correctly for the API documentation.
 
 If you follow these simple steps you'll be able design your very own decision tree functions.

@@ -19,7 +19,7 @@ def selectcomps2use(selector, decide_comps):
     """
     Give a list of component numbers that fit the classification types in
     decide_comps. Also pulls out and returns component_table from within
-    selector
+    selector.
     Since 'all' converts string to boolean, it will miss components with
     no classification. This means, in the initialization of comptree, all
     components need to be labeled as unclassified, NOT empty
