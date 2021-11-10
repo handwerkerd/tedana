@@ -80,7 +80,13 @@ def selectcomps2use(selector, decide_comps):
 
 
 def change_comptable_classifications(
-    selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=None, tag_ifFalse=None
+    selector,
+    ifTrue,
+    ifFalse,
+    decision_boolean,
+    tag_ifTrue=None,
+    tag_ifFalse=None,
+    dont_warn_reclassify=False,
 ):
     """
     Given information on whether a decision critereon is true or false for each component
@@ -104,6 +110,10 @@ def change_comptable_classifications(
         A string containing a label in classification_tags that will be added to
         the classification_tags column in component_table if a component is
         classified as true or false. default=None
+    dont_warn_reclassify: :obj:`bool`
+        If this function changes a component classification from accepted or
+        rejected to something else, it gives a warning. If this is True, that
+        warning is suppressed. default=False
 
     Returns
     -------
@@ -116,6 +126,8 @@ def change_comptable_classifications(
         component_table["classification_tags"] will be updated to include any
         new tags. Each tag should appear only once in the string and tags will
         be separated by commas.
+    If a classification is changed away from accepted or rejected and
+    dont_warn_reclassify is False, then a warning is logged
 
     Note
     ----
@@ -128,40 +140,108 @@ def change_comptable_classifications(
     remove all classification info at the start of a decision tree.
     """
 
-    if ifTrue != "nochange":
-        changeidx = decision_boolean.index[np.asarray(decision_boolean)]
-        selector.component_table.loc[changeidx, "classification"] = ifTrue
-        if tag_ifTrue:
-            for idx in changeidx:
-                tmpstr = selector.component_table.loc[idx, "classification_tags"]
-                if tmpstr != "":
-                    tmpset = set(tmpstr.split(","))
-                    tmpset.update([tag_ifTrue])
-                else:
-                    tmpset = set([tag_ifTrue])
-                selector.component_table.loc[idx, "classification_tags"] = ",".join(
-                    str(s) for s in tmpset
-                )
-
-    if ifFalse != "nochange":
-        changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
-        selector.component_table.loc[changeidx, "classification"] = ifFalse
-        if tag_ifFalse:
-            for idx in changeidx:
-                tmpstr = selector.component_table.loc[idx, "classification_tags"]
-                if tmpstr != "":
-                    tmpset = set(tmpstr.split(","))
-                    tmpset.update([tag_ifFalse])
-                else:
-                    tmpset = set([tag_ifFalse])
-                selector.component_table.loc[idx, "classification_tags"] = ",".join(
-                    str(s) for s in tmpset
-                )
+    selector = comptable_classification_changer(
+        selector, True, ifTrue, decision_boolean, tag_ifTrue
+    )
+    selector = comptable_classification_changer(
+        selector, False, ifFalse, decision_boolean, tag_ifFalse
+    )
 
     selector.component_status_table[
         f"Node {selector.current_node_idx}"
     ] = selector.component_table["classification"]
 
+    return selector
+
+
+def comptable_classification_changer(
+    selector,
+    boolstate,
+    classify_if,
+    decision_boolean,
+    tag_if=None,
+    dont_warn_reclassify=False,
+):
+    """
+    Implement the component classification changes specified in
+    change_comptable_classifications.
+
+    Parameters
+    ----------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        The attributes used are component_table, component_status_table, and
+        current_node_idx
+    boolstate : :obj:`bool`
+        Change classifications only for True or False components in
+        decision_boolean based on this variable
+    classify_if: :obj:`str`
+        This should be if_True or if_False to match boolstate.
+        If the condition in this step is true or false, give the component
+        the label in this string. Options are 'accepted', 'rejected',
+        'nochange', or intermediate_classification labels predefined in the
+        decision tree. If 'nochange' then don't change the current component
+        classification
+    decision_boolean: :obj:`pd.Series(bool)`
+        A dataframe column of equal length to component_table where each value
+        is True or False.
+    tag_if: :obj:`str`
+        This should be tag_ifTrue or tag_ifFalse to match boolstate
+        A string containing a label in classification_tags that will be added to
+        the classification_tags column in component_table if a component is
+        classified as true or false. default=None
+    dont_warn_reclassify: :obj:`bool`
+        If this function changes a component classification from accepted or
+        rejected to something else, it gives a warning. If this is True, that
+        warning is suppressed. default=False
+    Returns
+    -------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        Operates on the True OR False componets depending on boolstate
+        component_table["classifications"] will reflect any new
+        classifications.
+        component_status_table will have a new column titled
+        "Node current_node_idx" that is a copy of the updated classifications
+        column.
+        component_table["classification_tags"] will be updated to include any
+        new tags. Each tag should appear only once in the string and tags will
+        be separated by commas.
+    If a classification is changed away from accepted or rejected and
+    dont_warn_reclassify is False, then a warning is logged
+    """
+
+    if classify_if != "nochange":
+        changeidx = decision_boolean.index[np.asarray(decision_boolean) == boolstate]
+        current_classifications = set(
+            selector.component_table.loc[changeidx, "classification"].tolist()
+        )
+        if current_classifications.intersection({"accepted", "rejected"}):
+            if not dont_warn_reclassify:
+                # don't make a warning if classify_if matches the current classification
+                # That is reject->reject shouldn't throw a warning
+                if (
+                    ("accepted" in current_classifications)
+                    and (classify_if != "accepted")
+                ) or (
+                    ("rejected" in current_classifications)
+                    and (classify_if != "rejected")
+                ):
+                    LGR.warning(
+                        f"Step {selector.current_node_idx}: Some classifications are"
+                        " changing away from accepted or rejected. Once a component is "
+                        "accepted or rejected, it shouldn't be reclassified"
+                    )
+        selector.component_table.loc[changeidx, "classification"] = classify_if
+
+        for idx in changeidx:
+            tmpstr = selector.component_table.loc[idx, "classification_tags"]
+            if tmpstr != "":
+                tmpset = set(tmpstr.split(","))
+                tmpset.update([tag_if])
+            else:
+                tmpset = set([tag_if])
+            selector.component_table.loc[idx, "classification_tags"] = ",".join(
+                str(s) for s in tmpset
+            )
     return selector
 
 
@@ -287,13 +367,13 @@ def log_decision_tree_step(
     if comps2use is None:
         LGR.info(
             f"{function_name_idx} not applied because no remaining components were "
-            "classified as {decide_comps}"
+            f"classified as {decide_comps}"
         )
     if ifTrue or ifFalse:
         LGR.info(
             f"{function_name_idx} applied to {len(comps2use)} components. "
-            "{numTrue} True -> {ifTrue}. "
-            "{numFalse} False -> {ifFalse}."
+            f"{numTrue} True -> {ifTrue}. "
+            f"{numFalse} False -> {ifFalse}."
         )
     if calc_outputs:
         calc_summaries = [

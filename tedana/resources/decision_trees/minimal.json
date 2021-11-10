@@ -32,7 +32,8 @@
             "kwargs": {
                 "log_extra_info": "Initializing all classifications as unclassified and all classification tags as blank",
                 "log_extra_report": "",
-                "clear_classification_tags": true
+                "clear_classification_tags": true,
+                "dont_warn_reclassify": true
             }
         },
         {

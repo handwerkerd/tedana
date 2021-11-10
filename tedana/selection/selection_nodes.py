@@ -118,6 +118,7 @@ def manual_classify(
     custom_node_label="",
     only_used_metrics=False,
     tag=None,
+    dont_warn_reclassify=False,
 ):
     """
     Explicitly assign a classifictation, defined in new_classification,
@@ -141,6 +142,12 @@ def manual_classify(
         A classification tag to assign to all components being reclassified.
         This should be one of the tags defined by classification_tags in
         the decision tree specification
+    dont_warn_reclassify: :obj:`bool`
+        By default, if this function changes a component classification from accepted or
+        rejected to something else, it gives a warning, since those should be terminal
+        classifications. If this is True, that warning is suppressed.
+        (Useful if manual_classify is used to reset all labels to unclassified).
+        default=False
     {log_extra}
     {custom_node_label}
     {only_used_metrics}
