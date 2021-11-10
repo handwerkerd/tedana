@@ -124,14 +124,7 @@ def manual_classify(
 ):
     """
     Explicitly assign a classifictation, defined in new_classification,
-    to all the components in decide_comps. This was designed with three use
-    cases in mind:
-    1. Set the classifications of all components to unclassified for the first
-    node of a decision tree. clear_classification_tags=True is recommended for
-    this use case
-    2. Shift all components between classifications, such as provisionalaccept
-    to accepted for the penultimate node in the decision tree.
-    3. Manually re-classify components by number based on user observations.
+    to all the components in decide_comps.
 
     Parameters
     ----------
@@ -162,6 +155,15 @@ def manual_classify(
 
     Note
     ----
+    This was designed with three use
+    cases in mind:
+    1. Set the classifications of all components to unclassified for the first
+    node of a decision tree. clear_classification_tags=True is recommended for
+    this use case
+    2. Shift all components between classifications, such as provisionalaccept
+    to accepted for the penultimate node in the decision tree.
+    3. Manually re-classify components by number based on user observations.
+
     Unlike other decision node functions, ifTrue and ifFalse are not inputs
     since the same classification is assigned to all components listed in
     decide_comps
@@ -550,6 +552,9 @@ def calc_kappa_rho_elbows_kundu(
     based on the method by Kundu in the MEICA v2.7 code. Another elbow calculation would
     require a distinct function. Ideally, there can be one elbow function can allows for
     some more flexible options
+
+    This also uses all unclassified components as part of the elbow calculation, irregardless
+    of what is in decide_comps.
     """
 
     # If kappa_only or rho_only is true kappa or rho might not actually be
@@ -568,8 +573,6 @@ def calc_kappa_rho_elbows_kundu(
         "varex_upper_p": None,
         "kappa_elbow_kundu": None,
         "rho_elbow_kundu": None,
-        "kappa_only": kappa_only,
-        "rho_only": rho_only,
     }
 
     if only_used_metrics:

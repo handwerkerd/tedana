@@ -245,7 +245,7 @@ def validate_tree(tree):
 class ComponentSelector:
     """
     Classifies components based on specified `tree` when the class is initialized
-    and then the `component_select` function is called.
+    and then the `select` function is called.
     The expected output of running a decision tree is that every component
     will be classified as 'accepted', or 'rejected'.
 
@@ -384,7 +384,7 @@ class ComponentSelector:
         self.cross_component_metrics = dict()
         self.used_metrics = set()
 
-    def component_select(self):
+    def select(self):
         """
         Parse the parameters used to call each function in the component
         selection decision tree and run the functions to classify components

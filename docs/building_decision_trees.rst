@@ -42,9 +42,7 @@ classification_tags:
     Each component can have no tags (an empty string), one tag, or a comma separated
     list of tags.
 
-**Data stored in the ComponentSelector class variable selector**
-
-(Where these are stored is currently a work in progress, but they're currently in selector)
+**Data stored in the ComponentSelector object**
 
 cross_component_metrics:
     Metrics that are each a single value calculated across components. For example, kappa and rho elbows.
@@ -96,9 +94,9 @@ calc_cross_comp_metrics:
     was calculated, that information is stored here.
 
 
-******************************************
-Understanding the parts of a decision tree
-******************************************
+*********************************
+Defining a custom a decision tree
+*********************************
 
 Decision trees are stored in json files. The default trees are with the tedana code in ./resources/decision_trees
 The minimal tree, minimal.json is a good example highlighting the structure and steps in a tree. It may be helpful
@@ -110,6 +108,7 @@ to create something with non-ideal results for the current code. Some criteria w
 if violated, but more will just give a warning. If you are designing or editing a tree, look carefully at the warnings.
 
 A decision tree can include two types of nodes or functions. All functions are currently in selection_nodes.py
+
 - A decision function will use existing metrics and potentially change the classification of the components based on those metrics. By convention, all these functions should begin with "dec"
 - A calculation function will take existing metrics and calculate a value across components to be used for classification, for example the kappa and rho elbows. By convention, all these functions should begin with "calc"
 Nothing prevents a function from both calculating new cross component values and applying those values in a decision step, but following this convention should hopefully make decision tree specifications easier to follow and interpret.

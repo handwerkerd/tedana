@@ -85,7 +85,7 @@ def manual_selection(comptable, acc=None, rej=None):
     return comptable, metric_metadata
 
 
-def automatic_selection(comptable, n_echos, n_vols, tree="simple"):
+def automatic_selection(comptable, n_echos, n_vols, tree="minimal"):
     """Classify components based on component table and tree type.
 
     Parameters
@@ -108,7 +108,7 @@ def automatic_selection(comptable, n_echos, n_vols, tree="simple"):
     """
     comptable["classification_tags"] = ""
     selector = ComponentSelector(tree, comptable, n_echos=n_echos, n_vols=n_vols)
-    selector.component_select()
+    selector.select()
     selector.metadata = collect.get_metadata(selector.component_table)
 
     # TODO: Eventually return just selector
