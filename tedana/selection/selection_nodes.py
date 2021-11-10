@@ -15,39 +15,36 @@ from tedana.selection._utils import (
     log_decision_tree_step,
     change_comptable_classifications,
     getelbow,
-    create_dnode_outputs,
     get_extend_factor,
     kappa_elbow_kundu,
     get_new_meanmetricrank,
     prev_classified_comps,
 )
 
-
-# clean_dataframe, new_decision_node_info,
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
 RefLGR = logging.getLogger("REFERENCES")
 
 decision_docs = {
     "selector": """\
-    selector: :obj:`tedana.selection.ComponentSelector`
-        This structure contains most of the information needed to execute each
-        decision node function and to store the ouput of the function. The class
-        description has full details. Key elements include: component_table:
-        The metrics for each component, and the classification
-        labels and tags; cross_component_metrics: Values like the kappa and rho
-        elbows that are used to create decision criteria; nodes: Information on
-        the function calls for each step in the decision tree; and
-        current_node_idx: which is the ordered index for when a function is
-        called in the decision tree\
+selector: :obj:`tedana.selection.ComponentSelector`
+    This structure contains most of the information needed to execute each
+    decision node function and to store the ouput of the function. The class
+    description has full details. Key elements include: component_table:
+    The metrics for each component, and the classification
+    labels and tags; cross_component_metrics: Values like the kappa and rho
+    elbows that are used to create decision criteria; nodes: Information on
+    the function calls for each step in the decision tree; and
+    current_node_idx: which is the ordered index for when a function is
+    called in the decision tree\
 """,
     "ifTrueFalse": """\
 ifTrue, ifFalse: :obj:`str`
     If the condition in this step is true or false, give the component
     the label in this string. Options are 'accepted', 'rejected',
     'nochange', or intermediate_classification labels predefined in the
-    decision tree
-    If 'nochange' then don't change the current component classification\
+    decision tree. If 'nochange' then don't change the current component
+    classification\
 """,
     "decide_comps": """\
 decide_comps: :obj:`str` or :obj:`list[str]`
@@ -466,7 +463,7 @@ def dec_variance_lessthan_thresholds(
         RepLGR.info(log_extra_report)
 
     comps2use, component_table = selectcomps2use(selector, decide_comps)
-    metrics_exist, missing_metrics = confirm_metrics_exist(
+    confirm_metrics_exist(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
@@ -615,7 +612,7 @@ def calc_kappa_rho_elbows_kundu(
         RepLGR.info(log_extra_report)
 
     comps2use, component_table = selectcomps2use(selector, decide_comps)
-    metrics_exist, missing_metrics = confirm_metrics_exist(
+    confirm_metrics_exist(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
