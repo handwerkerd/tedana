@@ -126,18 +126,13 @@ def change_comptable_classifications(
         component_table["classification_tags"] will be updated to include any
         new tags. Each tag should appear only once in the string and tags will
         be separated by commas.
-    If a classification is changed away from accepted or rejected and
-    dont_warn_reclassify is False, then a warning is logged
+    numTrue, numFalse: :obj:`int`
+        The number of True and False components in decision_boolean
 
     Note
     ----
-    TODO: May want to add a check here so that, if a component classification
-    is changed away from accepted or reject to something else, throw a warning.
-    A user would have the power to change component labels in any order, but
-    the ideal is that once something is accepted or rejected, that shouldn't
-    change. If this is added, then there should be an option to override the
-    warning. That override would be necessary when manual_classify is used to
-    remove all classification info at the start of a decision tree.
+    If a classification is changed away from accepted or rejected and
+    dont_warn_reclassify is False, then a warning is logged
     """
 
     selector = comptable_classification_changer(
@@ -151,7 +146,9 @@ def change_comptable_classifications(
         f"Node {selector.current_node_idx}"
     ] = selector.component_table["classification"]
 
-    return selector
+    numTrue = decision_boolean.sum()
+    numFalse = np.logical_not(decision_boolean).sum()
+    return selector, numTrue, numFalse
 
 
 def comptable_classification_changer(

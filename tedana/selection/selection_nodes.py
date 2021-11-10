@@ -207,13 +207,16 @@ def manual_classify(
         outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
-        selector = change_comptable_classifications(
+        (
+            selector,
+            outputs["numTrue"],
+            outputs["numFalse"],
+        ) = change_comptable_classifications(
             selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=tag
         )
-        outputs["numTrue"] = decision_boolean.sum()
-        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
-        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-        #    numTrue, numFalse, len(comps2use))))
+        # outputs["numTrue"] = decision_boolean.sum()
+        # outputs["numFalse"] = np.logical_not(decision_boolean).sum()
+
         log_decision_tree_step(
             function_name_idx,
             comps2use,
@@ -368,7 +371,11 @@ def dec_left_op_right(
             val2 = right  # should be a fixed number
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
-        selector = change_comptable_classifications(
+        (
+            selector,
+            outputs["numTrue"],
+            outputs["numFalse"],
+        ) = change_comptable_classifications(
             selector,
             ifTrue,
             ifFalse,
@@ -376,10 +383,9 @@ def dec_left_op_right(
             tag_ifTrue=tag_ifTrue,
             tag_ifFalse=tag_ifFalse,
         )
-        outputs["numTrue"] = np.asarray(decision_boolean).sum()
-        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
-        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-        #    numTrue, numFalse, len(comps2use))))
+        # outputs["numTrue"] = np.asarray(decision_boolean).sum()
+        # outputs["numFalse"] = np.logical_not(decision_boolean).sum()
+
         log_decision_tree_step(
             function_name_idx,
             comps2use,
@@ -489,7 +495,11 @@ def dec_variance_lessthan_thresholds(
             while variance[decision_boolean].sum() > all_comp_threshold:
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
-        selector = change_comptable_classifications(
+        (
+            selector,
+            outputs["numTrue"],
+            outputs["numFalse"],
+        ) = change_comptable_classifications(
             selector,
             ifTrue,
             ifFalse,
@@ -497,10 +507,9 @@ def dec_variance_lessthan_thresholds(
             tag_ifTrue=tag_ifTrue,
             tag_ifFalse=tag_ifFalse,
         )
-        outputs["numTrue"] = np.asarray(decision_boolean).sum()
-        outputs["numFalse"] = np.logical_not(decision_boolean).sum()
-        # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-        #    numTrue, numFalse, len(comps2use))))
+        # outputs["numTrue"] = np.asarray(decision_boolean).sum()
+        # outputs["numFalse"] = np.logical_not(decision_boolean).sum()
+
         log_decision_tree_step(
             function_name_idx,
             comps2use,
