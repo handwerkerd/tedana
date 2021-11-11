@@ -4,8 +4,8 @@ Understanding and building a component selection process
 
 ``tedana`` involves transforming data into components via ICA, and then calculating metrics for each component.
 Each metric has one value per component that is stored in a comptable or component_table dataframe. This structure
-is then passed to a "decision tree" which through a series of binary choices categories each component as accepted or
-rejected. The time series for the rejected components are regressed from the data in the final denoising step.
+is then passed to a "decision tree" which through a series of binary choices categories each component as **accepted** or
+**rejected**. The time series for the rejected components are regressed from the data in the final denoising step.
 
 There are several decision trees that are included by default in ``tedana`` but users can also build their own.
 This might be useful if one of the default decision trees needs to be slightly altered due to the nature
@@ -102,7 +102,7 @@ Decision trees are stored in json files. The default trees are stored as part of
 The minimal tree, minimal.json is a good example highlighting the structure and steps in a tree. It may be helpful
 to look at that tree while reading this section.
 
-A user can specify another decision tree and link to the tree location when tedana is executed. The format is
+A user can specify another decision tree and link to the tree location when tedana is executed with the ``--tree`` option. The format is
 flexible to allow for future innovations, but be advised that this also allows you to
 to create something with non-ideal results for the current code. Some criteria will result in an error
 if violated, but more will just give a warning. If you are designing or editing a tree, look carefully at the warnings.
@@ -193,11 +193,12 @@ Additional fields can be used to log funciton-specific information, but the foll
 
 Before anything data are touched in the function, there should be an ``if only_used_metrics:`` clause that returns ``used_metrics`` for the function call
 
-Existing functions define ``function_name_idx = f"Step {selector.current_node_idx}: [text of function_name]`` This is used several times in logging and is nice to define only once.
+Existing functions define ``function_name_idx = f"Step {selector.current_node_idx}: [text of function_name]`` This is used in logging and is cleaner to initialize near the top of each function.
 
 
-Code the executes ``outputs["node_label"] = custom_node_label`` if there is a user-inputted custom node label or assigned a default node label. The default node lable
-may be used in decision tree visualization so it should be relatively short.
+Each function has code that creates a default node label in ``outputs["node_label"]``. The default node lable
+may be used in decision tree visualization so it should be relatively short. Within this section, if there is
+a user-provided custom_node_label, that should be used instead.
 
 Calculation nodes should check if the value they are calculating was already calculated and output a warning if the function overwrites and existing value
 
@@ -218,16 +219,12 @@ Nearly every function has a clause like:
 
 If there are no components with the classifications in ``decide_comps`` this logs that there's nothing for the function to be run on, else continue.
 
-For decision functions the key variable is ``decision_boolean`` which should be a dataframe column which is True or False based on the function's criteria.
-That column is an input to ``change_comptable_classifications`` which will update the component_table classifications, update the classification history in component_status_table,
-and update the component classification_tags.
-
-This is followed by something that logs how many components were identified as true or false, like:
-
-.. code-block:: python
-
-  outputs["numTrue"] = np.asarray(decision_boolean).sum()
-  outputs["numFalse"] = np.logical_not(decision_boolean).sum()
+For decision functions the key variable is ``decision_boolean`` which should be a dataframe column which is True or False for the components in ``decide_comps``
+based on the function's criteria. That column is an input to ``change_comptable_classifications`` which will update the component_table classifications,
+update the classification history in component_status_table, and update the component classification_tags. Components not in ``decide_comps`` retain their
+existing classifications and tags.
+``change_comptable_classifications`` also outputs and should assign values to ``outputs["numTrue"]`` and ``outputs["numFalse"]``.
+These log how many components were identified as true or false within each function.
 
 For calculation functions, the calculated values should be added as a value/key pair to both ``selector.cross_component_metrics`` and ``outputs``
 
@@ -245,4 +242,5 @@ Every function should end.
 This returns makes sure the outputs from the function are saved in the class structure and the class structure is returned.
 The following line should include the function's name and is used to make sure repeated variable names are compiled correctly for the API documentation.
 
-If you follow these simple steps you'll be able design your very own decision tree functions.
+If you have made it this far, congratulations. 
+If you follow these steps you'll be to impress your colleagues, friends, and family by designing your very own decision tree functions.

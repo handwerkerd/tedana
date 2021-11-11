@@ -538,15 +538,7 @@ def get_metadata(comptable):
                 ),
             },
         }
-    # if "original_rationale" in comptable:
-    #     metric_metadata["original_rationale"] = {
-    #         "LongName": "Original rationale",
-    #         "Description": (
-    #             "The reason for the original classification. "
-    #             "Please see tedana's documentation for information about "
-    #             "possible rationales."
-    #         ),
-    #     }
+
     if "classification" in comptable:
         metric_metadata["classification"] = {
             "LongName": "Component classification",
@@ -559,19 +551,21 @@ def get_metadata(comptable):
                     "A non-BOLD component excluded from denoised and "
                     "high-Kappa data."
                 ),
-                "ignored": (
-                    "A low-variance component included in denoised, "
-                    "but excluded from high-Kappa data."
-                ),
             },
+        }
+    if "classification_tags" in comptable:
+        metric_metadata["classification_tags"] = {
+            "LongName": "Component classification tags",
+            "Description": (
+                "A single tag or a comma separated list of tags to describe why a component received its classification"
+            ),
         }
     if "rationale" in comptable:
         metric_metadata["rationale"] = {
             "LongName": "Rationale for component classification",
             "Description": (
                 "The reason for the original classification. "
-                "Please see tedana's documentation for information about "
-                "possible rationales."
+                "This column label was replaced with classification_tags in late 2021"
             ),
         }
     if "kappa ratio" in comptable:
