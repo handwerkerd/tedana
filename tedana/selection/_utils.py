@@ -12,30 +12,58 @@ LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
 RefLGR = logging.getLogger("REFERENCES")
 
-# Functions that are used for interacting with comptable
+##############################################################
+# Functions that are used for interacting with component_table
+##############################################################
 
 
-def selectcomps2use(comptable, decide_comps):
+def selectcomps2use(selector, decide_comps):
     """
-    Give a list of components that fit a classification types
-    Since 'all' converts string to boolean, it will miss components with
-    no classification. This means, in the initialization of comptree, all
-    components need to be labeled as unclassified, NOT empty
-    WILL NEED TO ADD NUMBER INDEXING TO selectcomps2use
+    Give a list of component numbers that fit the classification types in
+    decide_comps.
+
+    Parameters
+    ----------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        Only uses the component_table in this object
+    decide_comps: :obj:`str` or :obj:`list[str]` or :obj:`list[int]`
+        This is string or a list of strings describing what classifications
+        of components to operate on, using default or intermediate_classification
+        labels. For example: decide_comps='unclassified' means to operate only on
+        unclassified components. The label 'all' will operate on all components
+        regardess of classification. This can also be used to pass through a list
+        of component indices to comps2use
+
+    Returns
+    -------
+    comps2use: :obj:`list[int]`
+        A list of component indices that should be used by a function
+    component_table : (C x M) :obj:`pandas.DataFrame`
+        Reference to component metric table in `selector`. One row for each
+        component, with a column for each metric. Since the component table
+        is assigned rather than copied, changes to this variable will change
+        `selector.component_table`
+
+     Note
+    ----
+    TODO: Number indexing should work here, but validator would not currently allow
+    numbers to be assigned to a node in the ComponentSelector object. May want to make
+    sure this option is acceissble through the class.
     """
+
+    component_table = selector.component_table
     if type(decide_comps) == str:
         decide_comps = [decide_comps]
     if decide_comps[0] == "all":
         # All components with any string in the classification field
         # are set to True
-        comps2use = list(range(comptable.shape[0]))
-    # elif (type(decide_comps) == str):
-    #    comps2use = comptable.index[comptable['classification'] == decide_comps].tolist()
+        comps2use = list(range(component_table.shape[0]))
+
     elif (type(decide_comps) == list) and (type(decide_comps[0]) == str):
         comps2use = []
         for didx in range(len(decide_comps)):
-            newcomps2use = comptable.index[
-                comptable["classification"] == decide_comps[didx]
+            newcomps2use = component_table.index[
+                component_table["classification"] == decide_comps[didx]
             ].tolist()
             comps2use = list(set(comps2use + newcomps2use))
     else:
@@ -48,195 +76,246 @@ def selectcomps2use(comptable, decide_comps):
     if not comps2use:
         comps2use = None
 
-    return comps2use
+    return comps2use, component_table
 
 
 def change_comptable_classifications(
-    comptable, ifTrue, ifFalse, decision_boolean, decision_node_idx_str
+    selector,
+    ifTrue,
+    ifFalse,
+    decision_boolean,
+    tag_ifTrue=None,
+    tag_ifFalse=None,
+    dont_warn_reclassify=False,
 ):
     """
     Given information on whether a decision critereon is true or false for each component
     change or don't change the component classification
 
+    Parameters
+    ----------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        The attributes used are component_table, component_status_table, and
+        current_node_idx
+    ifTrue, ifFalse: :obj:`str`
+        If the condition in this step is true or false, give the component
+        the label in this string. Options are 'accepted', 'rejected',
+        'nochange', or intermediate_classification labels predefined in the
+        decision tree. If 'nochange' then don't change the current component
+        classification
+    decision_boolean: :obj:`pd.Series(bool)`
+        A dataframe column of equal length to component_table where each value
+        is True or False.
+    tag_ifTrue, tag_ifFalse: :obj:`str`
+        A string containing a label in classification_tags that will be added to
+        the classification_tags column in component_table if a component is
+        classified as true or false. default=None
+    dont_warn_reclassify: :obj:`bool`
+        If this function changes a component classification from accepted or
+        rejected to something else, it gives a warning. If this is True, that
+        warning is suppressed. default=False
+
+    Returns
+    -------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        component_table["classifications"] will reflect any new
+        classifications.
+        component_status_table will have a new column titled
+        "Node current_node_idx" that is a copy of the updated classifications
+        column.
+        component_table["classification_tags"] will be updated to include any
+        new tags. Each tag should appear only once in the string and tags will
+        be separated by commas.
+    numTrue, numFalse: :obj:`int`
+        The number of True and False components in decision_boolean
+
     Note
     ----
-    May want to add a check here so that, if a component classification is changed from
-    accepted, rejected, or ignored, to something else, throw a warning. A user would have the power
-    to change component labels in any order, but the ideal is that once something is assigned
-    as accepted, rejected, or ignored, those are final classifications that should not be changed.
-    If this is added, then there should be an option to override the warning. That override
-    would be necessary when manual_classify is used to remove all classification info at the
-    start of a decision tree. It also might be useful to have an override for ignore.
-    The use case for this would be, if the total explained variance of all the ignored components
-    is above a threshold (i.e >5% of accepted explained variance) then move the highest variance
-    ignored components with rho/kappa>a threshold form ignore to reject
+    If a classification is changed away from accepted or rejected and
+    dont_warn_reclassify is False, then a warning is logged
     """
-    # print(('ifTrue={}, ifFalse={}, decision_node_idx_str{}').format(
-    #    ifTrue, ifFalse, decision_node_idx_str))
 
-    if ifTrue != "nochange":
-        changeidx = decision_boolean.index[np.asarray(decision_boolean)]
-        comptable.loc[changeidx, "classification"] = ifTrue
-        comptable.loc[changeidx, "rationale"] += (
-            decision_node_idx_str + ": " + ifTrue + "; "
+    selector = comptable_classification_changer(
+        selector, True, ifTrue, decision_boolean, tag_ifTrue
+    )
+    selector = comptable_classification_changer(
+        selector, False, ifFalse, decision_boolean, tag_ifFalse
+    )
+
+    selector.component_status_table[
+        f"Node {selector.current_node_idx}"
+    ] = selector.component_table["classification"]
+
+    numTrue = decision_boolean.sum()
+    numFalse = np.logical_not(decision_boolean).sum()
+    return selector, numTrue, numFalse
+
+
+def comptable_classification_changer(
+    selector,
+    boolstate,
+    classify_if,
+    decision_boolean,
+    tag_if=None,
+    dont_warn_reclassify=False,
+):
+    """
+    Implement the component classification changes specified in
+    change_comptable_classifications.
+
+    Parameters
+    ----------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        The attributes used are component_table, component_status_table, and
+        current_node_idx
+    boolstate : :obj:`bool`
+        Change classifications only for True or False components in
+        decision_boolean based on this variable
+    classify_if: :obj:`str`
+        This should be if_True or if_False to match boolstate.
+        If the condition in this step is true or false, give the component
+        the label in this string. Options are 'accepted', 'rejected',
+        'nochange', or intermediate_classification labels predefined in the
+        decision tree. If 'nochange' then don't change the current component
+        classification
+    decision_boolean: :obj:`pd.Series(bool)`
+        A dataframe column of equal length to component_table where each value
+        is True or False.
+    tag_if: :obj:`str`
+        This should be tag_ifTrue or tag_ifFalse to match boolstate
+        A string containing a label in classification_tags that will be added to
+        the classification_tags column in component_table if a component is
+        classified as true or false. default=None
+    dont_warn_reclassify: :obj:`bool`
+        If this function changes a component classification from accepted or
+        rejected to something else, it gives a warning. If this is True, that
+        warning is suppressed. default=False
+    Returns
+    -------
+    selector: :obj:`tedana.selection.ComponentSelector`
+        Operates on the True OR False componets depending on boolstate
+        component_table["classifications"] will reflect any new
+        classifications.
+        component_status_table will have a new column titled
+        "Node current_node_idx" that is a copy of the updated classifications
+        column.
+        component_table["classification_tags"] will be updated to include any
+        new tags. Each tag should appear only once in the string and tags will
+        be separated by commas.
+    If a classification is changed away from accepted or rejected and
+    dont_warn_reclassify is False, then a warning is logged
+    """
+
+    if classify_if != "nochange":
+        changeidx = decision_boolean.index[np.asarray(decision_boolean) == boolstate]
+        current_classifications = set(
+            selector.component_table.loc[changeidx, "classification"].tolist()
         )
-    if ifFalse != "nochange":
-        changeidx = decision_boolean.index[~np.asarray(decision_boolean)]
-        comptable.loc[changeidx, "classification"] = ifFalse
-        comptable.loc[changeidx, "rationale"] += (
-            decision_node_idx_str + ": " + ifFalse + "; "
-        )
+        if current_classifications.intersection({"accepted", "rejected"}):
+            if not dont_warn_reclassify:
+                # don't make a warning if classify_if matches the current classification
+                # That is reject->reject shouldn't throw a warning
+                if (
+                    ("accepted" in current_classifications)
+                    and (classify_if != "accepted")
+                ) or (
+                    ("rejected" in current_classifications)
+                    and (classify_if != "rejected")
+                ):
+                    LGR.warning(
+                        f"Step {selector.current_node_idx}: Some classifications are"
+                        " changing away from accepted or rejected. Once a component is "
+                        "accepted or rejected, it shouldn't be reclassified"
+                    )
+        selector.component_table.loc[changeidx, "classification"] = classify_if
 
-    # decision_tree_steps[-1]['numtrue'] = (decision_boolean is True).sum()
-    # decision_tree_steps[-1]['numfalse'] = (decision_boolean is False).sum()
+        for idx in changeidx:
+            tmpstr = selector.component_table.loc[idx, "classification_tags"]
+            if tmpstr != "":
+                tmpset = set(tmpstr.split(","))
+                tmpset.update([tag_if])
+            else:
+                tmpset = set([tag_if])
+            selector.component_table.loc[idx, "classification_tags"] = ",".join(
+                str(s) for s in tmpset
+            )
+    return selector
 
-    return comptable  # , decision_tree_steps
 
-
-def clean_dataframe(comptable):
+def clean_dataframe(component_table):
     """
-    Reorder columns in component table so "rationale" and "classification" are
-    last and remove trailing semicolons from rationale column.
+    Reorder columns in component table so that "classification"
+    and "classification_tags" are last.
+
+    Parameters
+    ----------
+    component_table : (C x M) :obj:`pandas.DataFrame`
+        Component metric table. One row for each component, with a column for
+        each metric
+
+    Returns
+    -------
+    component_table : (C x M) :obj:`pandas.DataFrame`
+        Same data as input, but the final two columns are "classification"
+        and "classification_tags"
     """
-    cols_at_end = ["classification", "rationale"]
-    comptable = comptable[
-        [c for c in comptable if c not in cols_at_end]
-        + [c for c in cols_at_end if c in comptable]
+    cols_at_end = ["classification", "classification_tags"]
+    component_table = component_table[
+        [c for c in component_table if c not in cols_at_end]
+        + [c for c in cols_at_end if c in component_table]
     ]
-    comptable["rationale"] = comptable["rationale"].str.rstrip(";")
-    return comptable
+
+    return component_table
 
 
-# Functions that validate inputted parameters or other processing steps
+#################################################
+# Functions to validate inputs or log information
+#################################################
 
 
-def confirm_metrics_exist(comptable, necessary_metrics, function_name=None):
+def confirm_metrics_exist(component_table, necessary_metrics, function_name=None):
     """
     Confirm that all metrics declared in necessary_metrics are
     already included in comptable.
 
     Parameters
     ----------
-    comptable : (C x M) :obj:`pandas.DataFrame`
+    component_table : (C x M) :obj:`pandas.DataFrame`
             Component metric table. One row for each component, with a column for
             each metric. The index should be the component number.
-    necessary_metrics : :obj:`list` a 1D list of strings of metrics
+    necessary_metrics : :obj:`set` a set of strings of metrics
     function_name : :obj:`str`
         Text identifying the function name that called this function
 
     Returns
     -------
     metrics_exist : :obj:`bool`
-            True if all metrics in necessary_metrics are on the comptable
-            False if one or more metrics are in necessary_metrics, but not in the comptable
-    missing_metrics : :obj:`list`
-            if metrics_exist then this is a list of strings containing the metric
-            names in necessary_metrics that aren't in the comptable
-            if not metrics_exist then an empty list
+            True if all metrics in necessary_metrics are in component_table
 
-    If metrics_exist is false then print an error and end the program
+    If metrics_exist is False then raise an error and end the program
 
     Notes
     -----
     This doesn't check if there are data in each metric's column, just that
     the columns exist. Also, this requires identical strings for the names
-    of the metrics in necessary_metrics and the column labels in comptable
+    of the metrics in necessary_metrics and the column labels in component_table
     """
 
-    missing_metrics = set(necessary_metrics) - set(comptable.columns)
-    metrics_exist = len(missing_metrics) == 0
+    missing_metrics = necessary_metrics - set(component_table.columns)
+    metrics_exist = len(missing_metrics) > 0
+    if metrics_exist is True:
+        if function_name is None:
+            function_name = "unknown function"
 
-    if metrics_exist is False:
-        if function_name is not None:
-            error_msg = (
-                f"Necessary metrics for {function_name}: "
-                f"{necessary_metrics}. "
-                f"Comptable metrics: {set(comptable.columns)}. "
-                f"MISSING METRICS: {missing_metrics}."
-            )
-        else:
-            error_msg = (
-                "Necessary metrics for unknown function: "
-                f"{necessary_metrics}. "
-                f"Comptable metrics: {set(comptable.columns)}. "
-                f"MISSING METRICS: {missing_metrics}."
-            )
-
+        error_msg = (
+            f"Necessary metrics for {function_name}: "
+            f"{necessary_metrics}. "
+            f"Comptable metrics: {set(component_table.columns)}. "
+            f"MISSING METRICS: {missing_metrics}."
+        )
         raise ValueError(error_msg)
 
-    return metrics_exist, missing_metrics
-
-
-# def are_only_necessary_metrics_used(used_metrics, necessary_metrics, function_name):
-#     """
-#     Checks if all metrics that are declared as necessary are actually used and
-#     if any used_metrics weren't explicitly declared. If either of these happen,
-#     a warning is added to the logger that notes which metrics weren't declared
-#     or used.
-
-#     Parameters
-#     ----------
-#     used_metrics: :obj:`list`
-#             A list of strings of the metric names that were used in the
-#             decision tree
-#     necessary_metrics: :obj:`list`
-#             A list of strings of the metric names that were declared
-#             to be used in the decision tree
-#     function_name: :obj:`str`
-#             The function name for the decision tree that was run
-
-#     Returns
-#     -------
-#     A warning that includes a list of metrics that were used, but
-#     not declared or declared, but not used. If only declared metrics
-#     where used, then this function has no output
-#     """
-#     onlyin_used_metrics = np.setdiff1d(used_metrics, necessary_metrics)
-#     if not onlyin_used_metrics:
-#         LGR.warning(function_name + " uses the following metrics that are not "
-#                     "declared as necessary metrices: " + str(onlyin_used_metrics))
-
-#     onlyin_necessary_metrics = np.setdiff1d(necessary_metrics, used_metrics)
-#     if not onlyin_necessary_metrics:
-#         LGR.warning(function_name + " declared the following metrics as necessary "
-#                     "but does not use them: " + str(onlyin_necessary_metrics))
-
-# Functions that edit decision_tree_steps
-
-
-def new_decision_node_info(
-    decision_tree_steps,
-    function_name,
-    metrics_used,
-    ifTrue,
-    ifFalse,
-    additionalparameters=None,
-):
-    """
-    create a new node that logs steps in the decision tree
-    """
-
-    # ADD ERROR TESTING SO THAT A CRASH FROM A MISSING VARIABLE IS INTELLIGENTLY LOGGED
-    tmp_decision_tree = {
-        "nodeidx": None,
-        "function_name": function_name,
-        "metrics_used": metrics_used,
-        "ifTrue": ifTrue,
-        "ifFalse": ifFalse,
-        "additionalparameters": additionalparameters,
-        "report_extra_log": [],  # optionally defined by user
-        "numfalse": [],  # will be filled in at runtime
-        "numtrue": [],  # will be filled in at runtime
-    }
-
-    if decision_tree_steps is None:
-        decision_tree_steps = [tmp_decision_tree]
-        decision_tree_steps["nodeidx"] = 1
-    else:
-        tmp_decision_tree["nodeidx"] = len(decision_tree_steps) + 1
-        decision_tree_steps.append(tmp_decision_tree)
-
-    return decision_tree_steps
+    return metrics_exist
 
 
 def log_decision_tree_step(
@@ -247,38 +326,81 @@ def log_decision_tree_step(
     numFalse=None,
     ifTrue=None,
     ifFalse=None,
+    calc_outputs=None,
 ):
     """
-        Logging text to add for every decision tree calculation
-        If decide_comps is not None, then the output will be ugly
-        if numTrue, numFalse, ifTrue, and ifFalse are not defined
+    Logging text to add for every decision tree calculation
+
+    Parameters
+    ----------
+    function_name_idx: :obj:`str`
+        The name of the function that should be logged. By convention, this
+        be "Step current_node_idx: function_name"
+    comps2use: :obj:`list[int]`
+        A list of component indices that should be used by a function.
+        Only used to report no components found if empty and report
+        the number of components found if not empty.
+    decide_comps: :obj:`str` or :obj:`list[str]` or :obj:`list[int]`
+        This is string or a list of strings describing what classifications
+        of components to operate on. Only used in this function to report
+        its contents if no components with these classifications were found
+    numTrue, numFalse: :obj:`int`
+        The number of components classified as True or False
+    ifTrue, ifFalse: :obj:`str`
+        If a component is true or false, the classification to assign that
+        component
+    calc_outputs: :obj:`bool`
+        True if the function being logged calculated new cross component
+        metrics. If true, then log the metrics calculated and their values
+
+    Returns
+    -------
+    Information is added to the LGR.info logger. This either logs that
+    nothing was changed, the number of components classified as true or
+    false and what they changed to, or the cross component metrics that were
+    calculated
     """
 
     if comps2use is None:
         LGR.info(
-            (
-                "{} not applied because no remaining components were "
-                "classified as {}"
-            ).format(function_name_idx, decide_comps)
+            f"{function_name_idx} not applied because no remaining components were "
+            f"classified as {decide_comps}"
         )
-    else:
+    if ifTrue or ifFalse:
         LGR.info(
-            (
-                "{} applied to {} components. " "{} True -> {}. " "{} False -> {}."
-            ).format(
-                function_name_idx, len(comps2use), numTrue, ifTrue, numFalse, ifFalse
-            )
+            f"{function_name_idx} applied to {len(comps2use)} components. "
+            f"{numTrue} True -> {ifTrue}. "
+            f"{numFalse} False -> {ifFalse}."
         )
+    if calc_outputs:
+        calc_summaries = [
+            f"{metric_name}={calc_outputs[metric_name]}"
+            for metric_name in calc_outputs["calc_cross_comp_metrics"]
+        ]
+        LGR.info(f"{function_name_idx} calculated: {', '.join(calc_summaries)}")
 
 
-def log_classification_counts(decision_node_idx, comptable):
+def log_classification_counts(decision_node_idx, component_table):
     """
-    Log the total counts for each component classification in the comptable
-    That is something like 'Total component classifications: 10 accepted, 5 ignored, 8 rejected'
+    Log the total counts for each component classification in component_table
+
+    Parameters
+    ----------
+    decision_node_idx : :obj:`int`
+        The index number for the function in the decision tree that just
+        finished executing
+    component_table : (C x M) :obj:`pandas.DataFrame`
+        Component metric table. One row for each component, with a column for
+        each metric. Only the "classification" column is usd in this function
+
+    Returns
+    -------
+    The info logger will add a line like:
+    'Step 4: Total component classifications: 10 accepted, 5 provisionalreject, 8 rejected'
     """
 
     (classification_labels, label_counts) = np.unique(
-        comptable["classification"].values, return_counts=True
+        component_table["classification"].values, return_counts=True
     )
     label_summaries = [
         f"{label_counts[i]} {label}" for i, label in enumerate(classification_labels)
@@ -288,112 +410,9 @@ def log_classification_counts(decision_node_idx, comptable):
     LGR.info(out_str)
 
 
-def create_dnode_outputs(
-    decision_node_idx,
-    used_metrics,
-    node_label,
-    numTrue,
-    numFalse,
-    n_echos=None,
-    n_vols=None,
-    kappa_elbow=None,
-    rho_elbow=None,
-    kappa_only=None,
-    rho_only=None,
-    num_prov_accept=None,
-    max_good_meanmetricrank=None,
-    varex_threshold=None,
-    low_perc=None,
-    high_perc=None,
-    extend_factor=None,
-    restrict_factor=None,
-    prev_X_steps=None,
-    num_acc_guess=None,
-):
-    """
-    Take several parameters that should be output from each decision node function
-    and put them in a dictionary under the key 'outputs' When the decision is output
-    as part of the decision tree class, this will be added to the dictionary with
-    parameters that called the function with all the outputs under the 'outputs' key.
-
-    Parameters
-    ----------
-    Required parameters
-    decison_node_idx : :obj:`int`
-        The decision tree function are run as part of an ordered list.
-        This is the positional index for when this function has been run
-        as part of this list.
-    used_metrics: :obj:`list[str]`
-        A list of all metrics from the comptable header used within this function.
-        Note, this must be a list even if only one metric is used
-    node_label: :obj:`str`
-        A brief label for what happens in this node that can be used in a decision
-        tree summary table or flow chart.
-    numTrue, numFalse: :obj:`int`
-        The number of components that were classified as true or false respectively
-    in this decision tree step.
-
-    Optional parameters that are ignored, if None
-    n_echos: :obj:`int`
-        The number of echos in the multi-echo data
-    n_vols: :obj:`int`
-        The number of volumes (time points) in the fMRI data
-    kappa_elbow: :obj:`float`
-        The kappa threshold below which components should be rejected or ignored
-    rho_elbow: :obj:`float`
-        The rho threshold above which components should be rejected or ignored
-    kappa_only: :obj:`bool`, optional
-            Only use the kappa>kappa_elbow threshold. default=False
-    rho_only: :obj:`bool`, optional
-            Only use the rho>rho_elbow threshold. default=False
-
-
-    Returns
-    -------
-    dnode_outputs: :obj:`dict`
-        A dict that contains the inputted parameters that are not 'None'
-    """
-
-    dnode_outputs = {
-        "outputs": {
-            "decision_node_idx": decision_node_idx,
-            "used_metrics": used_metrics,
-            "node_label": node_label,
-            "numTrue": numTrue,
-            "numFalse": numFalse,
-        }
-    }
-    if n_echos:
-        dnode_outputs["outputs"].update({"n_echos": n_echos})
-    if n_vols:
-        dnode_outputs["outputs"].update({"n_vols": n_vols})
-    if kappa_elbow:
-        dnode_outputs["outputs"].update({"kappa_elbow": kappa_elbow})
-    if rho_elbow:
-        dnode_outputs["outputs"].update({"rho_elbow": rho_elbow})
-    if high_perc:
-        dnode_outputs["outputs"].update({"high_perc": high_perc})
-    if low_perc:
-        dnode_outputs["outputs"].update({"low_perc": low_perc})
-    if max_good_meanmetricrank:
-        dnode_outputs["outputs"].update(
-            {"max_good_meanmetricrank": max_good_meanmetricrank}
-        )
-    if varex_threshold:
-        dnode_outputs["outputs"].update({"varex_threshold": varex_threshold})
-    if num_prov_accept:
-        dnode_outputs["outputs"].update({"num_prov_accept": num_prov_accept})
-    if restrict_factor:
-        dnode_outputs["outputs"].update({"restrict_factor": num_prov_accept})
-    if prev_X_steps:
-        dnode_outputs["outputs"].update({"prev_X_steps": num_prov_accept})
-    if num_acc_guess:
-        dnode_outputs["outputs"].update({"num_acc_guess": num_prov_accept})
-
-    return dnode_outputs
-
-
+#######################################################
 # Calculations that are used in decision tree functions
+#######################################################
 
 
 def getelbow_cons(arr, return_val=False):
@@ -512,20 +531,10 @@ def kappa_elbow_kundu(comptable, n_echos):
                 getelbow(comptable["kappa"], return_val=True),
             )
         )
-        LGR.info(
-            (
-                "Calculating kappa elbow based min of all and nonsig "
-                f"components. Kappa elbow is {kappa_elbow}"
-            )
-        )
+        LGR.info(("Calculating kappa elbow based on min of all and nonsig components."))
     else:
         kappa_elbow = getelbow(comptable["kappa"], return_val=True)
-        LGR.info(
-            (
-                "Calculating kappa elbow based on all components. "
-                f"Kappa elbow is {kappa_elbow}"
-            )
-        )
+        LGR.info(("Calculating kappa elbow based on all components."))
 
     return kappa_elbow
 

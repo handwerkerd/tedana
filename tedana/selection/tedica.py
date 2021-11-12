@@ -6,13 +6,14 @@ import numpy as np
 from scipy import stats
 
 from tedana.stats import getfbounds
-from tedana.selection.DecisionTree import DecisionTree
+from tedana.selection.ComponentSelector import ComponentSelector
 from tedana.selection._utils import clean_dataframe
 from tedana.metrics import collect
 
 LGR = logging.getLogger("GENERAL")
-RepLGR = logging.getLogger('REPORT')
-RefLGR = logging.getLogger('REFERENCES')
+RepLGR = logging.getLogger("REPORT")
+RefLGR = logging.getLogger("REFERENCES")
+
 
 def manual_selection(comptable, acc=None, rej=None):
     """
@@ -35,17 +36,21 @@ def manual_selection(comptable, acc=None, rej=None):
         Dictionary with metadata about calculated metrics.
         Each entry corresponds to a column in ``comptable``.
     """
-    LGR.info('Performing manual ICA component selection')
-    RepLGR.info("Next, components were manually classified as "
-                "BOLD (TE-dependent), non-BOLD (TE-independent), or "
-                "uncertain (low-variance).")
-    if ('classification' in comptable.columns and
-            'original_classification' not in comptable.columns):
-        comptable['original_classification'] = comptable['classification']
-        comptable['original_rationale'] = comptable['rationale']
+    LGR.info("Performing manual ICA component selection")
+    RepLGR.info(
+        "Next, components were manually classified as "
+        "BOLD (TE-dependent), non-BOLD (TE-independent), or "
+        "uncertain (low-variance)."
+    )
+    if (
+        "classification" in comptable.columns
+        and "original_classification" not in comptable.columns
+    ):
+        comptable["original_classification"] = comptable["classification"]
+        # comptable["original_rationale"] = comptable["rationale"]
 
-    comptable['classification'] = 'accepted'
-    comptable['rationale'] = ''
+    comptable["classification"] = "accepted"
+    # comptable["rationale"] = ""
 
     all_comps = comptable.index.values
     if acc is not None:
@@ -59,25 +64,28 @@ def manual_selection(comptable, acc=None, rej=None):
     elif acc is None and rej is not None:
         acc = sorted(np.setdiff1d(all_comps, rej))
     elif acc is None and rej is None:
-        LGR.info('No manually accepted or rejected components supplied. '
-                 'Accepting all components.')
+        LGR.info(
+            "No manually accepted or rejected components supplied. "
+            "Accepting all components."
+        )
         # Accept all components if no manual selection provided
         acc = all_comps[:]
         rej = []
 
     ign = np.setdiff1d(all_comps, np.union1d(acc, rej))
-    comptable.loc[acc, 'classification'] = 'accepted'
-    comptable.loc[rej, 'classification'] = 'rejected'
-    comptable.loc[rej, 'rationale'] += 'I001;'
-    comptable.loc[ign, 'classification'] = 'ignored'
-    comptable.loc[ign, 'rationale'] += 'I001;'
+    comptable.loc[acc, "classification"] = "accepted"
+    comptable.loc[rej, "classification"] = "rejected"
+    comptable.loc[rej, "rationale"] += "I001;"
+    comptable.loc[ign, "classification"] = "ignored"
+    comptable.loc[ign, "rationale"] += "I001;"
 
     # Move decision columns to end
     comptable = clean_dataframe(comptable)
     metric_metadata = collect.get_metadata(comptable)
     return comptable, metric_metadata
 
-def automatic_selection(comptable, n_echos, n_vols, tree='simple'):
+
+def automatic_selection(comptable, n_echos, n_vols, tree="minimal"):
     """Classify components based on component table and tree type.
 
     Parameters
@@ -87,7 +95,7 @@ def automatic_selection(comptable, n_echos, n_vols, tree='simple'):
     n_echos: int
         The number of echoes in this dataset
     tree: str
-        The type of tree to use for the DecisionTree object
+        The type of tree to use for the ComponentSelector object
 
     Returns
     -------
@@ -96,11 +104,17 @@ def automatic_selection(comptable, n_echos, n_vols, tree='simple'):
 
     See Also
     --------
-    DecisionTree, the class used to represent the classification process
+    ComponentSelector, the class used to represent the classification process
     """
-    comptable['rationale'] = ''
-    dt = DecisionTree(tree, comptable, n_echos=n_echos, n_vols=n_vols)
-    comptable, _ = dt.run()
-    metadata = collect.get_metadata(comptable)
+    comptable["classification_tags"] = ""
+    selector = ComponentSelector(tree, comptable, n_echos=n_echos, n_vols=n_vols)
+    selector.select()
+    selector.metadata = collect.get_metadata(selector.component_table)
 
-    return comptable, metadata
+    # TODO: Eventually return just selector
+    return (
+        selector.component_table,
+        selector.cross_component_metrics,
+        selector.component_status_table,
+        selector.metadata,
+    )

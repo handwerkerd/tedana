@@ -14,12 +14,12 @@
         "variance explained"
     ],
     "intermediate_classifications": [
-        "lowvariance",
         "provisionalaccept",
         "provisionalreject"
     ],
     "classification_tags": [
         "Likely BOLD",
+        "Unlikely BOLD",
         "Low variance"
     ],
     "nodes": [
@@ -30,13 +30,14 @@
                 "decide_comps": "all"
             },
             "kwargs": {
-                "log_extra_info": "Initializing all classifications as unclassified and all rationales as blank",
+                "log_extra_info": "Initializing all classifications as unclassified and all classification tags as blank",
                 "log_extra_report": "",
-                "clear_rationale": true
+                "clear_classification_tags": true,
+                "dont_warn_reclassify": true
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -47,11 +48,12 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if Kappa<Rho",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -62,11 +64,12 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if countsig_in S0clusters > T2clusters",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -77,11 +80,12 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if dice S0>T2",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
@@ -92,25 +96,37 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if T2fitdiff_invsout_ICAmap_Tstat<0",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
-            "functionname": "kappa_rho_elbow_cutoffs_kundu",
+            "functionname": "calc_kappa_rho_elbows_kundu",
             "parameters": {
-                "ifTrue": "provisionalaccept",
-                "ifFalse": "nochange",
-                "decide_comps": "unclassified",
-                "n_echos": null
+                "decide_comps": "unclassified"
             },
             "kwargs": {
-                "kappa_only": true,
                 "log_extra_info": "",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "left_op_right",
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "provisionalaccept",
+                "ifFalse": "nochange",
+                "decide_comps": "unclassified",
+                "op": ">",
+                "left": "kappa",
+                "right": "kappa_elbow_kundu"
+            },
+            "kwargs": {
+                "log_extra_info": "kappa>elbow",
+                "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "accepted",
                 "ifFalse": "nochange",
@@ -122,11 +138,12 @@
             "kwargs": {
                 "log_extra_info": "If kappa>elbow and kappa>3*rho accept even if rho>elbow",
                 "log_extra_report": "",
-                "right_scale": 3
+                "right_scale": 3,
+                "tag_ifTrue": "Likely BOLD"
             }
         },
         {
-            "functionname": "kappa_rho_elbow_cutoffs_kundu",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "nochange",
                 "ifFalse": "provisionalreject",
@@ -134,18 +151,19 @@
                     "unclassified",
                     "provisionalaccept"
                 ],
-                "n_echos": null
+                "op": ">",
+                "left": "rho",
+                "right": "rho_elbow_kundu"
             },
             "kwargs": {
-                "rho_only": true,
-                "log_extra_info": "",
+                "log_extra_info": "rho>elbow",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "variance_lessthan_thresholds",
+            "functionname": "dec_variance_lessthan_thresholds",
             "parameters": {
-                "ifTrue": "lowvariance",
+                "ifTrue": "accepted",
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalreject",
@@ -157,7 +175,8 @@
                 "log_extra_info": "",
                 "log_extra_report": "",
                 "single_comp_threshold": 0.1,
-                "all_comp_threshold": 1.0
+                "all_comp_threshold": 1.0,
+                "tag_ifTrue": "Low variance"
             }
         },
         {
@@ -169,7 +188,7 @@
             "kwargs": {
                 "log_extra_info": "",
                 "log_extra_report": "",
-                "clear_rationale": false
+                "tag": "Likely BOLD"
             }
         },
         {
@@ -184,7 +203,7 @@
             "kwargs": {
                 "log_extra_info": "",
                 "log_extra_report": "",
-                "clear_rationale": false
+                "tag": "Unlikely BOLD"
             }
         }
     ]
