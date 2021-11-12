@@ -259,7 +259,7 @@ def clean_dataframe(component_table):
         Same data as input, but the final two columns are "classification"
         and "classification_tags"
     """
-    cols_at_end = ["classification", "rationale"]
+    cols_at_end = ["classification", "classification_tags"]
     component_table = component_table[
         [c for c in component_table if c not in cols_at_end]
         + [c for c in cols_at_end if c in component_table]
