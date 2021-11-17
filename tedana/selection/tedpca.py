@@ -48,7 +48,7 @@ def kundu_tedpca(comptable, n_echos, kdaw=10.0, rdaw=1.0, stabilize=False):
     """
     LGR.info("Performing PCA component selection with Kundu decision tree")
     comptable["classification"] = "accepted"
-    # comptable['rationale'] = ''
+    comptable["rationale"] = ""
 
     eigenvalue_elbow = getelbow(
         comptable["normalized variance explained"], return_val=True

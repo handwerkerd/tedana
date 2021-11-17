@@ -75,9 +75,10 @@ def manual_selection(comptable, acc=None, rej=None):
     ign = np.setdiff1d(all_comps, np.union1d(acc, rej))
     comptable.loc[acc, "classification"] = "accepted"
     comptable.loc[rej, "classification"] = "rejected"
-    comptable.loc[rej, "rationale"] += "I001;"
+    # TODO Need to fix classification_tags here to better interact with any previous tags
+    # comptable.loc[rej, "classification_tags"] += "Manual"
     comptable.loc[ign, "classification"] = "ignored"
-    comptable.loc[ign, "rationale"] += "I001;"
+    # comptable.loc[ign, "classification_tags"] += "Manual"
 
     # Move decision columns to end
     comptable = clean_dataframe(comptable)
