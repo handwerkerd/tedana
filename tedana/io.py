@@ -25,6 +25,26 @@ RepLGR = logging.getLogger('REPORT')
 RefLGR = logging.getLogger('REFERENCES')
 
 
+class CustomEncoder(json.JSONEncoder):
+    """Convert some types because of JSON serialization and numpy
+    incompatibilities
+
+    See here: https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable/50916741
+    """
+    def default(self, obj):
+        # int64 non-serializable but is a numpy output
+        if isinstance(obj, np.integer):
+            return int(obj)
+    
+        # containers that are not serializable
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance (obj, set):
+            return list(obj)
+
+        return super(CustomEncoder, self).default(obj)
+
+
 class OutputGenerator():
     """A class for managing tedana outputs.
 
@@ -242,7 +262,7 @@ class OutputGenerator():
         if not isinstance(data, dict):
             raise TypeError(f"data must be a dict, not type {data_type}.")
         with open(name, "w") as fo:
-            json.dump(data, fo, indent=4, sort_keys=True)
+            json.dump(data, fo, indent=4, sort_keys=True, cls=CustomEncoder)
 
     def save_tsv(self, data, name):
         """Save DataFrame to a tsv file.

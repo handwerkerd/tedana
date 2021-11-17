@@ -370,7 +370,8 @@ class ComponentSelector:
         )
 
         self.__dict__.update(kwargs)
-        tree_config = load_config(self.tree)
+        self.tree_config = load_config(self.tree)
+        tree_config = self.tree_config
 
         LGR.info("Performing component selection with " + tree_config["tree_id"])
         LGR.info(tree_config.get("info", ""))

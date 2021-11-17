@@ -724,13 +724,13 @@ def tedana_workflow(
                 "ICA",
                 metrics=required_metrics,
             )
-            # NOTE: Added cross_component_metrics and component_status_table here, but they are not yet stored anywhere
-            (
+            ica_selection = selection.automatic_selection(
                 comptable,
-                cross_component_metrics,
-                component_status_table,
-                metric_metadata,
-            ) = selection.automatic_selection(comptable, n_echos, n_vols, tree=tree)
+                n_echos,
+                n_vols,
+                tree=tree
+            )
+            comptable = ica_selection.component_table
             n_bold_comps = comptable[comptable.classification == "accepted"].shape[0]
             if (n_restarts < maxrestart) and (n_bold_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")
@@ -773,12 +773,12 @@ def tedana_workflow(
                 "ICA",
                 metrics=required_metrics,
             )
-            (
+            ica_selection = selection.automatic_selection(
                 comptable,
-                cross_component_metrics,
-                component_status_table,
-                metric_metadata,
-            ) = selection.automatic_selection(comptable, n_echos, n_vols, tree=tree)
+                n_echos,
+                n_vols,
+                tree=tree
+            )
         else:
             comptable = pd.read_table(ctab)
 
@@ -787,7 +787,6 @@ def tedana_workflow(
                     comptable, acc=manacc
                 )
 
-    # Write out ICA files.
     comp_names = comptable["Component"].values
     mixing_df = pd.DataFrame(data=mmix, columns=comp_names)
     io_generator.save_file(mixing_df, "ICA mixing tsv")
@@ -795,7 +794,28 @@ def tedana_workflow(
     io_generator.save_file(betas_oc, "z-scored ICA components img")
 
     # Save component table and associated json
-    io_generator.save_file(comptable, "ICA metrics tsv")
+    ica_comptable_fname = io_generator.save_file(
+        ica_selection.component_table,
+        "ICA metrics tsv",
+    )
+    ica_cross_component_fname = io_generator.save_file(
+        ica_selection.cross_component_metrics,
+        "ICA cross component metrics json",
+    )
+    ica_status_table_fname = io_generator.save_file(
+        ica_selection.component_status_table,
+        "ICA status table tsv",
+    )
+    # Insert the files needed for reconstructing the tree object
+    ica_selection.tree_config["reconstruct_from"] = {
+        "component table": op.basename(ica_comptable_fname),
+        "cross component table": op.basename(ica_cross_component_fname),
+        "status table": op.basename(ica_status_table_fname),
+    }
+    ica_tree_fname = io_generator.save_file(
+        ica_selection.tree_config,
+        "ICA decision tree json"
+    )
     metric_metadata = metrics.collect.get_metadata(comptable)
     io_generator.save_file(metric_metadata, "ICA metrics json")
 

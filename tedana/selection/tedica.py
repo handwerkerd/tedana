@@ -112,10 +112,4 @@ def automatic_selection(comptable, n_echos, n_vols, tree="minimal"):
     selector.select()
     selector.metadata = collect.get_metadata(selector.component_table)
 
-    # TODO: Eventually return just selector
-    return (
-        selector.component_table,
-        selector.cross_component_metrics,
-        selector.component_status_table,
-        selector.metadata,
-    )
+    return selector
