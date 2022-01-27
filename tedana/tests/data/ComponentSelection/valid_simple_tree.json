@@ -1,0 +1,75 @@
+{
+    "tree_id": "valid_simple_tree",
+    "info": "This is a short valid tree that will be tweaked in various ways to create invalid trees. Includes one unused key, one intermediate label, and one classification tag in a node that weren't predefined. These trigger warnings, not errors.",
+    "report": "",
+    "refs": "",
+    "unused_key": "There can be added keys that are valid, but aren't used",
+    "necessary_metrics": [
+        "kappa",
+        "rho"
+    ],
+    "intermediate_classifications": [
+        "random1"
+    ],
+    "classification_tags": [
+        "Random1"
+    ],
+    "nodes": [
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "rejected",
+                "ifFalse": "nochange",
+                "decide_comps": "all",
+                "op": ">",
+                "left": "rho",
+                "right": "kappa"
+            },
+            "kwargs": {
+                "log_extra_info": "random1 if Kappa<Rho",
+                "log_extra_report": "",
+                "tag_ifTrue": "random1"
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "random2",
+                "ifFalse": "nochange",
+                "decide_comps": "all",
+                "op": ">",
+                "left": "kappa",
+                "right": "rho"
+            },
+            "kwargs": {
+                "log_extra_info": "random2 if Kappa>Rho",
+                "log_extra_report": "",
+                "tag_ifTrue": "random2notpredefined"
+            }
+        },
+        {
+            "functionname": "manual_classify",
+            "parameters": {
+                "new_classification": "accepted",
+                "decide_comps": "random2notpredefined"
+            },
+            "kwargs": {
+                "log_extra_info": "",
+                "log_extra_report": "",
+                "tag": "Random2_NotPredefined"
+            }
+        },
+        {
+            "functionname": "manual_classify",
+            "parameters": {
+                "new_classification": "rejected",
+                "decide_comps": "random1"
+            },
+            "kwargs": {
+                "log_extra_info": "",
+                "log_extra_report": "",
+                "tag": "Random1"
+            }
+        }
+    ]
+}
