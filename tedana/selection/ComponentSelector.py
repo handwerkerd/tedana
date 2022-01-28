@@ -176,6 +176,15 @@ def validate_tree(tree):
             err_msg += "Node {} is missing required parameter(s): {}\n".format(
                 i, missing_pos
             )
+
+        invalid_params = set(node.get("parameters").keys()) - pos
+        if len(invalid_params) > 0:
+            err_msg += (
+                "Node {} has additional, undefined required parameters: {}\n".format(
+                    i, invalid_params
+                )
+            )
+
         invalid_kwargs = set(node.get("kwargs").keys()) - kwargs
         if len(invalid_kwargs) > 0:
             err_msg += "Node {} has additional, undefined optional parameters (kwargs): {}\n".format(
@@ -218,7 +227,7 @@ def validate_tree(tree):
         nonstandard_labels = compclass.difference(all_decide_comps)
         if nonstandard_labels:
             LGR.warning(
-                f"{complass} in node {i} of the decision tree includes a classification label that was not predefined"
+                f"{compclass} in node {i} of the decision tree includes a classification label that was not predefined"
             )
 
         tagset = set()

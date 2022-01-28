@@ -168,10 +168,10 @@
                 "decide_comps": [
                     "provisionalreject",
                     "unclassified"
-                ],
-                "var_metric": "variance explained"
+                ]
             },
             "kwargs": {
+                "var_metric": "variance explained",
                 "log_extra_info": "",
                 "log_extra_report": "",
                 "single_comp_threshold": 0.1,

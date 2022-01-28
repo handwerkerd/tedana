@@ -408,7 +408,7 @@ def dec_variance_lessthan_thresholds(
     ifTrue,
     ifFalse,
     decide_comps,
-    var_metric="varexp",
+    var_metric="variance explained",
     single_comp_threshold=0.1,
     all_comp_threshold=1.0,
     log_extra_report="",
