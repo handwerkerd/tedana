@@ -32,17 +32,13 @@ def dicts_to_test(treechoice):
     """
 
     # valid_dict is a simple valid dictionary to test
-    # It includes a few things that should trigger warnings, but not errors:
-    #  One unused key: "unused_key"
-    #  One intermediate_classification, "random2notpredefined" that is not
-    #    predefined and is used once to change a classification and once
-    #    to select which components to operate on
-    #  One classification_tags "Random2_NotPredefined" that is not predefined
+    # It includes a few things that should trigger warnings, but not errors.
     valid_dict = {
         "tree_id": "valid_simple_tree",
         "info": "This is a short valid tree",
         "report": "",
         "refs": "",
+        # Warning for an unused key
         "unused_key": "There can be added keys that are valid, but aren't used",
         "necessary_metrics": ["kappa", "rho"],
         "intermediate_classifications": ["random1"],
@@ -76,6 +72,7 @@ def dicts_to_test(treechoice):
                 "kwargs": {
                     "log_extra_info": "random2 if Kappa>Rho",
                     "log_extra_report": "",
+                    # Warning for an non-predefined classification assigned to a component
                     "tag_ifTrue": "random2notpredefined",
                 },
             },
@@ -83,11 +80,13 @@ def dicts_to_test(treechoice):
                 "functionname": "manual_classify",
                 "parameters": {
                     "new_classification": "accepted",
+                    # Warning for an non-predefined classification used to select components to operate on
                     "decide_comps": "random2notpredefined",
                 },
                 "kwargs": {
                     "log_extra_info": "",
                     "log_extra_report": "",
+                    # Warning for a tag that wasn't predefined
                     "tag": "Random2_NotPredefined",
                 },
             },
@@ -158,22 +157,14 @@ def test_load_config_succeeds():
 
 def test_validate_tree_succeeds():
     """
-    Tests to make sure validate_tree suceeds for valid decision trees
-    Tested on all default trees in ../resources/decision_trees
+    Tests to make sure validate_tree suceeds for all default
+    decision trees in  decision trees
+    Tested on all default trees in ./tedana/resources/decision_trees
     Note: If there is a tree in the default trees directory that
     is being developed and not yet valid, it's file name should
     include 'invalid' as a prefix
-    Also checks trees in data/ComponentSelection that have the
-    'valid_trees' prefix. These are for trees that aren't to be
-    used, but are designed tomake sure valid edge cases do work
     """
 
-    # A tree that raises all possible warnings in the validator should still be valid
-    assert ComponentSelector.validate_tree(dicts_to_test("valid"))
-
-    # Get the names of all trees that are included as default options
-    # and make sure the validator doesn't fail on any of them
-    # Trees with the 'invalid' prefix are ignored
     default_tree_names = glob.glob(
         os.path.join(THIS_DIR, "../resources/decision_trees/[!invalid]*.json")
     )
@@ -181,8 +172,17 @@ def test_validate_tree_succeeds():
     for tree_name in default_tree_names:
         f = open(tree_name)
         tree = json.load(f)
-        print(f"Validating: {tree_name}")
         assert ComponentSelector.validate_tree(tree)
+
+
+def test_validate_tree_warnings():
+    """
+    Tests to make sure validate_tree triggers all warning conditions
+    but still succeeds
+    """
+
+    # A tree that raises all possible warnings in the validator should still be valid
+    assert ComponentSelector.validate_tree(dicts_to_test("valid"))
 
 
 def test_validate_tree_fails():
