@@ -7,7 +7,7 @@ from scipy import stats
 
 from tedana.stats import getfbounds
 from tedana.selection.ComponentSelector import ComponentSelector
-from tedana.selection._utils import clean_dataframe
+from tedana.selection.selection_utils import clean_dataframe
 from tedana.metrics import collect
 
 LGR = logging.getLogger("GENERAL")

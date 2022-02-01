@@ -48,7 +48,7 @@ def selectcomps2use(selector, decide_comps):
     ----
     TODO: Number indexing should work here, but validator would not currently allow
     numbers to be assigned to a node in the ComponentSelector object. May want to make
-    sure this option is acceissble through the class.
+    sure this option is accessible through the class.
     """
 
     component_table = selector.component_table
@@ -89,8 +89,9 @@ def change_comptable_classifications(
     dont_warn_reclassify=False,
 ):
     """
-    Given information on whether a decision critereon is true or false for each component
-    change or don't change the component classification
+    Calls comptable_classification_changer to change (or not change) component
+    classifications based on whether a decision critereon is true or false for
+    each component
 
     Parameters
     ----------
@@ -579,7 +580,7 @@ def get_extend_factor(n_vols=None, extend_factor=None):
             "extend_factor={}, based on number of fMRI volumes".format(extend_factor)
         )
     else:
-        error_msg = "get_extend_factor need n_vols or extend_factor as an input"
+        error_msg = "get_extend_factor needs n_vols or extend_factor as an input"
         LGR.error(error_msg)
         ValueError(error_msg)
     return extend_factor

@@ -7,7 +7,7 @@ import numpy as np
 from tedana import utils
 from tedana.stats import getfbounds
 from tedana.metrics import collect
-from tedana.selection._utils import getelbow_cons, getelbow, clean_dataframe
+from tedana.selection.selection_utils import getelbow_cons, getelbow, clean_dataframe
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")

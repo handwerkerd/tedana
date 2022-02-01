@@ -6,10 +6,11 @@ import os.path as op
 import inspect
 import json
 import logging
+import pandas as pd
 from pkg_resources import resource_filename
 from numpy import asarray
 
-from tedana.selection._utils import (
+from tedana.selection.selection_utils import (
     clean_dataframe,
     confirm_metrics_exist,
     log_classification_counts,
@@ -17,6 +18,7 @@ from tedana.selection._utils import (
 from tedana.selection import selection_nodes
 from tedana.io import load_json
 from tedana.utils import get_resource_path
+
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
@@ -251,6 +253,34 @@ def validate_tree(tree):
     return tree
 
 
+def validate_component_table(component_table):
+    """
+    Make sure a valid component_table is included
+
+    Parameters
+    ----------
+    component_table : :obj:`pandas.DataFrame`
+    Ideally a valid component table
+
+    Returns
+    -------
+    True, if no errors are raised within the function
+    Raises an error if the component table is not valid
+
+    TODO: Right now this just makes sure the component_table is a dataframe
+        and that there is a column that's labeled "components"
+        Consider adding more things to validate
+    """
+
+    if not isinstance(component_table, pd.DataFrame):
+        raise TypeError("component_table should be a pandas dataframe")
+
+    if "Component" not in component_table:
+        raise KeyError("component_table is required to have a Component column")
+
+    return True
+
+
 class ComponentSelector:
     """
     Classifies components based on specified `tree` when the class is initialized
@@ -361,9 +391,11 @@ class ComponentSelector:
             component_status_table: empty dataframe
             cross_component_metrics: empty dict
             used_metrics: empty set
+
         """
 
         self.tree = tree
+        validate_component_table(component_table)
         self.component_table = component_table.copy()
 
         # To run a decision tree, each component needs to have an initial classification
@@ -371,6 +403,8 @@ class ComponentSelector:
         # as unclassified
         if "classification" not in self.component_table:
             self.component_table["classification"] = "unclassified"
+        if "classification_tags" not in self.component_table:
+            self.component_table["classification_tags"] = ""
         self.component_status_table = self.component_table[
             ["Component", "classification"]
         ].copy()
@@ -449,13 +483,34 @@ class ComponentSelector:
 
     def check_null(self, params, fcn):
         """
-        Checks that all required parameters for selection node functions are
-        attributes in the class. Error if any are undefined
+        Checks that all required parameters for selection node functions have
+        values defined for them. If a value is None, then check if that value
+        is globally defined in the initialization of ComponenetSelector
+        (i.e. what's done for n_vols or n_echoes)).
+
+        Parameters
+        ----------
+        params : :obj:`dict`
+            A dictionary of parmeters and their values
+        fcn : :obj:`are`
+            The name of the function being called
 
         Returns
         -------
         params
-            The values for the inputted parameters
+            The values for the inputted parameters with any centrally
+            defined values filled in
+
+        Raises and error with message if a required parameter has no value
+
+        TODO: This function seem irrelevant for any selection node function
+        without additional values. Need to better check this function when
+        the functions for the kundu decision tree are revived. One quirk to
+        check is that any parameter defined in the JSON will load as an
+        empty string, not None & would never trigger this check. Any undefined
+        required parameter will fail in validate_tree. This may be a new issue
+        since when this function was originally created that will need to be
+        fixed.
         """
 
         for key, val in params.items():
@@ -464,14 +519,12 @@ class ComponentSelector:
                     params[key] = getattr(self, key)
                 except AttributeError:
                     raise ValueError(
-                        "Parameter {} is required in node {}, but not defined. ".format(
-                            key, fcn
-                        )
-                        + "If {} is dataset specific, it should be "
-                        "defined in the ".format(key) + " initialization of "
-                        "ComponentSelector. If it is fixed regardless of dataset, it "
-                        "should be defined in the json file that defines the "
-                        "decision tree."
+                        f"Parameter {key} is required in node {fcn}, but not "
+                        f"defined. If {key} is dataset specific, it should be "
+                        "defined in the initialization of ComponentSelector. "
+                        "If it is fixed regardless of dataset, it should be "
+                        "defined in the json file that defines the decision "
+                        "tree."
                     )
 
         return params
@@ -482,11 +535,6 @@ class ComponentSelector:
         used and if any used_metrics weren't explicitly declared necessary
         If either of these happen, a warning is added to the logger
         """
-        unused_metrics = self.necessary_metrics - self.used_metrics
-        if len(unused_metrics) > 0:
-            LGR.warning(
-                f"The following metrics were declared necessary by not actually used: {unused_metrics}"
-            )
 
         not_declared = self.used_metrics - self.necessary_metrics
         not_used = self.necessary_metrics - self.used_metrics

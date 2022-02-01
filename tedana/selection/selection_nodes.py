@@ -9,7 +9,7 @@ import pandas as pd
 
 from scipy.stats import scoreatpercentile
 from tedana.stats import getfbounds
-from tedana.selection._utils import (
+from tedana.selection.selection_utils import (
     confirm_metrics_exist,
     selectcomps2use,
     log_decision_tree_step,
