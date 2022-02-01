@@ -320,6 +320,9 @@ def test_Selector_select_succeeds():
     this function, so there is no reason to make a failure test
     Should anything else be validated directly within this
     function?
+
+    TODO: n_echoes should not be a required param, but this fails
+    if it's not included, I need to figure out why
     """
 
     selector = ComponentSelector.ComponentSelector(
