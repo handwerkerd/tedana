@@ -1,4 +1,5 @@
 """Tests for the decision tree modularization"""
+from queue import Empty
 import pytest
 import pandas as pd
 import json, os, glob
@@ -329,6 +330,14 @@ def test_Selector_select_succeeds():
         "minimal", component_table_to_test("valid"), n_echos=3
     )
     selector.select()
+    assert bool(selector.used_metrics)  # Will be false of the set is empty
+    # is component_status_table created
+    assert isinstance(selector.component_status_table, pd.DataFrame)
+    # This is currently the correct number of columns for the minimal decision tree
+    assert len(selector.component_status_table.columns) == 13
+    # Every node should have an output dictionary with at least 5 elements
+    for nodeidx in range(len(selector.nodes)):
+        assert len(selector.nodes[nodeidx]["outputs"]) >= 5
 
 
 # TODO It's hard to test check_null when it's not actually being used in the minimal tree
