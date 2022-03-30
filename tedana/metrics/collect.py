@@ -5,13 +5,11 @@ import os.path as op
 import numpy as np
 import pandas as pd
 
-from . import dependence
-from ._utils import determine_signs, flip_components, dependency_resolver
-
-from tedana import io
-from tedana import utils
+from tedana import io, utils
 from tedana.stats import getfbounds
 
+from . import dependence
+from ._utils import dependency_resolver, determine_signs, flip_components
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
@@ -71,9 +69,7 @@ def generate_metrics(
         raise ValueError(
             "First dimensions (number of samples) of data_cat ({0}), "
             "data_optcom ({1}), and adaptive_mask ({2}) do not "
-            "match".format(
-                data_cat.shape[0], data_optcom.shape[0], adaptive_mask.shape[0]
-            )
+            "match".format(data_cat.shape[0], data_optcom.shape[0], adaptive_mask.shape[0])
         )
     elif data_cat.shape[1] != len(tes):
         raise ValueError(
@@ -134,9 +130,7 @@ def generate_metrics(
 
     if "map optcom betas" in required_metrics:
         LGR.info("Calculating parameter estimate maps for optimally combined data")
-        metric_maps["map optcom betas"] = dependence.calculate_betas(
-            data_optcom, mixing
-        )
+        metric_maps["map optcom betas"] = dependence.calculate_betas(data_optcom, mixing)
         if io_generator.verbose:
             metric_maps["map echo betas"] = dependence.calculate_betas(data_cat, mixing)
 
@@ -203,17 +197,13 @@ def generate_metrics(
 
     # Back to maps
     if "map beta T2 clusterized" in required_metrics:
-        LGR.info(
-            "Thresholding optimal combination beta maps to match T2* F-statistic maps"
-        )
+        LGR.info("Thresholding optimal combination beta maps to match T2* F-statistic maps")
         metric_maps["map beta T2 clusterized"] = dependence.threshold_to_match(
             metric_maps["map optcom betas"], comptable["countsigFT2"], mask, ref_img
         )
 
     if "map beta S0 clusterized" in required_metrics:
-        LGR.info(
-            "Thresholding optimal combination beta maps to match S0 F-statistic maps"
-        )
+        LGR.info("Thresholding optimal combination beta maps to match S0 F-statistic maps")
         metric_maps["map beta S0 clusterized"] = dependence.threshold_to_match(
             metric_maps["map optcom betas"], comptable["countsigFS0"], mask, ref_img
         )
@@ -525,13 +515,8 @@ def get_metadata(comptable):
             "LongName": "Original classification",
             "Description": ("Classification from the original decision tree."),
             "Levels": {
-                "accepted": (
-                    "A BOLD-like component included in denoised and " "high-Kappa data."
-                ),
-                "rejected": (
-                    "A non-BOLD component excluded from denoised and "
-                    "high-Kappa data."
-                ),
+                "accepted": ("A BOLD-like component included in denoised and high-Kappa data."),
+                "rejected": ("A non-BOLD component excluded from denoised and high-Kappa data."),
                 "ignored": (
                     "A low-variance component included in denoised, "
                     "but excluded from high-Kappa data."
@@ -544,12 +529,11 @@ def get_metadata(comptable):
             "LongName": "Component classification",
             "Description": ("Classification from the manual classification procedure."),
             "Levels": {
-                "accepted": (
-                    "A BOLD-like component included in denoised and " "high-Kappa data."
-                ),
-                "rejected": (
-                    "A non-BOLD component excluded from denoised and "
-                    "high-Kappa data."
+                "accepted": ("A BOLD-like component included in denoised and high-Kappa data."),
+                "rejected": ("A non-BOLD component excluded from denoised and high-Kappa data."),
+                "ignored": (
+                    "A low-variance component included in denoised, "
+                    "but excluded from high-Kappa data."
                 ),
             },
         }

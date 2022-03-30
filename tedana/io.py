@@ -4,14 +4,14 @@ Other functions in the module help write outputs which require multiple
 data sources, assist in writing per-echo verbose outputs, or act as helper
 functions for any of the above.
 """
+import json
 import logging
 import os
 import os.path as op
-import json
 from string import Formatter
 
-import numpy as np
 import nibabel as nib
+import numpy as np
 import pandas as pd
 from nilearn._utils import check_niimg
 from nilearn.image import new_img_like
@@ -19,10 +19,9 @@ from nilearn.image import new_img_like
 from tedana import utils
 from tedana.stats import computefeats2, get_coeffs
 
-
 LGR = logging.getLogger("GENERAL")
-RepLGR = logging.getLogger('REPORT')
-RefLGR = logging.getLogger('REFERENCES')
+RepLGR = logging.getLogger("REPORT")
+RefLGR = logging.getLogger("REFERENCES")
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -190,9 +189,9 @@ class OutputGenerator():
         for key, value in kwargs.items():
             if key not in name_variables:
                 raise ValueError(
-                    f'Argument {key} passed but has no match in format '
-                    f'string. Available format variables: '
-                    f'{name_variables} from {kwargs} and {name}.'
+                    f"Argument {key} passed but has no match in format "
+                    f"string. Available format variables: "
+                    f"{name_variables} from {kwargs} and {name}."
                 )
 
         name = name.format(**kwargs)
@@ -234,17 +233,26 @@ class OutputGenerator():
             Data to save to a file.
         name : str
             Full file path for output file.
+
+        Notes
+        -----
+        Will coerce 64-bit float and int arrays into 32-bit arrays.
         """
         data_type = type(data)
         if not isinstance(data, np.ndarray):
-            raise TypeError(
-                f"Data supplied must of type np.ndarray, not {data_type}."
-            )
+            raise TypeError(f"Data supplied must of type np.ndarray, not {data_type}.")
         if data.ndim not in (1, 2):
-            raise TypeError(
-                "Data must have number of dimensions in (1, 2), not "
-                f"{data.ndim}"
-            )
+            raise TypeError(f"Data must have number of dimensions in (1, 2), not {data.ndim}")
+
+        # Coerce data to be 32-bit max in the cases of float64, int64
+        # Note that int64 niftis cannot be read by mricroGL, AFNI
+        vox_type = data.dtype
+        if vox_type == np.int64:
+            data = np.int32(data)
+        elif vox_type == np.float64:
+            data = np.float32(data)
+
+        # Make new img and save
         img = new_nii_like(self.reference_img, data)
         img.to_filename(name)
 
@@ -313,7 +321,7 @@ def load_json(path: str) -> dict:
     FileNotFoundError if the file does not exist
     IsADirectoryError if the path is a directory instead of a file
     """
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         try:
             data = json.load(f)
         except json.decoder.JSONDecodeError:
@@ -343,8 +351,8 @@ def add_decomp_prefix(comp_num, prefix, max_value):
         Component name in the form <prefix>_<zeros><comp_num>
     """
     n_digits = int(np.log10(max_value)) + 1
-    comp_name = '{0:08d}'.format(int(comp_num))
-    comp_name = '{0}_{1}'.format(prefix, comp_name[8 - n_digits:])
+    comp_name = "{0:08d}".format(int(comp_num))
+    comp_name = "{0}_{1}".format(prefix, comp_name[8 - n_digits :])
     return comp_name
 
 
@@ -373,8 +381,8 @@ def denoise_ts(data, mmix, mask, comptable):
     lowkts : (S x T) array_like
         Low-Kappa data (i.e., data composed only of rejected components).
     """
-    acc = comptable[comptable.classification == 'accepted'].index.values
-    rej = comptable[comptable.classification == 'rejected'].index.values
+    acc = comptable[comptable.classification == "accepted"].index.values
+    rej = comptable[comptable.classification == "rejected"].index.values
 
     # mask and de-mean data
     mdata = data[mask]
@@ -382,9 +390,8 @@ def denoise_ts(data, mmix, mask, comptable):
 
     # get variance explained by retained components
     betas = get_coeffs(dmdata.T, mmix, mask=None)
-    varexpl = (1 - ((dmdata.T - betas.dot(mmix.T))**2.).sum() /
-               (dmdata**2.).sum()) * 100
-    LGR.info('Variance explained by decomposition: {:.02f}%'.format(varexpl))
+    varexpl = (1 - ((dmdata.T - betas.dot(mmix.T)) ** 2.0).sum() / (dmdata**2.0).sum()) * 100
+    LGR.info("Variance explained by decomposition: {:.02f}%".format(varexpl))
 
     # create component-based data
     hikts = utils.unmask(betas[:, acc].dot(mmix.T[acc, :]), mask)
@@ -432,31 +439,31 @@ def write_split_ts(data, mmix, mask, comptable, io_generator, echo=0):
     [prefix]Denoised_bold.nii.gz    Denoised time series.
     ============================    ============================================
     """
-    acc = comptable[comptable.classification == 'accepted'].index.values
-    rej = comptable[comptable.classification == 'rejected'].index.values
+    acc = comptable[comptable.classification == "accepted"].index.values
+    rej = comptable[comptable.classification == "rejected"].index.values
 
     dnts, hikts, lowkts = denoise_ts(data, mmix, mask, comptable)
 
     if len(acc) != 0:
         if echo != 0:
-            fout = io_generator.save_file(hikts, 'high kappa ts split img', echo=echo)
+            fout = io_generator.save_file(hikts, "high kappa ts split img", echo=echo)
         else:
-            fout = io_generator.save_file(hikts, 'high kappa ts img')
-        LGR.info('Writing high-Kappa time series: {}'.format(fout))
+            fout = io_generator.save_file(hikts, "high kappa ts img")
+        LGR.info("Writing high-Kappa time series: {}".format(fout))
 
     if len(rej) != 0:
         if echo != 0:
-            fout = io_generator.save_file(lowkts, 'low kappa ts split img', echo=echo)
+            fout = io_generator.save_file(lowkts, "low kappa ts split img", echo=echo)
         else:
-            fout = io_generator.save_file(lowkts, 'low kappa ts img')
-        LGR.info('Writing low-Kappa time series: {}'.format(fout))
+            fout = io_generator.save_file(lowkts, "low kappa ts img")
+        LGR.info("Writing low-Kappa time series: {}".format(fout))
 
     if echo != 0:
-        fout = io_generator.save_file(dnts, 'denoised ts split img', echo=echo)
+        fout = io_generator.save_file(dnts, "denoised ts split img", echo=echo)
     else:
-        fout = io_generator.save_file(dnts, 'denoised ts img')
+        fout = io_generator.save_file(dnts, "denoised ts img")
 
-    LGR.info('Writing denoised time series: {}'.format(fout))
+    LGR.info("Writing denoised time series: {}".format(fout))
 
 
 def writeresults(ts, mask, comptable, mmix, n_vols, io_generator):
@@ -503,28 +510,22 @@ def writeresults(ts, mask, comptable, mmix, n_vols, io_generator):
     --------
     tedana.io.write_split_ts: Writes out time series files
     """
-    acc = comptable[comptable.classification == 'accepted'].index.values
+    acc = comptable[comptable.classification == "accepted"].index.values
     write_split_ts(ts, mmix, mask, comptable, io_generator)
 
     ts_B = get_coeffs(ts, mmix, mask)
-    fout = io_generator.save_file(ts_B, 'ICA components img')
-    LGR.info('Writing full ICA coefficient feature set: {}'.format(fout))
+    fout = io_generator.save_file(ts_B, "ICA components img")
+    LGR.info("Writing full ICA coefficient feature set: {}".format(fout))
 
     if len(acc) != 0:
-        fout = io_generator.save_file(
-            ts_B[:, acc],
-            'ICA accepted components img'
-        )
-        LGR.info('Writing denoised ICA coefficient feature set: {}'.format(fout))
+        fout = io_generator.save_file(ts_B[:, acc], "ICA accepted components img")
+        LGR.info("Writing denoised ICA coefficient feature set: {}".format(fout))
 
         # write feature versions of components
         feats = computefeats2(split_ts(ts, mmix, mask, comptable)[0], mmix[:, acc], mask)
         feats = utils.unmask(feats, mask)
-        fname = io_generator.save_file(
-            feats,
-            'z-scored ICA accepted components img'
-        )
-        LGR.info('Writing Z-normalized spatial component maps: {}'.format(fname))
+        fname = io_generator.save_file(feats, "z-scored ICA accepted components img")
+        LGR.info("Writing Z-normalized spatial component maps: {}".format(fname))
 
 
 def writeresults_echoes(catd, mmix, mask, comptable, io_generator):
@@ -567,55 +568,60 @@ def writeresults_echoes(catd, mmix, mask, comptable, io_generator):
     """
 
     for i_echo in range(catd.shape[1]):
-        LGR.info('Writing Kappa-filtered echo #{:01d} timeseries'.format(i_echo + 1))
+        LGR.info("Writing Kappa-filtered echo #{:01d} timeseries".format(i_echo + 1))
         write_split_ts(catd[:, i_echo, :], mmix, mask, comptable, io_generator, echo=(i_echo + 1))
 
 
 # File Loading Functions
 def load_data(data, n_echos=None):
-    """
-    Coerces input `data` files to required 3D array output
+    """Coerce input `data` files to required 3D array output.
 
     Parameters
     ----------
-    data : (X x Y x M x T) array_like or :obj:`list` of img_like
-        Input multi-echo data array, where `X` and `Y` are spatial dimensions,
-        `M` is the Z-spatial dimensions with all the input echos concatenated,
-        and `T` is time. A list of image-like objects (e.g., .nii) are
-        accepted, as well
+    data : :obj:`list` of img_like, :obj:`list` of :obj:`str`, :obj:`str`, or img_like
+        A list of echo-wise img objects or paths to files.
+        Single img objects or filenames are allowed as well, to support z-concatenated data.
     n_echos : :obj:`int`, optional
-        Number of echos in provided data array. Only necessary if `data` is
-        array_like. Default: None
+        Number of echos in provided data array. Only necessary if `data` is a single,
+        z-concatenated file. Default: None
 
     Returns
     -------
     fdata : (S x E x T) :obj:`numpy.ndarray`
-        Output data where `S` is samples, `E` is echos, and `T` is time
-    ref_img : :obj:`str` or :obj:`numpy.ndarray`
-        Filepath to reference image for saving output files or NIFTI-like array
+        Output data where `S` is samples, `E` is echos, and `T` is time.
+    ref_img : img_like
+        Reference image object for saving output files.
     """
-    if n_echos is None:
-        raise ValueError('Number of echos must be specified. '
-                         'Confirm that TE times are provided with the `-e` argument.')
+    if n_echos is None and (isinstance(data, str) or len(data) == 1):
+        raise ValueError(
+            "Number of echos must be specified when a single z-concatenated file is supplied."
+        )
 
-    if isinstance(data, list):
+    if not isinstance(data, (list, str, nib.spatialimages.SpatialImage)):
+        raise TypeError(f"Unsupported type: {type(data)}")
+    elif isinstance(data, list):
+        for item in data:
+            if not isinstance(item, (str, nib.spatialimages.SpatialImage)):
+                raise TypeError(f"Unsupported type: {type(item)}")
+
         if len(data) == 1:  # a z-concatenated file was provided
             data = data[0]
         elif len(data) == 2:  # inviable -- need more than 2 echos
-            raise ValueError('Cannot run `tedana` with only two echos: '
-                             '{}'.format(data))
+            raise ValueError(f"Cannot run `tedana` with only two echos: {data}")
         else:  # individual echo files were provided (surface or volumetric)
-            fdata = np.stack([utils.load_image(f) for f in data], axis=1)
+            fdata = np.stack([utils.reshape_niimg(f) for f in data], axis=1)
             ref_img = check_niimg(data[0])
             ref_img.header.extensions = []
             return np.atleast_3d(fdata), ref_img
 
+    # Z-concatenated file/img
     img = check_niimg(data)
     (nx, ny), nz = img.shape[:2], img.shape[2] // n_echos
-    fdata = utils.load_image(img.get_fdata().reshape(nx, ny, nz, n_echos, -1, order='F'))
+    fdata = utils.reshape_niimg(img.get_fdata().reshape(nx, ny, nz, n_echos, -1, order="F"))
     # create reference image
-    ref_img = img.__class__(np.zeros((nx, ny, nz, 1)), affine=img.affine,
-                            header=img.header, extra=img.extra)
+    ref_img = img.__class__(
+        np.zeros((nx, ny, nz, 1)), affine=img.affine, header=img.header, extra=img.extra
+    )
     ref_img.header.extensions = []
     ref_img.header.set_sform(ref_img.header.get_sform(), code=1)
 
@@ -646,14 +652,12 @@ def new_nii_like(ref_img, data, affine=None, copy_header=True):
 
     ref_img = check_niimg(ref_img)
     newdata = data.reshape(ref_img.shape[:3] + data.shape[1:])
-    if '.nii' not in ref_img.valid_exts:
+    if ".nii" not in ref_img.valid_exts:
         # this is rather ugly and may lose some information...
-        nii = nib.Nifti1Image(newdata, affine=ref_img.affine,
-                              header=ref_img.header)
+        nii = nib.Nifti1Image(newdata, affine=ref_img.affine, header=ref_img.header)
     else:
         # nilearn's `new_img_like` is a very nice function
-        nii = new_img_like(ref_img, newdata, affine=affine,
-                           copy_header=copy_header)
+        nii = new_img_like(ref_img, newdata, affine=affine, copy_header=copy_header)
     nii.set_data_dtype(data.dtype)
 
     return nii
@@ -684,10 +688,9 @@ def split_ts(data, mmix, mask, comptable):
     resid : (S x T) :obj:`numpy.ndarray`
         Original data with `hikts` removed
     """
-    acc = comptable[comptable.classification == 'accepted'].index.values
+    acc = comptable[comptable.classification == "accepted"].index.values
 
-    cbetas = get_coeffs(data - data.mean(axis=-1, keepdims=True),
-                        mmix, mask)
+    cbetas = get_coeffs(data - data.mean(axis=-1, keepdims=True), mmix, mask)
     betas = cbetas[mask]
     if len(acc) != 0:
         hikts = utils.unmask(betas[:, acc].dot(mmix.T[acc, :]), mask)

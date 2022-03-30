@@ -4,8 +4,8 @@ Functions to creating figures to inspect tedana output
 import logging
 import os
 
-import numpy as np
 import matplotlib
+import numpy as np
 
 matplotlib.use("AGG")
 import matplotlib.pyplot as plt
@@ -38,9 +38,7 @@ def _trim_edge_zeros(arr):
     """
 
     mask = arr != 0
-    bounding_box = tuple(
-        slice(np.min(indexes), np.max(indexes) + 1) for indexes in np.where(mask)
-    )
+    bounding_box = tuple(slice(np.min(indexes), np.max(indexes) + 1) for indexes in np.where(mask))
     return arr[bounding_box]
 
 
@@ -203,23 +201,17 @@ def comp_figures(ts, mask, comptable, mmix, io_generator, png_cmap):
     expl_text = ""
 
     # Remove trailing ';' from rationale column
-    # comptable['rationale'] = comptable['rationale'].str.rstrip(';')
+    #comptable["rationale"] = comptable["rationale"].str.rstrip(";")
     for compnum in comptable.index.values:
         if comptable.loc[compnum, "classification"] == "accepted":
             line_color = "g"
-            expl_text = (
-                "accepted reason(s): " + comptable.loc[compnum, "classification_tags"]
-            )
+            expl_text = "accepted"
         elif comptable.loc[compnum, "classification"] == "rejected":
             line_color = "r"
-            expl_text = (
-                "rejection reason(s): " + comptable.loc[compnum, "classification_tags"]
-            )
+            expl_text = "rejection reason(s): " + comptable.loc[compnum, "rationale"]
         elif comptable.loc[compnum, "classification"] == "ignored":
             line_color = "k"
-            expl_text = (
-                "ignored reason(s): " + comptable.loc[compnum, "classification_tags"]
-            )
+            expl_text = "ignored reason(s): " + comptable.loc[compnum, "rationale"]
         else:
             # Classification not added
             # If new, this will keep code running
@@ -256,7 +248,7 @@ def comp_figures(ts, mask, comptable, mmix, io_generator, png_cmap):
         comp_var = "{0:.2f}".format(comptable.loc[compnum, "variance explained"])
         comp_kappa = "{0:.2f}".format(comptable.loc[compnum, "kappa"])
         comp_rho = "{0:.2f}".format(comptable.loc[compnum, "rho"])
-        plt_title = "Comp. {}: variance: {}%, kappa: {}, rho: {}, " "{}".format(
+        plt_title = "Comp. {}: variance: {}%, kappa: {}, rho: {}, {}".format(
             compnum, comp_var, comp_kappa, comp_rho, expl_text
         )
         title = ax_ts.set_title(plt_title)
@@ -268,9 +260,7 @@ def comp_figures(ts, mask, comptable, mmix, io_generator, png_cmap):
 
         for idx, _ in enumerate(cuts):
             for imgslice in range(1, 6):
-                ax = plt.subplot2grid(
-                    (5, 6), (idx + 1, imgslice - 1), rowspan=1, colspan=1
-                )
+                ax = plt.subplot2grid((5, 6), (idx + 1, imgslice - 1), rowspan=1, colspan=1)
                 ax.axis("off")
 
                 if idx == 0:
@@ -280,9 +270,7 @@ def comp_figures(ts, mask, comptable, mmix, io_generator, png_cmap):
                 if idx == 2:
                     to_plot = ts_B[:, :, imgslice * cuts[idx], compnum]
 
-                ax_im = ax.imshow(
-                    to_plot, vmin=imgmin, vmax=imgmax, aspect="equal", cmap=png_cmap
-                )
+                ax_im = ax.imshow(to_plot, vmin=imgmin, vmax=imgmax, aspect="equal", cmap=png_cmap)
 
         # Add a color bar to the plot.
         ax_cbar = allplot.add_axes([0.8, 0.3, 0.03, 0.37])

@@ -401,17 +401,33 @@ The following plots reflect the average values for studies conducted at 3 Tesla.
 Processing multi-echo fMRI
 **************************
 
-``tedana`` must be called in the context of a larger ME-EPI preprocessing pipeline.
+Most multi-echo denoising methods, including ``tedana``,
+must be called in the context of a larger ME-EPI preprocessing pipeline.
 Two common pipelines which support ME-EPI processing include `fMRIPrep`_ and `afni_proc.py`_.
 
-Users can also construct their own preprocessing pipeline for ME-EPI data from which to call ``tedana``.
+Users can also construct their own preprocessing pipeline for ME-EPI data from which to call the
+multi-echo denoising method of their choice.
 There are several general principles to keep in mind when constructing ME-EPI processing pipelines.
 
-In general, we recommend
+In general, we recommend the following:
 
 
-1. Perform slice timing correction and motion correction **before** ``tedana``
-==============================================================================
+1. Estimate motion correction parameters from one echo and apply those parameters to all echoes
+===============================================================================================
+
+When preparing ME-EPI data for multi-echo denoising with a tool like ``tedana``,
+it is important not to do anything that mean shifts the data or otherwise separately
+scales the voxelwise values at each echo.
+
+For example, head-motion correction parameters should *not* be calculated and applied at an
+individual echo level (see above).
+Instead, we recommend that researchers apply the same transforms to all echoes in an ME-EPI series.
+That is, that they calculate head motion correction parameters from one echo
+and apply the resulting transformation to all echoes.
+
+
+2. Perform slice timing correction and motion correction **before** multi-echo denoising
+========================================================================================
 
 Similarly to single-echo EPI data, slice time correction allows us to assume that voxels across
 slices represent roughly simultaneous events.
@@ -425,29 +441,29 @@ and the same is true when one is collecting multiple echoes after a single excit
 Therefore, we suggest using the same slice timing for all echoes in an ME-EPI series.
 
 
-2. Perform distortion correction, spatial normalization, smoothing, and any rescaling or filtering **after** ``tedana``
-=======================================================================================================================
+3. Perform distortion correction, spatial normalization, smoothing, and any rescaling or filtering **after** denoising
+======================================================================================================================
 
-When preparing ME-EPI data for multi-echo denoising as in ``tedana``, it is important
-not to do anything that mean shifts the data or otherwise separately
-scales the voxelwise values at each echo.
-
-For example, head-motion correction parameters should *not* be calculated and applied at an
-individual echo level.
-Instead, we recommend that researchers apply the same transforms to all echoes in an ME-EPI series.
-That is, that they calculate head motion correction parameters from one echo
-and apply the resulting transformation to all echoes.
+Any step that will alter the relationship of signal magnitudes between echoes should occur after denoising and combining
+of the echoes. For example, if echo is separately scaled by its mean signal over time, then resulting intensity gradients
+and the subsequent calculation of voxelwise T2* values will be distorted or incorrect. See the description of
+``tedana``'s :doc:`approach <\approach>` for more details on how T2* values are calculated. An agressive temporal filter
+(i.e. a 0.1Hz low pass filter) or spatial smoothing could similarly distort the relationship between the echoes at each
+time point.
 
 .. note::
-    Any intensity normalization or nuisance regressors should be applied to the data
-    *after* ``tedana`` calculates the BOLD and non-BOLD weighting of components.
-    If this is not considered, resulting intensity gradients (e.g., in the case of scaling)
-    or alignment parameters (e.g., in the case of motion correction, normalization)
-    are likely to differ across echos,
-    and the subsequent calculation of voxelwise T2* values will be distorted or incorrect.
-    See the description of ``tedana``'s :doc:`approach <\approach>` for more details
-    on how T2* values are calculated.
+    We are assuming that spatial normalization and distortion correction, particularly non-linear normalization methods
+    with higher order interpolation functions, are likely to distort the relationship between echoes while rigid body
+    motion correction would linearly alter each echo in a similar manner. This assumption has not yet been empirically
+    tested and an affine normalzation with bilinear interpolation may not distort the relationship between echoes.
+    Additionally, there are benefits to applying only one spatial transform to data rather than applying one spatial
+    transform for motion correction and a later transform for normalization and distortion correction. Our advice
+    against doing normalization and distortion correction is a conservative choice and we encourage additional
+    research to better understand how these steps can be applied before denoising.
 
+
+.. _fMRIPrep: https://fmriprep.readthedocs.io
+.. _afni_proc.py: https://afni.nimh.nih.gov/pub/dist/doc/program_help/afni_proc.py.html
 
 *****************
 General Resources
@@ -485,11 +501,13 @@ Videos
 * A `series of lectures from the OHBM 2017 multi-echo session`_ on multiple facets of multi-echo data analysis
 * | Multi-echo fMRI lecture from the `2018 NIH FMRI Summer Course`_ by Javier Gonzalez-Castillo
   | `Slides from 2018 NIH FMRI Summer Course`_
+* An `NIMH Center for Multimodal Neuroimaging video`_ by the Section on Functional Imaging Methods
 
 .. _educational session from OHBM 2017: https://www.pathlms.com/ohbm/courses/5158/sections/7788/video_presentations/75977
 .. _series of lectures from the OHBM 2017 multi-echo session: https://www.pathlms.com/ohbm/courses/5158/sections/7822
 .. _2018 NIH FMRI Summer Course: https://fmrif.nimh.nih.gov/course/fmrif_course/2018/14_Javier_20180713
 .. _Slides from 2018 NIH FMRI Summer Course: https://fmrif.nimh.nih.gov/COURSE/fmrif_course/2018/content/14_Javier_20180713.pdf
+.. _NIMH Center for Multimodal Neuroimaging video: https://youtu.be/G1Ftd2IwF14
 
 
 Multi-echo preprocessing software
@@ -504,7 +522,7 @@ AFNI can process multi-echo data natively as well as apply tedana denoising thro
 
 `fmriprep` can also process multi-echo data, but is currently limited to using the optimally combined
 timeseries.
-For more details, see the `fmriprep workflows page`_.
+For more details, see the `fmriprep workflows page`_ and :ref:`collecting fMRIPrepped data`.
 
 .. _fmriprep workflows page: https://fmriprep.readthedocs.io/en/stable/workflows.html
 
@@ -559,6 +577,7 @@ This list is not necessarily up to date, so please check out OpenNeuro to potent
 * `Valence processing differs across stimulus modalities`_
 * `Cambridge Centre for Ageing Neuroscience (Cam-CAN)`_
 * `rt-me-fMRI - A task and resting state dataset for real-time, multi-echo fMRI methods development and validation`_
+* `EuskalIBUR`_
 
 .. _Multi-echo fMRI replication sample of autobiographical memory, prospection and theory of mind reasoning tasks: https://openneuro.org/datasets/ds000210/
 .. _Multi-echo Cambridge: https://openneuro.org/datasets/ds000258
@@ -566,6 +585,7 @@ This list is not necessarily up to date, so please check out OpenNeuro to potent
 .. _Valence processing differs across stimulus modalities: https://openneuro.org/datasets/ds001491
 .. _Cambridge Centre for Ageing Neuroscience (Cam-CAN): https://camcan-archive.mrc-cbu.cam.ac.uk/dataaccess/
 .. _rt-me-fMRI - A task and resting state dataset for real-time, multi-echo fMRI methods development and validation: https://doi.org/10.34894/R1TNL8
+.. _EuskalIBUR: https://openneuro.org/datasets/ds003192
 
 
 .. _spreadsheet of publications:

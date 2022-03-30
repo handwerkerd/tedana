@@ -2,6 +2,7 @@
 Functions to identify TE-dependent and TE-independent components.
 """
 import logging
+
 import numpy as np
 from scipy import stats
 
@@ -9,6 +10,8 @@ from tedana.stats import getfbounds
 from tedana.selection.ComponentSelector import ComponentSelector
 from tedana.selection._utils import clean_dataframe
 from tedana.metrics import collect
+from tedana.selection._utils import clean_dataframe, getelbow
+from tedana.stats import getfbounds
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
@@ -42,6 +45,8 @@ def manual_selection(comptable, acc=None, rej=None):
         "BOLD (TE-dependent), non-BOLD (TE-independent), or "
         "uncertain (low-variance)."
     )
+    # NOTE: during a merge conflict this got split oddly in a diff
+    # Please pay attention to this part to make sure it makes sense
     if (
         "classification" in comptable.columns
         and "original_classification" not in comptable.columns
@@ -49,7 +54,6 @@ def manual_selection(comptable, acc=None, rej=None):
         comptable["original_classification"] = comptable["classification"]
         # comptable["original_rationale"] = comptable["rationale"]
 
-    comptable["classification"] = "accepted"
     # comptable["rationale"] = ""
 
     all_comps = comptable.index.values
@@ -64,10 +68,7 @@ def manual_selection(comptable, acc=None, rej=None):
     elif acc is None and rej is not None:
         acc = sorted(np.setdiff1d(all_comps, rej))
     elif acc is None and rej is None:
-        LGR.info(
-            "No manually accepted or rejected components supplied. "
-            "Accepting all components."
-        )
+        LGR.info("No manually accepted or rejected components supplied. Accepting all components.")
         # Accept all components if no manual selection provided
         acc = all_comps[:]
         rej = []

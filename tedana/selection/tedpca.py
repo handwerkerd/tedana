@@ -2,12 +2,13 @@
 Functions to identify TE-dependent and TE-independent components.
 """
 import logging
+
 import numpy as np
 
 from tedana import utils
-from tedana.stats import getfbounds
 from tedana.metrics import collect
-from tedana.selection._utils import getelbow_cons, getelbow, clean_dataframe
+from tedana.selection._utils import clean_dataframe, getelbow, getelbow_cons
+from tedana.stats import getfbounds
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
@@ -50,27 +51,21 @@ def kundu_tedpca(comptable, n_echos, kdaw=10.0, rdaw=1.0, stabilize=False):
     comptable["classification"] = "accepted"
     comptable["rationale"] = ""
 
-    eigenvalue_elbow = getelbow(
-        comptable["normalized variance explained"], return_val=True
-    )
+    eigenvalue_elbow = getelbow(comptable["normalized variance explained"], return_val=True)
 
     diff_varex_norm = np.abs(np.diff(comptable["normalized variance explained"]))
     lower_diff_varex_norm = diff_varex_norm[(len(diff_varex_norm) // 2) :]
     varex_norm_thr = np.mean([lower_diff_varex_norm.max(), diff_varex_norm.min()])
     varex_norm_min = comptable["normalized variance explained"][
         (len(diff_varex_norm) // 2)
-        + np.arange(len(lower_diff_varex_norm))[
-            lower_diff_varex_norm >= varex_norm_thr
-        ][0]
+        + np.arange(len(lower_diff_varex_norm))[lower_diff_varex_norm >= varex_norm_thr][0]
         + 1
     ]
     varex_norm_cum = np.cumsum(comptable["normalized variance explained"])
 
     fmin, fmid, fmax = getfbounds(n_echos)
     if int(kdaw) == -1:
-        lim_idx = (
-            utils.andb([comptable["kappa"] < fmid, comptable["kappa"] > fmin]) == 2
-        )
+        lim_idx = utils.andb([comptable["kappa"] < fmid, comptable["kappa"] > fmin]) == 2
         kappa_lim = comptable.loc[lim_idx, "kappa"].values
         kappa_thr = kappa_lim[getelbow(kappa_lim)]
 
@@ -78,7 +73,7 @@ def kundu_tedpca(comptable, n_echos, kdaw=10.0, rdaw=1.0, stabilize=False):
         rho_lim = comptable.loc[lim_idx, "rho"].values
         rho_thr = rho_lim[getelbow(rho_lim)]
         stabilize = True
-        LGR.info("kdaw set to -1. Switching TEDPCA algorithm to " "kundu-stabilize")
+        LGR.info("kdaw set to -1. Switching TEDPCA algorithm to kundu-stabilize")
     elif int(rdaw) == -1:
         lim_idx = utils.andb([comptable["rho"] < fmid, comptable["rho"] > fmin]) == 2
         rho_lim = comptable.loc[lim_idx, "rho"].values
@@ -89,9 +84,7 @@ def kundu_tedpca(comptable, n_echos, kdaw=10.0, rdaw=1.0, stabilize=False):
             weights=[kdaw, 1, 1],
         )
         rho_thr = np.average(
-            sorted(
-                [fmin, (getelbow_cons(comptable["rho"], return_val=True) / 2), fmid]
-            ),
+            sorted([fmin, (getelbow_cons(comptable["rho"], return_val=True) / 2), fmid]),
             weights=[rdaw, 1, 1],
         )
 

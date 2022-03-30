@@ -1,40 +1,36 @@
 """
 Run the "canonical" TE-Dependent ANAlysis workflow.
 """
+import argparse
+import datetime
 import json
+import logging
 import os
-import sys
 import os.path as op
 import shutil
-import logging
-import datetime
+import sys
 from glob import glob
 
-import argparse
 import numpy as np
 import pandas as pd
+from nilearn.masking import compute_epi_mask
 from scipy import stats
 from threadpoolctl import threadpool_limits
-from nilearn.masking import compute_epi_mask
 
+import tedana.gscontrol as gsc
 from tedana import (
-    decay,
+    __version__,
     combine,
+    decay,
     decomposition,
     io,
     metrics,
     reporting,
     selection,
     utils,
-    __version__,
 )
-import tedana.gscontrol as gsc
 from tedana.stats import computefeats2
-from tedana.workflows.parser_utils import (
-    is_valid_file,
-    check_tedpca_value,
-    ContextFilter,
-)
+from tedana.workflows.parser_utils import check_tedpca_value, is_valid_file
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
@@ -105,21 +101,14 @@ def _get_parser():
         default=None,
     )
     optional.add_argument(
-        "--prefix",
-        dest="prefix",
-        type=str,
-        help="Prefix for filenames generated.",
-        default="",
+        "--prefix", dest="prefix", type=str, help="Prefix for filenames generated.", default=""
     )
     optional.add_argument(
         "--convention",
         dest="convention",
         action="store",
         choices=["orig", "bids"],
-        help=(
-            "Filenaming convention. bids will use "
-            "the latest BIDS derivatives version."
-        ),
+        help=("Filenaming convention. bids will use the latest BIDS derivatives version."),
         default="bids",
     )
     optional.add_argument(
@@ -143,7 +132,7 @@ def _get_parser():
         dest="combmode",
         action="store",
         choices=["t2s"],
-        help=("Combination scheme for TEs: " "t2s (Posse 1999, default)"),
+        help=("Combination scheme for TEs: t2s (Posse 1999, default)"),
         default="t2s",
     )
     optional.add_argument(
@@ -213,10 +202,7 @@ def _get_parser():
         "--tedort",
         dest="tedort",
         action="store_true",
-        help=(
-            "Orthogonalize rejected components w.r.t. "
-            "accepted components prior to denoising."
-        ),
+        help=("Orthogonalize rejected components w.r.t. accepted components prior to denoising."),
         default=False,
     )
     optional.add_argument(
@@ -247,11 +233,7 @@ def _get_parser():
         default=False,
     )
     optional.add_argument(
-        "--png-cmap",
-        dest="png_cmap",
-        type=str,
-        help="Colormap for figures",
-        default="coolwarm",
+        "--png-cmap", dest="png_cmap", type=str, help="Colormap for figures", default="coolwarm"
     )
     optional.add_argument(
         "--verbose",
@@ -297,11 +279,7 @@ def _get_parser():
         default=False,
     )
     optional.add_argument(
-        "--quiet",
-        dest="quiet",
-        help=argparse.SUPPRESS,
-        action="store_true",
-        default=False,
+        "--quiet", dest="quiet", help=argparse.SUPPRESS, action="store_true", default=False
     )
     optional.add_argument("-v", "--version", action="version", version=verstr)
     parser._action_groups.append(optional)
@@ -312,7 +290,7 @@ def _get_parser():
         dest="t2smap",
         metavar="FILE",
         type=lambda x: is_valid_file(parser, x),
-        help=("Precalculated T2* map in the same space as " "the input data."),
+        help=("Precalculated T2* map in the same space as the input data."),
         default=None,
     )
     rerungrp.add_argument(
@@ -320,10 +298,7 @@ def _get_parser():
         dest="mixm",
         metavar="FILE",
         type=lambda x: is_valid_file(parser, x),
-        help=(
-            "File containing mixing matrix. If not "
-            "provided, ME-PCA & ME-ICA is done."
-        ),
+        help=("File containing mixing matrix. If not provided, ME-PCA & ME-ICA is done."),
         default=None,
     )
     rerungrp.add_argument(
@@ -344,7 +319,7 @@ def _get_parser():
         metavar="INT",
         type=int,
         nargs="+",
-        help=("List of manually accepted components. " "Requires --ctab and --mix."),
+        help=("List of manually accepted components. Requires --ctab and --mix."),
         default=None,
     )
 
@@ -360,8 +335,8 @@ def tedana_workflow(
     prefix="",
     fittype="loglin",
     combmode="t2s",
-    tedpca="mdl",
     tree="minimal",
+    tedpca="aic",
     fixed_seed=42,
     maxit=500,
     maxrestart=10,
@@ -380,6 +355,8 @@ def tedana_workflow(
 ):
     """
     Run the "canonical" TE-Dependent ANAlysis workflow.
+
+    Please remember to cite [1]_.
 
     Parameters
     ----------
@@ -406,7 +383,7 @@ def tedana_workflow(
         Method with which to select components in TEDPCA.
         If a float is provided, then it is assumed to represent percentage of variance
         explained (0-1) to retain from PCA.
-        Default is 'mdl'.
+        Default is 'aic'.
     tedort : :obj:`bool`, optional
         Orthogonalize rejected components w.r.t. accepted ones prior to
         denoising. Default is False.
@@ -463,6 +440,16 @@ def tedana_workflow(
     This workflow writes out several files. For a complete list of the files
     generated by this workflow, please visit
     https://tedana.readthedocs.io/en/latest/outputs.html
+
+    References
+    ----------
+    .. [1] DuPre, E. M., Salo, T., Ahmed, Z., Bandettini, P. A., Bottenhorn, K. L.,
+           Caballero-Gaudes, C., Dowdle, L. T., Gonzalez-Castillo, J., Heunis, S.,
+           Kundu, P., Laird, A. R., Markello, R., Markiewicz, C. J., Moia, S.,
+           Staden, I., Teves, J. B., Uruñuela, E., Vaziri-Pashkam, M.,
+           Whitaker, K., & Handwerker, D. A. (2021).
+           TE-dependent analysis of multi-echo fMRI with tedana.
+           Journal of Open Source Software, 6(66), 3669. doi:10.21105/joss.03669.
     """
     out_dir = op.abspath(out_dir)
     if not op.isdir(out_dir):
@@ -486,41 +473,7 @@ def tedana_workflow(
     extension = "tsv"
     start_time = datetime.datetime.now().strftime("%Y-%m-%dT%H%M%S")
     logname = op.join(out_dir, (basename + start_time + "." + extension))
-
-    # set logging format
-    log_formatter = logging.Formatter(
-        "%(asctime)s\t%(name)-12s\t%(levelname)-8s\t%(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-    )
-    text_formatter = logging.Formatter("%(message)s")
-
-    # set up logging file and open it for writing
-    log_handler = logging.FileHandler(logname)
-    log_handler.setFormatter(log_formatter)
-    # Removing handlers after basicConfig doesn't work, so we use filters
-    # for the relevant handlers themselves.
-    log_handler.addFilter(ContextFilter())
-    logging.root.addHandler(log_handler)
-    sh = logging.StreamHandler()
-    sh.addFilter(ContextFilter())
-    logging.root.addHandler(sh)
-
-    if quiet:
-        logging.root.setLevel(logging.WARNING)
-    elif debug:
-        logging.root.setLevel(logging.DEBUG)
-    else:
-        logging.root.setLevel(logging.INFO)
-
-    # Loggers for report and references
-    rep_handler = logging.FileHandler(repname)
-    rep_handler.setFormatter(text_formatter)
-    ref_handler = logging.FileHandler(refname)
-    ref_handler.setFormatter(text_formatter)
-    RepLGR.setLevel(logging.INFO)
-    RepLGR.addHandler(rep_handler)
-    RefLGR.setLevel(logging.INFO)
-    RefLGR.addHandler(ref_handler)
+    utils.setup_loggers(logname, repname, refname, quiet=quiet, debug=debug)
 
     LGR.info("Using output directory: {}".format(out_dir))
 
@@ -570,7 +523,7 @@ def tedana_workflow(
             shutil.copyfile(mixm, mixing_name)
             shutil.copyfile(mixm, op.join(io_generator.out_dir, op.basename(mixm)))
     elif mixm is not None:
-        raise IOError('Argument "mixm" must be an existing file.')
+        raise IOError("Argument 'mixm' must be an existing file.")
 
     if ctab is not None and op.isfile(ctab):
         ctab = op.abspath(ctab)
@@ -580,13 +533,13 @@ def tedana_workflow(
             shutil.copyfile(ctab, metrics_name)
             shutil.copyfile(ctab, op.join(io_generator.out_dir, op.basename(ctab)))
     elif ctab is not None:
-        raise IOError('Argument "ctab" must be an existing file.')
+        raise IOError("Argument 'ctab' must be an existing file.")
 
     if ctab and not mixm:
-        LGR.warning('Argument "ctab" requires argument "mixm".')
+        LGR.warning("Argument 'ctab' requires argument 'mixm'.")
         ctab = None
     elif manacc is not None and (not mixm or not ctab):
-        LGR.warning('Argument "manacc" requires arguments "mixm" and "ctab".')
+        LGR.warning("Argument 'manacc' requires arguments 'mixm' and 'ctab'.")
         manacc = None
     elif manacc is not None:
         # coerce to list of integers
@@ -599,25 +552,38 @@ def tedana_workflow(
         if t2smap != t2smap_file:
             shutil.copyfile(t2smap, t2smap_file)
     elif t2smap is not None:
-        raise IOError('Argument "t2smap" must be an existing file.')
+        raise IOError("Argument 't2smap' must be an existing file.")
 
-    RepLGR.info("TE-dependence analysis was performed on input data.")
+    RepLGR.info(
+        "TE-dependence analysis was performed on input data using the tedana workflow "
+        "(DuPre, Salo et al., 2021)."
+    )
+    RefLGR.info(
+        "DuPre, E. M., Salo, T., Ahmed, Z., Bandettini, P. A., Bottenhorn, K. L., "
+        "Caballero-Gaudes, C., Dowdle, L. T., Gonzalez-Castillo, J., Heunis, S., "
+        "Kundu, P., Laird, A. R., Markello, R., Markiewicz, C. J., Moia, S., "
+        "Staden, I., Teves, J. B., Uruñuela, E., Vaziri-Pashkam, M., "
+        "Whitaker, K., & Handwerker, D. A. (2021). "
+        "TE-dependent analysis of multi-echo fMRI with tedana. "
+        "Journal of Open Source Software, 6(66), 3669. doi:10.21105/joss.03669."
+    )
+
     if mask and not t2smap:
         # TODO: add affine check
         LGR.info("Using user-defined mask")
         RepLGR.info("A user-defined mask was applied to the data.")
     elif t2smap and not mask:
         LGR.info("Using user-defined T2* map to generate mask")
-        t2s_limited_sec = utils.load_image(t2smap)
+        t2s_limited_sec = utils.reshape_niimg(t2smap)
         t2s_limited = utils.sec2millisec(t2s_limited_sec)
         t2s_full = t2s_limited.copy()
         mask = (t2s_limited != 0).astype(int)
     elif t2smap and mask:
         LGR.info("Combining user-defined mask and T2* map to generate mask")
-        t2s_limited_sec = utils.load_image(t2smap)
+        t2s_limited_sec = utils.reshape_niimg(t2smap)
         t2s_limited = utils.sec2millisec(t2s_limited_sec)
         t2s_full = t2s_limited.copy()
-        mask = utils.load_image(mask)
+        mask = utils.reshape_niimg(mask)
         mask[t2s_limited == 0] = 0  # reduce mask based on T2* map
     else:
         LGR.info("Computing EPI mask from first echo")
@@ -628,35 +594,49 @@ def tedana_workflow(
             "nilearn's compute_epi_mask function."
         )
 
-    # Create an adaptive mask with at least 3 good echoes.
-    mask, masksum = utils.make_adaptive_mask(catd, mask=mask, getsum=True, threshold=3)
-    LGR.debug("Retaining {}/{} samples".format(mask.sum(), n_samp))
-    io_generator.save_file(masksum, "adaptive mask img")
+    # Create an adaptive mask with at least 1 good echo, for denoising
+    mask_denoise, masksum_denoise = utils.make_adaptive_mask(
+        catd,
+        mask=mask,
+        getsum=True,
+        threshold=1,
+    )
+    LGR.debug("Retaining {}/{} samples for denoising".format(mask_denoise.sum(), n_samp))
+    io_generator.save_file(masksum_denoise, "adaptive mask img")
+
+    # Create an adaptive mask with at least 3 good echoes, for classification
+    masksum_clf = masksum_denoise.copy()
+    masksum_clf[masksum_clf < 3] = 0
+    mask_clf = masksum_clf.astype(bool)
+    RepLGR.info(
+        "A two-stage masking procedure was applied, in which a liberal mask "
+        "(including voxels with good data in at least the first echo) was used for "
+        "optimal combination, T2*/S0 estimation, and denoising, while a more conservative mask "
+        "(restricted to voxels with good data in at least the first three echoes) was used for "
+        "the component classification procedure."
+    )
+    LGR.debug("Retaining {}/{} samples for classification".format(mask_clf.sum(), n_samp))
 
     if t2smap is None:
         LGR.info("Computing T2* map")
         t2s_limited, s0_limited, t2s_full, s0_full = decay.fit_decay(
-            catd, tes, mask, masksum, fittype
+            catd, tes, mask_denoise, masksum_denoise, fittype
         )
 
         # set a hard cap for the T2* map
         # anything that is 10x higher than the 99.5 %ile will be reset to 99.5 %ile
-        cap_t2s = stats.scoreatpercentile(
-            t2s_limited.flatten(), 99.5, interpolation_method="lower"
-        )
-        LGR.debug(
-            "Setting cap on T2* map at {:.5f}s".format(utils.millisec2sec(cap_t2s))
-        )
-        t2s_limited[t2s_limited > cap_t2s * 10] = cap_t2s
-        io_generator.save_file(utils.millisec2sec(t2s_limited), "t2star img")
-        io_generator.save_file(s0_limited, "s0 img")
+        cap_t2s = stats.scoreatpercentile(t2s_full.flatten(), 99.5, interpolation_method="lower")
+        LGR.debug("Setting cap on T2* map at {:.5f}s".format(utils.millisec2sec(cap_t2s)))
+        t2s_full[t2s_full > cap_t2s * 10] = cap_t2s
+        io_generator.save_file(utils.millisec2sec(t2s_full), "t2star img")
+        io_generator.save_file(s0_full, "s0 img")
 
         if verbose:
-            io_generator.save_file(utils.millisec2sec(t2s_full), "full t2star img")
-            io_generator.save_file(s0_full, "full s0 img")
+            io_generator.save_file(utils.millisec2sec(t2s_limited), "limited t2star img")
+            io_generator.save_file(s0_limited, "limited s0 img")
 
     # optimally combine data
-    data_oc = combine.make_optcom(catd, tes, masksum, t2s=t2s_full, combmode=combmode)
+    data_oc = combine.make_optcom(catd, tes, masksum_denoise, t2s=t2s_full, combmode=combmode)
 
     # regress out global signal unless explicitly not desired
     if "gsr" in gscontrol:
@@ -671,8 +651,8 @@ def tedana_workflow(
             catd,
             data_oc,
             combmode,
-            mask,
-            masksum,
+            mask_clf,
+            masksum_clf,
             t2s_full,
             io_generator,
             tes=tes,
@@ -683,7 +663,7 @@ def tedana_workflow(
             low_mem=low_mem,
         )
         if verbose:
-            io_generator.save_file(utils.unmask(dd, mask), "whitened img")
+            io_generator.save_file(utils.unmask(dd, mask_clf), "whitened img")
 
         # Perform ICA, calculate metrics, and apply decision tree
         # Restart when ICA fails to converge or too few BOLD components found
@@ -718,7 +698,7 @@ def tedana_workflow(
                 catd,
                 data_oc,
                 mmix,
-                masksum,
+                masksum_clf,
                 tes,
                 io_generator,
                 "ICA",
@@ -735,9 +715,7 @@ def tedana_workflow(
             if (n_restarts < maxrestart) and (n_bold_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")
             elif n_bold_comps == 0:
-                LGR.warning(
-                    "No BOLD components found, but maximum number of restarts reached."
-                )
+                LGR.warning("No BOLD components found, but maximum number of restarts reached.")
                 keep_restarting = False
             else:
                 keep_restarting = False
@@ -767,7 +745,7 @@ def tedana_workflow(
                 catd,
                 data_oc,
                 mmix,
-                masksum,
+                masksum_clf,
                 tes,
                 io_generator,
                 "ICA",
@@ -780,17 +758,18 @@ def tedana_workflow(
                 tree=tree
             )
         else:
+            LGR.info("Using supplied component table for classification")
             comptable = pd.read_table(ctab)
+            # Change rationale value of rows with NaN to empty strings
+            comptable.loc[comptable.rationale.isna(), "rationale"] = ""
 
             if manacc is not None:
-                comptable, metric_metadata = selection.manual_selection(
-                    comptable, acc=manacc
-                )
+                comptable, metric_metadata = selection.manual_selection(comptable, acc=manacc)
 
     comp_names = comptable["Component"].values
     mixing_df = pd.DataFrame(data=mmix, columns=comp_names)
     io_generator.save_file(mixing_df, "ICA mixing tsv")
-    betas_oc = utils.unmask(computefeats2(data_oc, mmix, mask), mask)
+    betas_oc = utils.unmask(computefeats2(data_oc, mmix, mask_denoise), mask_denoise)
     io_generator.save_file(betas_oc, "z-scored ICA components img")
 
     # Save component table and associated json
@@ -821,8 +800,7 @@ def tedana_workflow(
 
     decomp_metadata = {
         "Method": (
-            "Independent components analysis with FastICA "
-            "algorithm implemented by sklearn. "
+            "Independent components analysis with FastICA algorithm implemented by sklearn. "
         ),
     }
     for comp_name in comp_names:
@@ -834,16 +812,12 @@ def tedana_workflow(
         json.dump(decomp_metadata, fo, sort_keys=True, indent=4)
 
     if comptable[comptable.classification == "accepted"].shape[0] == 0:
-        LGR.warning("No BOLD components detected! Please check data and " "results!")
+        LGR.warning("No BOLD components detected! Please check data and results!")
 
     mmix_orig = mmix.copy()
     if tedort:
-        acc_idx = comptable.loc[
-            ~comptable.classification.str.contains("rejected")
-        ].index.values
-        rej_idx = comptable.loc[
-            comptable.classification.str.contains("rejected")
-        ].index.values
+        acc_idx = comptable.loc[~comptable.classification.str.contains("rejected")].index.values
+        rej_idx = comptable.loc[comptable.classification.str.contains("rejected")].index.values
         acc_ts = mmix[:, acc_idx]
         rej_ts = mmix[:, rej_idx]
         betas = np.linalg.lstsq(acc_ts, rej_ts, rcond=None)[0]
@@ -864,7 +838,7 @@ def tedana_workflow(
 
     io.writeresults(
         data_oc,
-        mask=mask,
+        mask=mask_denoise,
         comptable=comptable,
         mmix=mmix,
         n_vols=n_vols,
@@ -872,10 +846,10 @@ def tedana_workflow(
     )
 
     if "mir" in gscontrol:
-        gsc.minimum_image_regression(data_oc, mmix, mask, comptable, io_generator)
+        gsc.minimum_image_regression(data_oc, mmix, mask_denoise, comptable, io_generator)
 
     if verbose:
-        io.writeresults_echoes(catd, mmix, mask, comptable, io_generator)
+        io.writeresults_echoes(catd, mmix, mask_denoise, comptable, io_generator)
 
     # Write out BIDS-compatible description file
     derivative_metadata = {
@@ -896,8 +870,6 @@ def tedana_workflow(
     }
     with open(io_generator.get_name("data description json"), "w") as fo:
         json.dump(derivative_metadata, fo, sort_keys=True, indent=4)
-
-    LGR.info("Workflow completed")
 
     RepLGR.info(
         "This workflow used numpy (Van Der Walt, Colbert, & "
@@ -932,8 +904,7 @@ def tedana_workflow(
     )
 
     RepLGR.info(
-        "This workflow also used the Dice similarity index "
-        "(Dice, 1945; Sørensen, 1948)."
+        "This workflow also used the Dice similarity index " "(Dice, 1945; Sørensen, 1948)."
     )
     RefLGR.info(
         "Dice, L. R. (1945). Measures of the amount of ecologic "
@@ -957,24 +928,22 @@ def tedana_workflow(
         fo.write(report)
 
     if not no_reports:
-        LGR.info(
-            "Making figures folder with static component maps and timecourse plots."
-        )
+        LGR.info("Making figures folder with static component maps and timecourse plots.")
 
-        dn_ts, hikts, lowkts = io.denoise_ts(data_oc, mmix, mask, comptable)
+        dn_ts, hikts, lowkts = io.denoise_ts(data_oc, mmix, mask_denoise, comptable)
 
         reporting.static_figures.carpet_plot(
             optcom_ts=data_oc,
             denoised_ts=dn_ts,
             hikts=hikts,
             lowkts=lowkts,
-            mask=mask,
+            mask=mask_denoise,
             io_generator=io_generator,
             gscontrol=gscontrol,
         )
         reporting.static_figures.comp_figures(
             data_oc,
-            mask=mask,
+            mask=mask_denoise,
             comptable=comptable,
             mmix=mmix_orig,
             io_generator=io_generator,
@@ -991,17 +960,9 @@ def tedana_workflow(
             LGR.info("Generating dynamic report")
             reporting.generate_report(io_generator, tr=img_t_r)
 
-    log_handler.close()
-    logging.root.removeHandler(log_handler)
-    sh.close()
-    logging.root.removeHandler(sh)
-    for local_logger in (RefLGR, RepLGR):
-        for handler in local_logger.handlers[:]:
-            handler.close()
-            local_logger.removeHandler(handler)
-    os.remove(refname)
-
     LGR.info("Workflow completed")
+    utils.teardown_loggers()
+    os.remove(refname)
 
 
 def _main(argv=None):

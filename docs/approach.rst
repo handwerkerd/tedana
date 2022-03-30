@@ -19,6 +19,8 @@ This is performed in a series of steps, including:
 .. image:: /_static/tedana-workflow.png
   :align: center
 
+We provide more detail on each step below.
+The figures shown in this walkthrough are generated in the `provided notebooks <https://github.com/ME-ICA/tedana/tree/joss/docs/notebooks>`_.
 
 ***************
 Multi-echo data
@@ -108,12 +110,9 @@ this voxel), so the line is fit to all available data.
     ``tedana`` actually performs and uses two sets of :math:`T_{2}^*`/:math:`S_0` model fits.
     In one case, ``tedana`` estimates :math:`T_{2}^*` and :math:`S_0` for voxels with good signal in at
     least two echoes.
-    The resulting "limited" :math:`T_{2}^*` and :math:`S_0` maps are used throughout
-    most of the pipeline.
     In the other case, ``tedana`` estimates :math:`T_{2}^*` and :math:`S_0` for voxels
     with good data in only one echo as well, but uses the first two echoes for those voxels.
-    The resulting "full" :math:`T_{2}^*` and :math:`S_0` maps are used to generate the
-    optimally combined data.
+    The resulting "full" :math:`T_{2}^*` and :math:`S_0` maps are used throughout the rest of the pipeline.
 
 .. image:: /_static/a05_loglinear_regression.png
 
@@ -220,7 +219,7 @@ These components are subjected to component selection, the specifics of which
 vary according to algorithm.
 Specifically, ``tedana`` offers three different approaches that perform this step.
 
-The recommended approach (the default ``mdl`` option, along with the ``aic`` and ``kic`` options, for
+The recommended approach (the default ``aic`` option, along with the ``kic`` and ``mdl`` options, for
 ``--tedpca``) is based on a moving average (stationary Gaussian) process
 proposed by `Li et al (2007)`_ and used primarily in the Group ICA of fMRI Toolbox (GIFT).
 A moving average process is the output of a linear system (which, in this case, is
@@ -234,17 +233,22 @@ For this PCA method in particular, ``--tedpca`` provides three different options
 to select the PCA components based on three widely-used model selection criteria:
 
 * ``mdl``: the Minimum Description Length (`MDL`_), which is the most aggressive option;
-  i.e. returns the least number of components. This option is the **default and recommeded**
-  as we have seen it yields the most reasonable results.
+  i.e. returns the least number of components.
 * ``kic``: the Kullback-Leibler Information Criterion (`KIC`_), which stands in the
   middle in terms of aggressiveness. You can see how KIC is related to AIC `here`_.
 * ``aic``: the Akaike Information Criterion (`AIC`_), which is the least aggressive option;
-  i.e., returns the largest number of components.
+  i.e., returns the largest number of components. We have chosen AIC as the default PCA
+  criterion because it tends to result in fewer components than the Kundu methods, which increases
+  the likelihood that the ICA step will successfully converge, but also, in our experience, retains
+  enough components for meaningful interpretation later on.
 
 .. note::
     Please, bear in mind that this is a data-driven dimensionality reduction approach. The default
-    option ``mdl`` might not yield perfect results on your data. We suggest you explore the ``kic``
-    and ``aic`` options if running ``tedana`` with ``mdl`` returns less components than expected.
+    option ``aic`` might not yield perfect results on your data. Consider ``kic``
+    and ``mdl`` options if running ``tedana`` with ``aic`` returns more components than expected.
+    There is no definitively right number of components, but, for typical fMRI datasets, if the PCA
+    explains more than 98% of the variance or if the number of components is more than half the number
+    of time points, then it may be worth considering more aggressive thresholds.
 
 The simplest approach uses a user-supplied threshold applied to the cumulative variance explained
 by the PCA.

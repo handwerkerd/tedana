@@ -2,17 +2,16 @@
 Tests for tedana.io
 """
 
+import os
+
 import nibabel as nib
 import numpy as np
-import pytest
 import pandas as pd
+import pytest
 
 from tedana import io as me
 from tedana.tests.test_utils import fnames, tes
-
 from tedana.tests.utils import get_test_data_path
-
-import os
 
 data_dir = get_test_data_path()
 
@@ -35,11 +34,42 @@ def test_load_data():
     assert isinstance(ref, nib.Nifti1Image)
     assert np.allclose(ref.get_fdata(), nib.load(fnames[0]).get_fdata())
 
+    # list of filepath to images *without n_echos*
+    d, ref = me.load_data(fnames)
+    assert d.shape == exp_shape
+    assert isinstance(ref, nib.Nifti1Image)
+    assert np.allclose(ref.get_fdata(), nib.load(fnames[0]).get_fdata())
+
     # list of img_like
     d, ref = me.load_data(fimg, n_echos=len(tes))
     assert d.shape == exp_shape
     assert isinstance(ref, nib.Nifti1Image)
     assert ref == fimg[0]
+
+    # list of img_like *without n_echos*
+    d, ref = me.load_data(fimg)
+    assert d.shape == exp_shape
+    assert isinstance(ref, nib.Nifti1Image)
+    assert ref == fimg[0]
+
+    # bad entry
+    fimg_with_bad_item = fimg[:]
+    fimg_with_bad_item[-1] = 5
+    with pytest.raises(TypeError):
+        d, ref = me.load_data(fimg_with_bad_item)
+
+    # unsupported tuple of img_like
+    fimg_tuple = tuple(fimg)
+    with pytest.raises(TypeError):
+        d, ref = me.load_data(fimg_tuple, n_echos=len(tes))
+
+    # tuple of img_like *without n_echos*
+    with pytest.raises(TypeError):
+        d, ref = me.load_data(fimg_tuple)
+
+    # two echos should raise value error
+    with pytest.raises(ValueError):
+        me.load_data(fnames[:2])
 
     # imagine z-cat img
     d, ref = me.load_data(fnames[0], n_echos=3)
@@ -47,11 +77,23 @@ def test_load_data():
     assert isinstance(ref, nib.Nifti1Image)
     assert ref.shape == (39, 50, 11, 1)
 
+    # z-cat without n_echos should raise an error
     with pytest.raises(ValueError):
         me.load_data(fnames[0])
 
+    # imagine z-cat img in list
+    d, ref = me.load_data(fnames[:1], n_echos=3)
+    assert d.shape == (21450, 3, 5)
+    assert isinstance(ref, nib.Nifti1Image)
+    assert ref.shape == (39, 50, 11, 1)
+
+    # z-cat in list without n_echos should raise an error
+    with pytest.raises(ValueError):
+        me.load_data(fnames[:1])
+
 
 # SMOKE TESTS
+
 
 def test_smoke_split_ts():
     """
@@ -72,7 +114,7 @@ def test_smoke_split_ts():
     metric = np.random.random((n_components))
     classification = np.random.choice(["accepted", "rejected", "ignored"], n_components)
     df_data = np.column_stack((component, metric, classification))
-    comptable = pd.DataFrame(df_data, columns=['component', 'metric', 'classification'])
+    comptable = pd.DataFrame(df_data, columns=["component", "metric", "classification"])
 
     hikts, resid = me.split_ts(data, mmix, mask, comptable)
 
@@ -89,7 +131,7 @@ def test_smoke_write_split_ts():
     data = np.random.random((n_samples, n_times))
     mmix = np.random.random((n_times, n_components))
     mask = np.random.randint(2, size=n_samples)
-    ref_img = os.path.join(data_dir, 'mask.nii.gz')
+    ref_img = os.path.join(data_dir, "mask.nii.gz")
     # ref_img has shape of (39, 50, 33) so data is 64350 (39*33*50) x 10
     # creating the component table with component as random floats,
     # a "metric," and random classification
@@ -98,13 +140,13 @@ def test_smoke_write_split_ts():
     metric = np.random.random((n_components))
     classification = np.random.choice(["accepted", "rejected", "ignored"], n_components)
     df_data = np.column_stack((component, metric, classification))
-    comptable = pd.DataFrame(df_data, columns=['component', 'metric', 'classification'])
+    comptable = pd.DataFrame(df_data, columns=["component", "metric", "classification"])
 
     me.write_split_ts(data, mmix, mask, comptable, io_generator)
 
     # TODO: midk_ts.nii is never generated?
     fn = io_generator.get_name
-    split = ('high kappa ts img', 'low kappa ts img', 'denoised ts img')
+    split = ("high kappa ts img", "low kappa ts img", "denoised ts img")
     fnames = [fn(f) for f in split]
     for filename in fnames:
         # remove all files generated
@@ -118,31 +160,32 @@ def test_smoke_filewrite():
     """
     n_samples, _, _ = 64350, 10, 6
     data_1d = np.random.random((n_samples))
-    ref_img = os.path.join(data_dir, 'mask.nii.gz')
+    ref_img = os.path.join(data_dir, "mask.nii.gz")
     io_generator = me.OutputGenerator(ref_img)
 
     with pytest.raises(KeyError):
-        io_generator.save_file(data_1d, '')
+        io_generator.save_file(data_1d, "")
 
-    for convention in ('bidsv1.5.0', 'orig'):
+    for convention in ("bidsv1.5.0", "orig"):
         io_generator.convention = convention
-        fname = io_generator.save_file(data_1d, 't2star img')
+        fname = io_generator.save_file(data_1d, "t2star img")
         assert fname is not None
         try:
             os.remove(fname)
         except OSError:
-            print('File not generated!')
+            print("File not generated!")
 
 
 def test_smoke_load_data():
     """
     Ensures that data is loaded when given a random neuroimage
     """
-    data = os.path.join(data_dir, 'mask.nii.gz')
+    data = os.path.join(data_dir, "mask.nii.gz")
     n_echos = 1
 
     fdata, ref_img = me.load_data(data, n_echos)
     assert fdata is not None
     assert ref_img is not None
+
 
 # TODO: "BREAK" AND UNIT TESTS
