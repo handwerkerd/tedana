@@ -760,8 +760,6 @@ def tedana_workflow(
         else:
             LGR.info("Using supplied component table for classification")
             comptable = pd.read_table(ctab)
-            # Change rationale value of rows with NaN to empty strings
-            comptable.loc[comptable.rationale.isna(), "rationale"] = ""
 
             if manacc is not None:
                 comptable, metric_metadata = selection.manual_selection(comptable, acc=manacc)
