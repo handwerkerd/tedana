@@ -207,11 +207,7 @@ def manual_classify(
         outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
-        (
-            selector,
-            outputs["numTrue"],
-            outputs["numFalse"],
-        ) = change_comptable_classifications(
+        (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
             selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=tag
         )
         # outputs["numTrue"] = decision_boolean.sum()
@@ -371,11 +367,7 @@ def dec_left_op_right(
             val2 = right  # should be a fixed number
         decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
 
-        (
-            selector,
-            outputs["numTrue"],
-            outputs["numFalse"],
-        ) = change_comptable_classifications(
+        (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
             selector,
             ifTrue,
             ifFalse,
@@ -460,9 +452,7 @@ def dec_variance_lessthan_thresholds(
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    function_name_idx = "Step {}: variance_lt_thresholds".format(
-        selector.current_node_idx
-    )
+    function_name_idx = "Step {}: variance_lt_thresholds".format(selector.current_node_idx)
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
@@ -495,11 +485,7 @@ def dec_variance_lessthan_thresholds(
             while variance[decision_boolean].sum() > all_comp_threshold:
                 cutcomp = variance[decision_boolean].idxmax
                 decision_boolean[cutcomp] = False
-        (
-            selector,
-            outputs["numTrue"],
-            outputs["numFalse"],
-        ) = change_comptable_classifications(
+        (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
             selector,
             ifTrue,
             ifFalse,
@@ -523,8 +509,8 @@ def dec_variance_lessthan_thresholds(
     return selector
 
 
-dec_variance_lessthan_thresholds.__doc__ = (
-    dec_variance_lessthan_thresholds.__doc__.format(**decision_docs)
+dec_variance_lessthan_thresholds.__doc__ = dec_variance_lessthan_thresholds.__doc__.format(
+    **decision_docs
 )
 
 
@@ -594,15 +580,15 @@ def calc_kappa_rho_elbows_kundu(
     function_name_idx = f"Step {selector.current_node_idx}: calc_kappa_rho_elbows_kundu"
 
     if "kappa_elbow_kundu" in selector.cross_component_metrics:
-        LRG.warning(
+        LGR.warning(
             f"kappa_elbow_kundu already calculated. Overwriting previous value in {function_name_idx}"
         )
     if "rho_elbow_kundu" in selector.cross_component_metrics:
-        LRG.warning(
+        LGR.warning(
             f"rho_elbow_kundu already calculated. Overwriting previous value in {function_name_idx}"
         )
     if "varex_upper_p" in selector.cross_component_metrics:
-        LRG.warning(
+        LGR.warning(
             f"varex_upper_p already calculated. Overwriting previous value in {function_name_idx}"
         )
 
@@ -636,20 +622,12 @@ def calc_kappa_rho_elbows_kundu(
 
     if (comps2use is None) or (unclassified_comps2use is None):
         if comps2use is None:
-            log_decision_tree_step(
-                function_name_idx, comps2use, decide_comps=decide_comps
-            )
+            log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         if unclassified_comps2use is None:
-            log_decision_tree_step(
-                function_name_idx, comps2use, decide_comps="unclassified"
-            )
+            log_decision_tree_step(function_name_idx, comps2use, decide_comps="unclassified")
     else:
-        outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(
-            component_table, selector.n_echos
-        )
-        selector.cross_component_metrics["kappa_elbow_kundu"] = outputs[
-            "kappa_elbow_kundu"
-        ]
+        outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, selector.n_echos)
+        selector.cross_component_metrics["kappa_elbow_kundu"] = outputs["kappa_elbow_kundu"]
 
         # The first elbow used to be for rho values of the unclassified components
         # excluding a few based on differences of variance. Now it's all unclassified
@@ -659,8 +637,7 @@ def calc_kappa_rho_elbows_kundu(
         f05, _, f01 = getfbounds(selector.n_echos)
         outputs["varex_upper_p"] = np.median(
             component_table.loc[
-                component_table["kappa"]
-                > getelbow(component_table["kappa"], return_val=True),
+                component_table["kappa"] > getelbow(component_table["kappa"], return_val=True),
                 "variance explained",
             ]
         )
@@ -700,9 +677,7 @@ def calc_kappa_rho_elbows_kundu(
     return selector
 
 
-calc_kappa_rho_elbows_kundu.__doc__ = calc_kappa_rho_elbows_kundu.__doc__.format(
-    **decision_docs
-)
+calc_kappa_rho_elbows_kundu.__doc__ = calc_kappa_rho_elbows_kundu.__doc__.format(**decision_docs)
 
 """
 EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
