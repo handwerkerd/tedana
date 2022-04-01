@@ -8,6 +8,7 @@ import json
 import logging
 from pkg_resources import resource_filename
 from numpy import asarray
+import pandas as pd
 
 from tedana.selection._utils import (
     clean_dataframe,
@@ -33,6 +34,8 @@ DEFAULT_TREES = ["minimal", "kundu"]
 class TreeError(Exception):
     pass
 
+# TODO: minimal tree should included expected kwargs
+# TODO: switch kwargs to xcomp_metrics
 
 def load_config(tree):
     """
@@ -138,6 +141,9 @@ def validate_tree(tree):
 
     # Warn if unused fields exist
     unused_keys = set(tree.keys()) - set(tree_expected_keys)
+    # Make sure reconstruct_from doesn't trigger a warning; hacky, sorry
+    if "reconstruct_from" in unused_keys:
+        unused_keys.remove("reconstruct_from")
     if unused_keys:
         LGR.warning(
             f"Decision tree includes fields that are not used or logged {unused_keys}"
@@ -362,8 +368,17 @@ class ComponentSelector:
             cross_component_metrics: empty dict
             used_metrics: empty set
         """
-
         self.tree = tree
+
+        tree_dict = load_config(tree)
+        if "reconstruct_from" not in tree_dict.keys():
+            self.__dict__.update(kwargs)
+            self._construct_new(tree, component_table)
+        else:
+            self._construct_from_executed(tree, tree_dict)
+
+    def _construct_new(self, tree, component_table):
+        """Construct an un-executed selector"""
         self.component_table = component_table.copy()
 
         # To run a decision tree, each component needs to have an initial classification
@@ -378,7 +393,7 @@ class ComponentSelector:
             columns={"classification": "initialized classification"}
         )
 
-        self.__dict__.update(kwargs)
+
         self.tree_config = load_config(self.tree)
         tree_config = self.tree_config
 
@@ -393,6 +408,23 @@ class ComponentSelector:
         self.classification_tags = set(tree_config["classification_tags"])
         self.cross_component_metrics = dict()
         self.used_metrics = set()
+
+    def _construct_from_executed(self, tree_fname, tree):
+        """Construct a selector from a previous execution
+
+        Parameters
+        ----------
+        tree: dict
+            The tree to build from
+        """
+        dirn = op.dirname(tree_fname)
+        outputs = tree["reconstruct_from"]
+        status_fname = op.join(dirn, outputs["component status table"])
+        xcomp_fname = op.join(dirn, outputs["cross component metrics"])
+        comptable_fname = op.join(dirn, outputs["component table"])
+        self.cross_component_metrics = load_json(xcomp_fname)
+        self.component_table = pd.read_csv(status_fname, sep='\t')
+        self.status_table = pd.read_csv(comptable_fname, sep='\t')
 
     def select(self):
         """
@@ -409,7 +441,9 @@ class ComponentSelector:
             cross_component_metrics, used_metrics, nodes (outputs field),
             current_node_idx
         """
-
+        # TODO: force-add classification tags
+        if not "classification_tags" in self.component_table.columns:
+            self.component_table["classification_tags"] = ""
         # this will crash the program with an error message if not all
         # necessary_metrics are in the comptable
         confirm_metrics_exist(self.component_table, self.necessary_metrics, self.tree)
@@ -519,3 +553,60 @@ class ComponentSelector:
                 LGR.warning(
                     f"{numcomp} components have a final classification of {nonfinal_class}. At the end of the selection process, all components are expected to be 'accepted' or 'rejected'"
                 )
+
+    @property
+    def n_comps(self):
+        return len(self.component_table)
+
+    @property
+    def n_bold_comps(self):
+        ct = self.component_table
+        return len(ct[ct.classification == "accepted"])
+
+    @property
+    def accepted_comps(self):
+        return self.status_table["classification"] == "accepted"
+
+    @property
+    def rejected_comps(self):
+        return self.status_table["rejected"] == "rejected"
+
+    @property
+    def is_final(self):
+        """Whether the classifications are all acccepted/rejected"""
+        return (
+            (self.accepted_comps.sum() + self.rejected_comps.sum())
+            > self.n_comps
+        )
+
+
+    def to_files(self, io_generator, mixing):
+        """Convert this selector into component files
+
+        Parameters
+        ----------
+        io_generator: tedana.io.OutputGenerator
+            The output generator to use for filename generation and saving
+        """
+        # TODO: add the kwargs supplied at construction to one of these
+        comptable_fname = io_generator.save_file(
+            self.component_table,
+            "ICA metrics tsv",
+        )
+        xcomp_fname = io_generator.save_file(
+            self.cross_component_metrics,
+            "ICA cross component metrics json",
+        )
+        status_fname = io_generator.save_file(
+            self.component_status_table,
+            "ICA status table tsv",
+        )
+        self.tree_config["reconstruct_from"] = {
+            "component table": op.basename(comptable_fname),
+            "cross component metrics": op.basename(xcomp_fname),
+            "component status table": op.basename(status_fname),
+        }
+        tree_fname = io_generator.save_file(
+            self.tree_config,
+            "ICA decision tree json",
+        )

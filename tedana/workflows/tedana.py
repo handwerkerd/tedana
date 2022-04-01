@@ -710,8 +710,7 @@ def tedana_workflow(
                 n_vols,
                 tree=tree
             )
-            comptable = ica_selection.component_table
-            n_bold_comps = comptable[comptable.classification == "accepted"].shape[0]
+            n_bold_comps = ica_selection.n_bold_comps
             if (n_restarts < maxrestart) and (n_bold_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")
             elif n_bold_comps == 0:
@@ -758,6 +757,9 @@ def tedana_workflow(
                 tree=tree
             )
         else:
+            # TODO: turn this into a new workflow which will 
+            #       - read in a selector file, mixing matrix
+            #       - write out the denoised files
             LGR.info("Using supplied component table for classification")
             comptable = pd.read_table(ctab)
 
@@ -770,29 +772,9 @@ def tedana_workflow(
     betas_oc = utils.unmask(computefeats2(data_oc, mmix, mask_denoise), mask_denoise)
     io_generator.save_file(betas_oc, "z-scored ICA components img")
 
-    # Save component table and associated json
-    ica_comptable_fname = io_generator.save_file(
-        ica_selection.component_table,
-        "ICA metrics tsv",
-    )
-    ica_cross_component_fname = io_generator.save_file(
-        ica_selection.cross_component_metrics,
-        "ICA cross component metrics json",
-    )
-    ica_status_table_fname = io_generator.save_file(
-        ica_selection.component_status_table,
-        "ICA status table tsv",
-    )
-    # Insert the files needed for reconstructing the tree object
-    ica_selection.tree_config["reconstruct_from"] = {
-        "component table": op.basename(ica_comptable_fname),
-        "cross component table": op.basename(ica_cross_component_fname),
-        "status table": op.basename(ica_status_table_fname),
-    }
-    ica_tree_fname = io_generator.save_file(
-        ica_selection.tree_config,
-        "ICA decision tree json"
-    )
+    # Save component selector and tree
+    ica_selection.to_files(io_generator, mmmix)
+    # Save metrics and metadata
     metric_metadata = metrics.collect.get_metadata(comptable)
     io_generator.save_file(metric_metadata, "ICA metrics json")
 
@@ -809,22 +791,25 @@ def tedana_workflow(
     with open(io_generator.get_name("ICA decomposition json"), "w") as fo:
         json.dump(decomp_metadata, fo, sort_keys=True, indent=4)
 
-    if comptable[comptable.classification == "accepted"].shape[0] == 0:
+    if ica_selection.n_bold_comps == 0:
         LGR.warning("No BOLD components detected! Please check data and results!")
+
+    # TODO: un-hack separate comptable
+    comptable = ica_selection.component_table
 
     mmix_orig = mmix.copy()
     if tedort:
-        acc_idx = comptable.loc[~comptable.classification.str.contains("rejected")].index.values
-        rej_idx = comptable.loc[comptable.classification.str.contains("rejected")].index.values
-        acc_ts = mmix[:, acc_idx]
-        rej_ts = mmix[:, rej_idx]
+        comps_accepted = ica_selection.accepted_comps
+        comps_rejected = ica_selection.rejected_comps
+        acc_ts = mmix[:, comps_accepted]
+        rej_ts = mmix[:, comps_rejected]
         betas = np.linalg.lstsq(acc_ts, rej_ts, rcond=None)[0]
         pred_rej_ts = np.dot(acc_ts, betas)
         resid = rej_ts - pred_rej_ts
         mmix[:, rej_idx] = resid
         comp_names = [
             io.add_decomp_prefix(comp, prefix="ica", max_value=comptable.index.max())
-            for comp in comptable.index.values
+            for comp in range(ica_selection.n_comps)
         ]
         mixing_df = pd.DataFrame(data=mmix, columns=comp_names)
         io_generator.save_file(mixing_df, "ICA orthogonalized mixing tsv")
