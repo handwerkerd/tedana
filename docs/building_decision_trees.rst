@@ -94,9 +94,9 @@ calc_cross_comp_metrics:
     was calculated, that information is stored here.
 
 
-*********************************
-Defining a custom a decision tree
-*********************************
+*******************************
+Defining a custom decision tree
+*******************************
 
 Decision trees are stored in json files. The default trees are stored as part of the tedana code repository in ./resources/decision_trees
 The minimal tree, minimal.json is a good example highlighting the structure and steps in a tree. It may be helpful

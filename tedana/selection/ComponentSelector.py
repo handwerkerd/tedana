@@ -145,17 +145,13 @@ def validate_tree(tree):
     if "reconstruct_from" in unused_keys:
         unused_keys.remove("reconstruct_from")
     if unused_keys:
-        LGR.warning(
-            f"Decision tree includes fields that are not used or logged {unused_keys}"
-        )
+        LGR.warning(f"Decision tree includes fields that are not used or logged {unused_keys}")
 
     # Combine the default classifications with the user inputted classifications
     all_classifications = set(tree.get("intermediate_classifications")) | set(
         default_classifications
     )
-    all_decide_comps = set(tree.get("intermediate_classifications")) | set(
-        default_decide_comps
-    )
+    all_decide_comps = set(tree.get("intermediate_classifications")) | set(default_decide_comps)
     for i, node in enumerate(tree["nodes"]):
         # Make sure each function defined in a node exists
         try:
@@ -168,33 +164,25 @@ def validate_tree(tree):
             continue
 
         # Get a functions parameters and compare to parameters defined in the tree
-        pos = set(
-            [
-                p
-                for p, i in sig.parameters.items()
-                if i.default is inspect.Parameter.empty
-            ]
-        )
+        pos = set([p for p, i in sig.parameters.items() if i.default is inspect.Parameter.empty])
         kwargs = set(sig.parameters.keys()) - pos
 
         missing_pos = pos - set(node.get("parameters").keys()) - defaults
         if len(missing_pos) > 0:
-            err_msg += "Node {} is missing required parameter(s): {}\n".format(
-                i, missing_pos
-            )
+            err_msg += "Node {} is missing required parameter(s): {}\n".format(i, missing_pos)
 
         invalid_params = set(node.get("parameters").keys()) - pos
         if len(invalid_params) > 0:
-            err_msg += (
-                "Node {} has additional, undefined required parameters: {}\n".format(
-                    i, invalid_params
-                )
+            err_msg += "Node {} has additional, undefined required parameters: {}\n".format(
+                i, invalid_params
             )
 
         invalid_kwargs = set(node.get("kwargs").keys()) - kwargs
         if len(invalid_kwargs) > 0:
-            err_msg += "Node {} has additional, undefined optional parameters (kwargs): {}\n".format(
-                i, invalid_kwargs
+            err_msg += (
+                "Node {} has additional, undefined optional parameters (kwargs): {}\n".format(
+                    i, invalid_kwargs
+                )
             )
 
         # Gather all the classification labels used in each tree both for
@@ -225,6 +213,10 @@ def validate_tree(tree):
                     compclass, i
                 )
             )
+        # TODO: If decide_comps value is a integer or a list of integers'
+        #    Check if it's a string of number or actual numbers by this point
+        #    Depending on what it is create a validator so that doesn't
+        #    warn about integers
         if "decide_comps" in node.get("parameters").keys():
             tmp_comp = node["parameters"]["decide_comps"]
             if isinstance(tmp_comp, str):
@@ -243,9 +235,7 @@ def validate_tree(tree):
             tagset.update(set([node["kwargs"]["tag_ifFalse"]]))
         if "tag" in node.get("kwargs").keys():
             tagset.update(set([node["kwargs"]["tag"]]))
-        undefined_classification_tags = tagset.difference(
-            set(tree.get("classification_tags"))
-        )
+        undefined_classification_tags = tagset.difference(set(tree.get("classification_tags")))
         if undefined_classification_tags:
             LGR.warning(
                 f"{tagset} in node {i} of the decision tree includes a classification tag that was not predefined"
@@ -386,9 +376,7 @@ class ComponentSelector:
         # as unclassified
         if "classification" not in self.component_table:
             self.component_table["classification"] = "unclassified"
-        self.component_status_table = self.component_table[
-            ["Component", "classification"]
-        ].copy()
+        self.component_status_table = self.component_table[["Component", "classification"]].copy()
         self.component_status_table = self.component_status_table.rename(
             columns={"classification": "initialized classification"}
         )
@@ -464,9 +452,7 @@ class ComponentSelector:
             )
             # run the decision node function
             self = fcn(self, **params, **kwargs)
-            self.used_metrics.update(
-                self.nodes[self.current_node_idx]["outputs"]["used_metrics"]
-            )
+            self.used_metrics.update(self.nodes[self.current_node_idx]["outputs"]["used_metrics"])
 
             # log the current counts for all classification labels
             log_classification_counts(self.current_node_idx, self.component_table)
@@ -498,9 +484,7 @@ class ComponentSelector:
                     params[key] = getattr(self, key)
                 except AttributeError:
                     raise ValueError(
-                        "Parameter {} is required in node {}, but not defined. ".format(
-                            key, fcn
-                        )
+                        "Parameter {} is required in node {}, but not defined. ".format(key, fcn)
                         + "If {} is dataset specific, it should be "
                         "defined in the ".format(key) + " initialization of "
                         "ComponentSelector. If it is fixed regardless of dataset, it "
@@ -539,17 +523,11 @@ class ComponentSelector:
         classifications are either "accepted" or "rejected"
         If any other component classifications remain, log a warning
         """
-        component_classifications = set(
-            self.component_table["classification"].to_list()
-        )
-        nonfinal_classifications = component_classifications.difference(
-            {"accepted", "rejected"}
-        )
+        component_classifications = set(self.component_table["classification"].to_list())
+        nonfinal_classifications = component_classifications.difference({"accepted", "rejected"})
         if nonfinal_classifications:
             for nonfinal_class in nonfinal_classifications:
-                numcomp = asarray(
-                    self.component_table["classification"] == nonfinal_class
-                ).sum()
+                numcomp = asarray(self.component_table["classification"] == nonfinal_class).sum()
                 LGR.warning(
                     f"{numcomp} components have a final classification of {nonfinal_class}. At the end of the selection process, all components are expected to be 'accepted' or 'rejected'"
                 )

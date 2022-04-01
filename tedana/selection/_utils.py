@@ -49,6 +49,7 @@ def selectcomps2use(selector, decide_comps):
     TODO: Number indexing should work here, but validator would not currently allow
     numbers to be assigned to a node in the ComponentSelector object. May want to make
     sure this option is acceissble through the class.
+    TODO: If a list of component number throw an if a number isn't valid rather than crashing
     """
 
     component_table = selector.component_table
@@ -215,12 +216,8 @@ def comptable_classification_changer(
             if not dont_warn_reclassify:
                 # don't make a warning if classify_if matches the current classification
                 # That is reject->reject shouldn't throw a warning
-                if (
-                    ("accepted" in current_classifications)
-                    and (classify_if != "accepted")
-                ) or (
-                    ("rejected" in current_classifications)
-                    and (classify_if != "rejected")
+                if (("accepted" in current_classifications) and (classify_if != "accepted")) or (
+                    ("rejected" in current_classifications) and (classify_if != "rejected")
                 ):
                     LGR.warning(
                         f"Step {selector.current_node_idx}: Some classifications are"
@@ -596,9 +593,7 @@ def get_extend_factor(n_vols=None, extend_factor=None):
             extend_factor = 2 + (n_vols - 90) / 20
         else:
             extend_factor = 2
-        LGR.info(
-            "extend_factor={}, based on number of fMRI volumes".format(extend_factor)
-        )
+        LGR.info("extend_factor={}, based on number of fMRI volumes".format(extend_factor))
     else:
         error_msg = "get_extend_factor need n_vols or extend_factor as an input"
         LGR.error(error_msg)
@@ -606,9 +601,7 @@ def get_extend_factor(n_vols=None, extend_factor=None):
     return extend_factor
 
 
-def get_new_meanmetricrank(
-    comptable, comps2use, decision_node_idx, calc_new_rank=False
-):
+def get_new_meanmetricrank(comptable, comps2use, decision_node_idx, calc_new_rank=False):
     """
     If a revised d_table_score was already calculated, use that.
     If not, calculate a new d_table_score based on the components
@@ -652,9 +645,7 @@ def get_new_meanmetricrank(
     return comptable[rank_label], comptable
 
 
-def prev_classified_comps(
-    comptable, decision_node_idx, classification_label, prev_X_steps=0
-):
+def prev_classified_comps(comptable, decision_node_idx, classification_label, prev_X_steps=0):
     """
     Output a list of components with a specific label during the current or
     previous X steps of the decision tree. For example, if
@@ -697,9 +688,7 @@ def prev_classified_comps(
                 tmp_list.remove("")
             # Check the previous nodes
             # This is inefficient, but it should work
-            for didx in range(
-                max(0, decision_node_idx - prev_X_steps), decision_node_idx
-            ):
+            for didx in range(max(0, decision_node_idx - prev_X_steps), decision_node_idx):
                 if str(didx) in tmp_list:
                     didx_loc = tmp_list.index(str(didx))
                     if didx_loc > 1:
