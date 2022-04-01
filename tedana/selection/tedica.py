@@ -8,9 +8,8 @@ from scipy import stats
 
 from tedana.stats import getfbounds
 from tedana.selection.ComponentSelector import ComponentSelector
-from tedana.selection._utils import clean_dataframe
 from tedana.metrics import collect
-from tedana.selection._utils import clean_dataframe, getelbow
+from tedana.selection.selection_utils import clean_dataframe, getelbow
 from tedana.stats import getfbounds
 
 LGR = logging.getLogger("GENERAL")
