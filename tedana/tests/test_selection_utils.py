@@ -1,45 +1,45 @@
-"""Tests for the tedana.selection._utils module."""
+"""Tests for the tedana.selection.selection_utils module."""
 import numpy as np
 import pytest
 
-from tedana.selection import _utils
+from tedana.selection import selection_utils
 
 
 def test_getelbow_smoke():
     """A smoke test for the getelbow function."""
     arr = np.random.random(100)
-    idx = _utils.getelbow(arr)
+    idx = selection_utils.getelbow(arr)
     assert isinstance(idx, np.integer)
 
-    val = _utils.getelbow(arr, return_val=True)
+    val = selection_utils.getelbow(arr, return_val=True)
     assert isinstance(val, float)
 
     # Running an empty array should raise a ValueError
     arr = np.array([])
     with pytest.raises(ValueError):
-        _utils.getelbow(arr)
+        selection_utils.getelbow(arr)
 
     # Running a 2D array should raise a ValueError
     arr = np.random.random((100, 100))
     with pytest.raises(ValueError):
-        _utils.getelbow(arr)
+        selection_utils.getelbow(arr)
 
 
 def test_getelbow_cons():
     """A smoke test for the getelbow_cons function."""
     arr = np.random.random(100)
-    idx = _utils.getelbow_cons(arr)
+    idx = selection_utils.getelbow_cons(arr)
     assert isinstance(idx, np.integer)
 
-    val = _utils.getelbow_cons(arr, return_val=True)
+    val = selection_utils.getelbow_cons(arr, return_val=True)
     assert isinstance(val, float)
 
     # Running an empty array should raise a ValueError
     arr = np.array([])
     with pytest.raises(ValueError):
-        _utils.getelbow_cons(arr)
+        selection_utils.getelbow_cons(arr)
 
     # Running a 2D array should raise a ValueError
     arr = np.random.random((100, 100))
     with pytest.raises(ValueError):
-        _utils.getelbow_cons(arr)
+        selection_utils.getelbow_cons(arr)

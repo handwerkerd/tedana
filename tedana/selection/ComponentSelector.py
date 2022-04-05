@@ -424,7 +424,7 @@ class ComponentSelector:
         comptable_fname = op.join(dirn, outputs["component table"])
         self.cross_component_metrics = load_json(xcomp_fname)
         self.component_table = pd.read_csv(status_fname, sep='\t')
-        self.status_table = pd.read_csv(comptable_fname, sep='\t')
+        self.component_status_table = pd.read_csv(comptable_fname, sep='\t')
 
     def select(self):
         """
@@ -565,11 +565,11 @@ class ComponentSelector:
 
     @property
     def accepted_comps(self):
-        return self.status_table["classification"] == "accepted"
+        return self.component_table["classification"] == "accepted"
 
     @property
     def rejected_comps(self):
-        return self.status_table["rejected"] == "rejected"
+        return self.component_table["classification"] == "rejected"
 
     @property
     def is_final(self):
