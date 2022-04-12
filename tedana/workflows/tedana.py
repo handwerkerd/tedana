@@ -706,7 +706,7 @@ def tedana_workflow(
             comptable,
             n_echos,
             n_vols,
-            tree=tree
+            tree=tree,
         )
         
     comp_names = comptable["Component"].values
@@ -716,7 +716,7 @@ def tedana_workflow(
     io_generator.save_file(betas_oc, "z-scored ICA components img")
 
     # Save component selector and tree
-    ica_selection.to_files(io_generator, mmix)
+    ica_selection.to_files(io_generator)
     # Save metrics and metadata
     metric_metadata = metrics.collect.get_metadata(comptable)
     io_generator.save_file(metric_metadata, "ICA metrics json")
@@ -731,8 +731,7 @@ def tedana_workflow(
             "Description": "ICA fit to dimensionally-reduced optimally combined data.",
             "Method": "tedana",
         }
-    with open(io_generator.get_name("ICA decomposition json"), "w") as fo:
-        json.dump(decomp_metadata, fo, sort_keys=True, indent=4)
+    io_generator.save_file(decomp_metadata, "ICA decomposition json")
 
     if ica_selection.n_bold_comps == 0:
         LGR.warning("No BOLD components detected! Please check data and results!")
@@ -776,6 +775,9 @@ def tedana_workflow(
 
     if verbose:
         io.writeresults_echoes(catd, mmix, mask_denoise, comptable, io_generator)
+
+    # Write out registry of outputs
+    io_generator.save_self()
 
     # Write out BIDS-compatible description file
     derivative_metadata = {

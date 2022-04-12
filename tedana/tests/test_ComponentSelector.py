@@ -165,8 +165,11 @@ def test_load_config_succeeds():
 
 def test_minimal():
     """Smoke test for constructor for ComponentSelector using minimal tree"""
+    xcomp = {
+        "n_echos": 3,
+    }
     tree = ComponentSelector.ComponentSelector(
-        "minimal", sample_comptable(), n_echos=3
+        "minimal", sample_comptable(), cross_component_metrics=xcomp,
     )
     tree.select()
 

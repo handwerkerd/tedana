@@ -347,7 +347,10 @@ class ComponentSelector:
     -----
     """
 
-    def __init__(self, tree, component_table, **kwargs):
+    def __init__(
+        self, tree, component_table,
+        cross_component_metrics={}, status_table=None
+    ):
         """
         Initialize the class using the info specified in the json file `tree`
 
@@ -371,13 +374,9 @@ class ComponentSelector:
         self.tree = tree
 
         tree_dict = load_config(tree)
-        if "reconstruct_from" not in tree_dict.keys():
-            self.__dict__.update(kwargs)
-            self._construct_new(tree, component_table)
-        else:
-            self._construct_from_executed(tree, tree_dict)
+        self.__dict__.update(cross_component_metrics)
+        self.cross_component_metrics = cross_component_metrics
 
-    def _construct_new(self, tree, component_table):
         """Construct an un-executed selector"""
         self.component_table = component_table.copy()
 
@@ -386,13 +385,6 @@ class ComponentSelector:
         # as unclassified
         if "classification" not in self.component_table:
             self.component_table["classification"] = "unclassified"
-        self.component_status_table = self.component_table[
-            ["Component", "classification"]
-        ].copy()
-        self.component_status_table = self.component_status_table.rename(
-            columns={"classification": "initialized classification"}
-        )
-
 
         self.tree_config = load_config(self.tree)
         tree_config = self.tree_config
@@ -406,25 +398,24 @@ class ComponentSelector:
         self.necessary_metrics = set(tree_config["necessary_metrics"])
         self.intermediate_classifications = tree_config["intermediate_classifications"]
         self.classification_tags = set(tree_config["classification_tags"])
-        self.cross_component_metrics = dict()
         self.used_metrics = set()
 
-    def _construct_from_executed(self, tree_fname, tree):
-        """Construct a selector from a previous execution
+        if status_table is None:
+            self.component_status_table = self.component_table[
+                ["Component", "classification"]
+            ].copy()
+            self.component_status_table = self.component_status_table.rename(
+                columns={"classification": "initialized classification"}
+            )
+            self.start_idx = 0
+        else:
+            # Since a status table exists, we need to skip nodes up to the
+            # point where the last tree finished
+            self.start_idx = len(tree_config["nodes"])
+            self.component_status_table = status_table
 
-        Parameters
-        ----------
-        tree: dict
-            The tree to build from
-        """
-        dirn = op.dirname(tree_fname)
-        outputs = tree["reconstruct_from"]
-        status_fname = op.join(dirn, outputs["component status table"])
-        xcomp_fname = op.join(dirn, outputs["cross component metrics"])
-        comptable_fname = op.join(dirn, outputs["component table"])
-        self.cross_component_metrics = load_json(xcomp_fname)
-        self.component_table = pd.read_csv(status_fname, sep='\t')
-        self.component_status_table = pd.read_csv(comptable_fname, sep='\t')
+        self.tree_config = load_config(self.tree)
+
 
     def select(self):
         """
@@ -449,7 +440,7 @@ class ComponentSelector:
         confirm_metrics_exist(self.component_table, self.necessary_metrics, self.tree)
 
         # for each node in the decision tree
-        for self.current_node_idx, node in enumerate(self.nodes):
+        for self.current_node_idx, node in enumerate(self.nodes[self.start_idx:]):
             # parse the variables to use with the function
             fcn = getattr(selection_nodes, node["functionname"])
 
@@ -480,6 +471,29 @@ class ComponentSelector:
         self.are_all_components_accepted_or_rejected()
         # TODO Remove this print statement once self.node is saved as a json
         print(self.nodes)
+
+    def add_manual(self, indices, classification):
+        """Add nodes that will manually classify components
+
+        Parameters
+        ----------
+        indices: list[int]
+            The indices to manually classify
+        classification: str
+            The classification to set the nodes to
+        """
+        self.nodes.append(
+            {
+                "functionname": "manual_classify",
+                "parameters": {
+                    "new_classification": classification,
+                    "decide_comps": indices,
+                },
+                "kwargs": {
+                    "dont_warn_reclassify": "true",
+                },
+            }
+        )
 
     def check_null(self, params, fcn):
         """
@@ -579,14 +593,22 @@ class ComponentSelector:
             > self.n_comps
         )
 
+    @property
+    def mixing(self):
+        return self.mixing_matrix
 
-    def to_files(self, io_generator, mixing):
+    @property
+    def oc_data(self):
+        return self.oc_data
+
+
+    def to_files(self, io_generator):
         """Convert this selector into component files
 
         Parameters
         ----------
         io_generator: tedana.io.OutputGenerator
-            The output generator to use for filename generation and saving
+            The output generator to use for filename generation and saving.
         """
         # TODO: add the kwargs supplied at construction to one of these
         comptable_fname = io_generator.save_file(
@@ -601,11 +623,6 @@ class ComponentSelector:
             self.component_status_table,
             "ICA status table tsv",
         )
-        self.tree_config["reconstruct_from"] = {
-            "component table": op.basename(comptable_fname),
-            "cross component metrics": op.basename(xcomp_fname),
-            "component status table": op.basename(status_fname),
-        }
         tree_fname = io_generator.save_file(
             self.tree_config,
             "ICA decision tree json",

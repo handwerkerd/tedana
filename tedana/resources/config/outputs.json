@@ -194,5 +194,9 @@
     "ICA orthogonalized mixing tsv": {
         "orig": "ica_orth_mixing",
         "bidsv1.5.0": "desc-ICAOrth_mixing"
+    },
+    "registry json": {
+        "orig": "registry",
+        "bidsv1.5.0": "desc-tedana_registry"
     }
 }

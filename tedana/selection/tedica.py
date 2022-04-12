@@ -108,7 +108,11 @@ def automatic_selection(comptable, n_echos, n_vols, tree="minimal"):
     ComponentSelector, the class used to represent the classification process
     """
     comptable["classification_tags"] = ""
-    selector = ComponentSelector(tree, comptable, n_echos=n_echos, n_vols=n_vols)
+    xcomp = {
+        "n_echos": n_echos,
+        "n_vols": n_vols,
+    }
+    selector = ComponentSelector(tree, comptable, cross_component_metrics=xcomp)
     selector.select()
     selector.metadata = collect.get_metadata(selector.component_table)
 

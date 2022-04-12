@@ -4,6 +4,7 @@ Integration tests for "real" data
 
 import glob
 import os
+import os.path as op
 import re
 import shutil
 import tarfile
@@ -17,6 +18,7 @@ from pkg_resources import resource_filename
 
 from tedana.workflows import t2smap as t2smap_cli
 from tedana.workflows import tedana as tedana_cli
+from tedana.workflows.tedana_reclassify import post_tedana
 
 
 def check_integration_outputs(fname, outpath):
@@ -145,6 +147,14 @@ def test_integration_four_echo(skip_integration):
         verbose=True,
     )
 
+    post_tedana(
+        op.join(out_dir, "desc-tedana_registry.json"),
+        accept=[1, 2, 3],
+        reject=[4, 5, 6],
+        out_dir=out_dir_manual,
+        mir=True,
+    )
+
     # compare the generated output files
     fn = resource_filename("tedana", "tests/data/fiu_four_echo_outputs.txt")
 
@@ -188,8 +198,8 @@ def test_integration_three_echo(skip_integration):
         out_dir_manual,
         "--debug",
         "--verbose",
-        "--mix",
         "-f",
+        "--mix",
         os.path.join(out_dir, "desc-ICA_mixing.tsv"),
     ]
     tedana_cli._main(args)
