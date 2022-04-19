@@ -226,7 +226,7 @@ def manual_classify(
         component_table["classification_tags"] = ""
         LGR.info(function_name_idx + " component classification tags are cleared")
 
-    selector.nodes[selector.current_node_idx]["outputs"] = outputs
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
 
     return selector
 
@@ -387,7 +387,7 @@ def dec_left_op_right(
             ifFalse=ifFalse,
         )
 
-    selector.nodes[selector.current_node_idx]["outputs"] = outputs
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
 
     return selector
 
@@ -505,7 +505,7 @@ def dec_variance_lessthan_thresholds(
             ifFalse=ifFalse,
         )
 
-    selector.nodes[selector.current_node_idx]["outputs"] = outputs
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
     return selector
 
 
@@ -672,7 +672,7 @@ def calc_kappa_rho_elbows_kundu(
         #        numTrue, numFalse, len(comps2use))))
         log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
 
-    selector.nodes[selector.current_node_idx]["outputs"] = outputs
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
 
     return selector
 

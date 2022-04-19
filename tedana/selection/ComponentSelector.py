@@ -34,8 +34,10 @@ DEFAULT_TREES = ["minimal", "kundu"]
 class TreeError(Exception):
     pass
 
+
 # TODO: minimal tree should included expected kwargs
 # TODO: switch kwargs to xcomp_metrics
+
 
 def load_config(tree):
     """
@@ -145,17 +147,13 @@ def validate_tree(tree):
     if "reconstruct_from" in unused_keys:
         unused_keys.remove("reconstruct_from")
     if unused_keys:
-        LGR.warning(
-            f"Decision tree includes fields that are not used or logged {unused_keys}"
-        )
+        LGR.warning(f"Decision tree includes fields that are not used or logged {unused_keys}")
 
     # Combine the default classifications with the user inputted classifications
     all_classifications = set(tree.get("intermediate_classifications")) | set(
         default_classifications
     )
-    all_decide_comps = set(tree.get("intermediate_classifications")) | set(
-        default_decide_comps
-    )
+    all_decide_comps = set(tree.get("intermediate_classifications")) | set(default_decide_comps)
     for i, node in enumerate(tree["nodes"]):
         # Make sure each function defined in a node exists
         try:
@@ -168,33 +166,25 @@ def validate_tree(tree):
             continue
 
         # Get a functions parameters and compare to parameters defined in the tree
-        pos = set(
-            [
-                p
-                for p, i in sig.parameters.items()
-                if i.default is inspect.Parameter.empty
-            ]
-        )
+        pos = set([p for p, i in sig.parameters.items() if i.default is inspect.Parameter.empty])
         kwargs = set(sig.parameters.keys()) - pos
 
         missing_pos = pos - set(node.get("parameters").keys()) - defaults
         if len(missing_pos) > 0:
-            err_msg += "Node {} is missing required parameter(s): {}\n".format(
-                i, missing_pos
-            )
+            err_msg += "Node {} is missing required parameter(s): {}\n".format(i, missing_pos)
 
         invalid_params = set(node.get("parameters").keys()) - pos
         if len(invalid_params) > 0:
-            err_msg += (
-                "Node {} has additional, undefined required parameters: {}\n".format(
-                    i, invalid_params
-                )
+            err_msg += "Node {} has additional, undefined required parameters: {}\n".format(
+                i, invalid_params
             )
 
         invalid_kwargs = set(node.get("kwargs").keys()) - kwargs
         if len(invalid_kwargs) > 0:
-            err_msg += "Node {} has additional, undefined optional parameters (kwargs): {}\n".format(
-                i, invalid_kwargs
+            err_msg += (
+                "Node {} has additional, undefined optional parameters (kwargs): {}\n".format(
+                    i, invalid_kwargs
+                )
             )
 
         # Gather all the classification labels used in each tree both for
@@ -243,9 +233,7 @@ def validate_tree(tree):
             tagset.update(set([node["kwargs"]["tag_ifFalse"]]))
         if "tag" in node.get("kwargs").keys():
             tagset.update(set([node["kwargs"]["tag"]]))
-        undefined_classification_tags = tagset.difference(
-            set(tree.get("classification_tags"))
-        )
+        undefined_classification_tags = tagset.difference(set(tree.get("classification_tags")))
         if undefined_classification_tags:
             LGR.warning(
                 f"{tagset} in node {i} of the decision tree includes a classification tag that was not predefined"
@@ -347,10 +335,7 @@ class ComponentSelector:
     -----
     """
 
-    def __init__(
-        self, tree, component_table,
-        cross_component_metrics={}, status_table=None
-    ):
+    def __init__(self, tree, component_table, cross_component_metrics={}, status_table=None):
         """
         Initialize the class using the info specified in the json file `tree`
 
@@ -371,9 +356,8 @@ class ComponentSelector:
             cross_component_metrics: empty dict
             used_metrics: empty set
         """
-        self.tree = tree
+        self.tree_name = tree
 
-        tree_dict = load_config(tree)
         self.__dict__.update(cross_component_metrics)
         self.cross_component_metrics = cross_component_metrics
 
@@ -386,19 +370,19 @@ class ComponentSelector:
         if "classification" not in self.component_table:
             self.component_table["classification"] = "unclassified"
 
-        self.tree_config = load_config(self.tree)
-        tree_config = self.tree_config
+        self.tree = load_config(self.tree_name)
+        tree_config = self.tree
 
         LGR.info("Performing component selection with " + tree_config["tree_id"])
         LGR.info(tree_config.get("info", ""))
         RepLGR.info(tree_config.get("report", ""))
         RefLGR.info(tree_config.get("refs", ""))
 
-        self.nodes = tree_config["nodes"]
+        self.tree["nodes"] = tree_config["nodes"]
         self.necessary_metrics = set(tree_config["necessary_metrics"])
         self.intermediate_classifications = tree_config["intermediate_classifications"]
         self.classification_tags = set(tree_config["classification_tags"])
-        self.used_metrics = set()
+        self.tree["used_metrics"] = set()
 
         if status_table is None:
             self.component_status_table = self.component_table[
@@ -413,9 +397,6 @@ class ComponentSelector:
             # point where the last tree finished
             self.start_idx = len(tree_config["nodes"])
             self.component_status_table = status_table
-
-        self.tree_config = load_config(self.tree)
-
 
     def select(self):
         """
@@ -437,10 +418,12 @@ class ComponentSelector:
             self.component_table["classification_tags"] = ""
         # this will crash the program with an error message if not all
         # necessary_metrics are in the comptable
-        confirm_metrics_exist(self.component_table, self.necessary_metrics, self.tree)
+        confirm_metrics_exist(
+            self.component_table, self.necessary_metrics, function_name=self.tree_name
+        )
 
         # for each node in the decision tree
-        for self.current_node_idx, node in enumerate(self.nodes[self.start_idx:]):
+        for self.current_node_idx, node in enumerate(self.tree["nodes"][self.start_idx :]):
             # parse the variables to use with the function
             fcn = getattr(selection_nodes, node["functionname"])
 
@@ -455,8 +438,8 @@ class ComponentSelector:
             )
             # run the decision node function
             self = fcn(self, **params, **kwargs)
-            self.used_metrics.update(
-                self.nodes[self.current_node_idx]["outputs"]["used_metrics"]
+            self.tree["used_metrics"].update(
+                self.tree["nodes"][self.current_node_idx]["outputs"]["used_metrics"]
             )
 
             # log the current counts for all classification labels
@@ -470,7 +453,7 @@ class ComponentSelector:
 
         self.are_all_components_accepted_or_rejected()
         # TODO Remove this print statement once self.node is saved as a json
-        print(self.nodes)
+        print(self.tree["nodes"])
 
     def add_manual(self, indices, classification):
         """Add nodes that will manually classify components
@@ -482,7 +465,7 @@ class ComponentSelector:
         classification: str
             The classification to set the nodes to
         """
-        self.nodes.append(
+        self.tree["nodes"].append(
             {
                 "functionname": "manual_classify",
                 "parameters": {
@@ -512,9 +495,7 @@ class ComponentSelector:
                     params[key] = getattr(self, key)
                 except AttributeError:
                     raise ValueError(
-                        "Parameter {} is required in node {}, but not defined. ".format(
-                            key, fcn
-                        )
+                        "Parameter {} is required in node {}, but not defined. ".format(key, fcn)
                         + "If {} is dataset specific, it should be "
                         "defined in the ".format(key) + " initialization of "
                         "ComponentSelector. If it is fixed regardless of dataset, it "
@@ -530,21 +511,15 @@ class ComponentSelector:
         used and if any used_metrics weren't explicitly declared necessary
         If either of these happen, a warning is added to the logger
         """
-        unused_metrics = self.necessary_metrics - self.used_metrics
-        if len(unused_metrics) > 0:
-            LGR.warning(
-                f"The following metrics were declared necessary by not actually used: {unused_metrics}"
-            )
-
-        not_declared = self.used_metrics - self.necessary_metrics
-        not_used = self.necessary_metrics - self.used_metrics
+        not_declared = self.tree["used_metrics"] - self.necessary_metrics
+        not_used = self.necessary_metrics - self.tree["used_metrics"]
         if len(not_declared) > 0:
             LGR.warning(
-                f"Decision tree {self.tree} used the following metrics that were not declared as necessary: {not_declared}"
+                f"Decision tree {self.tree_name} used the following metrics that were not declared as necessary: {not_declared}"
             )
         if len(not_used) > 0:
             LGR.warning(
-                f"Decision tree {self.tree} failed to use the following metrics that were declared as necessary: {not_used}"
+                f"Decision tree {self.tree_name} did not use the following metrics that were declared as necessary: {not_used}"
             )
 
     def are_all_components_accepted_or_rejected(self):
@@ -553,17 +528,11 @@ class ComponentSelector:
         classifications are either "accepted" or "rejected"
         If any other component classifications remain, log a warning
         """
-        component_classifications = set(
-            self.component_table["classification"].to_list()
-        )
-        nonfinal_classifications = component_classifications.difference(
-            {"accepted", "rejected"}
-        )
+        component_classifications = set(self.component_table["classification"].to_list())
+        nonfinal_classifications = component_classifications.difference({"accepted", "rejected"})
         if nonfinal_classifications:
             for nonfinal_class in nonfinal_classifications:
-                numcomp = asarray(
-                    self.component_table["classification"] == nonfinal_class
-                ).sum()
+                numcomp = asarray(self.component_table["classification"] == nonfinal_class).sum()
                 LGR.warning(
                     f"{numcomp} components have a final classification of {nonfinal_class}. At the end of the selection process, all components are expected to be 'accepted' or 'rejected'"
                 )
@@ -588,10 +557,7 @@ class ComponentSelector:
     @property
     def is_final(self):
         """Whether the classifications are all acccepted/rejected"""
-        return (
-            (self.accepted_comps.sum() + self.rejected_comps.sum())
-            > self.n_comps
-        )
+        return (self.accepted_comps.sum() + self.rejected_comps.sum()) > self.n_comps
 
     @property
     def mixing(self):
@@ -601,7 +567,6 @@ class ComponentSelector:
     def oc_data(self):
         return self.oc_data
 
-
     def to_files(self, io_generator):
         """Convert this selector into component files
 
@@ -610,7 +575,6 @@ class ComponentSelector:
         io_generator: tedana.io.OutputGenerator
             The output generator to use for filename generation and saving.
         """
-        # TODO: add the kwargs supplied at construction to one of these
         comptable_fname = io_generator.save_file(
             self.component_table,
             "ICA metrics tsv",
@@ -624,6 +588,6 @@ class ComponentSelector:
             "ICA status table tsv",
         )
         tree_fname = io_generator.save_file(
-            self.tree_config,
+            self.tree,
             "ICA decision tree json",
         )
