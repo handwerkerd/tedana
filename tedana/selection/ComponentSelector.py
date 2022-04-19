@@ -35,10 +35,6 @@ class TreeError(Exception):
     pass
 
 
-# TODO: minimal tree should included expected kwargs
-# TODO: switch kwargs to xcomp_metrics
-
-
 def load_config(tree):
     """
     Loads the json file with the decision tree and validates that the
@@ -142,10 +138,11 @@ def validate_tree(tree):
         raise TreeError("\n" + f"Decision tree missing required fields: {missing_keys}")
 
     # Warn if unused fields exist
-    unused_keys = set(tree.keys()) - set(tree_expected_keys)
+    unused_keys = set(tree.keys()) - set(tree_expected_keys) - set(["used_metrics"])
     # Make sure reconstruct_from doesn't trigger a warning; hacky, sorry
     if "reconstruct_from" in unused_keys:
         unused_keys.remove("reconstruct_from")
+    
     if unused_keys:
         LGR.warning(f"Decision tree includes fields that are not used or logged {unused_keys}")
 
@@ -382,7 +379,10 @@ class ComponentSelector:
         self.necessary_metrics = set(tree_config["necessary_metrics"])
         self.intermediate_classifications = tree_config["intermediate_classifications"]
         self.classification_tags = set(tree_config["classification_tags"])
-        self.tree["used_metrics"] = set()
+        if "used_metrics" not in self.tree.keys():
+            self.tree["used_metrics"] = set()
+        else:
+            self.tree["used_metrics"] = set(self.tree["used_metrics"])
 
         if status_table is None:
             self.component_status_table = self.component_table[

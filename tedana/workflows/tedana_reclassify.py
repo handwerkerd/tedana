@@ -354,10 +354,14 @@ def post_tedana(
     )
 
     if mir:
+        io_generator.force = True
         gsc.minimum_image_regression(data_oc, mmix, mask_denoise, comptable, io_generator)
+        io_generator.force = False
 
     if verbose:
+        io_generator.force = True
         io.writeresults_echoes(catd, mmix, mask_denoise, comptable, io_generator)
+        io_generator.force = False
 
     # Write out BIDS-compatible description file
     derivative_metadata = {

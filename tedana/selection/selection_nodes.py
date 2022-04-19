@@ -208,7 +208,7 @@ def manual_classify(
     else:
         decision_boolean = pd.Series(True, index=comps2use)
         (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
-            selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=tag
+            selector, ifTrue, ifFalse, decision_boolean, tag_ifTrue=tag, dont_warn_reclassify=dont_warn_reclassify
         )
         # outputs["numTrue"] = decision_boolean.sum()
         # outputs["numFalse"] = np.logical_not(decision_boolean).sum()

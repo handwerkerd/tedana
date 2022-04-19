@@ -135,12 +135,11 @@ def change_comptable_classifications(
     If a classification is changed away from accepted or rejected and
     dont_warn_reclassify is False, then a warning is logged
     """
-
     selector = comptable_classification_changer(
-        selector, True, ifTrue, decision_boolean, tag_ifTrue
+        selector, True, ifTrue, decision_boolean, tag_ifTrue, dont_warn_reclassify=dont_warn_reclassify
     )
     selector = comptable_classification_changer(
-        selector, False, ifFalse, decision_boolean, tag_ifFalse
+        selector, False, ifFalse, decision_boolean, tag_ifFalse, dont_warn_reclassify=dont_warn_reclassify
     )
 
     selector.component_status_table[
@@ -206,7 +205,6 @@ def comptable_classification_changer(
     If a classification is changed away from accepted or rejected and
     dont_warn_reclassify is False, then a warning is logged
     """
-
     if classify_if != "nochange":
         changeidx = decision_boolean.index[np.asarray(decision_boolean) == boolstate]
         current_classifications = set(
