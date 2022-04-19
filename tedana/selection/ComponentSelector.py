@@ -142,7 +142,7 @@ def validate_tree(tree):
     # Make sure reconstruct_from doesn't trigger a warning; hacky, sorry
     if "reconstruct_from" in unused_keys:
         unused_keys.remove("reconstruct_from")
-    
+
     if unused_keys:
         LGR.warning(f"Decision tree includes fields that are not used or logged {unused_keys}")
 

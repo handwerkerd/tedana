@@ -136,10 +136,20 @@ def change_comptable_classifications(
     dont_warn_reclassify is False, then a warning is logged
     """
     selector = comptable_classification_changer(
-        selector, True, ifTrue, decision_boolean, tag_ifTrue, dont_warn_reclassify=dont_warn_reclassify
+        selector,
+        True,
+        ifTrue,
+        decision_boolean,
+        tag_ifTrue,
+        dont_warn_reclassify=dont_warn_reclassify,
     )
     selector = comptable_classification_changer(
-        selector, False, ifFalse, decision_boolean, tag_ifFalse, dont_warn_reclassify=dont_warn_reclassify
+        selector,
+        False,
+        ifFalse,
+        decision_boolean,
+        tag_ifFalse,
+        dont_warn_reclassify=dont_warn_reclassify,
     )
 
     selector.component_status_table[

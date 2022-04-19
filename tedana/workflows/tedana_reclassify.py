@@ -32,6 +32,7 @@ LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
 RefLGR = logging.getLogger("REFERENCES")
 
+
 def main():
     from ..info import __version__
 
@@ -47,14 +48,14 @@ def main():
         dest="manual_accept",
         nargs="+",
         type=int,
-        help="Component indices to accept (zero-indexed)."
+        help="Component indices to accept (zero-indexed).",
     )
     parser.add_argument(
         "--manrej",
         dest="manual_reject",
         nargs="+",
         type=int,
-        help="Component indices to reject (zero-indexed)."
+        help="Component indices to reject (zero-indexed).",
     )
     parser.add_argument(
         "--config",
@@ -109,13 +110,6 @@ def main():
         "--png-cmap", dest="png_cmap", type=str, help="Colormap for figures", default="coolwarm"
     )
     parser.add_argument(
-        "--verbose",
-        dest="verbose",
-        action="store_true",
-        help="Generate intermediate and additional files.",
-        default=False,
-    )
-    parser.add_argument(
         "--debug",
         dest="debug",
         action="store_true",
@@ -127,8 +121,11 @@ def main():
         default=False,
     )
     parser.add_argument(
-        "--force", "-f", dest="force", action="store_true",
-        help="Force overwriting of files. Default False."
+        "--force",
+        "-f",
+        dest="force",
+        action="store_true",
+        help="Force overwriting of files. Default False.",
     )
     parser.add_argument(
         "--quiet", dest="quiet", help=argparse.SUPPRESS, action="store_true", default=False
@@ -152,7 +149,6 @@ def post_tedana(
     mir=False,
     no_reports=False,
     png_cmap="coolwarm",
-    verbose=False,
     force=False,
     debug=False,
     quiet=False,
@@ -177,8 +173,6 @@ def post_tedana(
         denoising. Default is False.
     mir : :obj:`bool`, optional
         Run minimum image regression after denoising. Default is False.
-    verbose : :obj:`bool`, optional
-        Generate intermediate and additional files. Default is False.
     no_reports : obj:'bool', optional
         Do not generate .html reports and .png plots. Default is false such
         that reports are generated.
@@ -223,10 +217,7 @@ def post_tedana(
         if r in acc and not r in rej:
             in_both.append(r)
     if len(in_both) != 0:
-        raise ValueError(
-            "The following components were both accepted and rejected: "
-            f"{in_both}"
-        )
+        raise ValueError("The following components were both accepted and rejected: " f"{in_both}")
 
     # boilerplate
     basename = "report"
@@ -268,15 +259,18 @@ def post_tedana(
         data_oc = ioh.get_file_contents("combined img")
         used_gs = False
     io_generator = io.OutputGenerator(
-        data_oc, convention=convention, prefix=prefix, config=config,
-        force=force, verbose=verbose, out_dir=out_dir,
+        data_oc,
+        convention=convention,
+        prefix=prefix,
+        config=config,
+        force=force,
+        verbose=False,
+        out_dir=out_dir,
     )
-
 
     # Make a new selector with the added files
     selector = selection.ComponentSelector.ComponentSelector(
-        previous_tree_fname, comptable, cross_component_metrics=xcomp,
-        status_table=status_table
+        previous_tree_fname, comptable, cross_component_metrics=xcomp, status_table=status_table
     )
 
     selector.add_manual(accept, "accepted")
@@ -309,7 +303,6 @@ def post_tedana(
     if selector.n_bold_comps == 0:
         LGR.warning("No BOLD components detected! Please check data and results!")
 
-
     mmix_orig = mmix.copy()
     # TODO: make this a function
     if tedort:
@@ -320,6 +313,7 @@ def post_tedana(
         betas = np.linalg.lstsq(acc_ts, rej_ts, rcond=None)[0]
         pred_rej_ts = np.dot(acc_ts, betas)
         resid = rej_ts - pred_rej_ts
+        # TODO rej_idx not here right now. Need to fix bug
         mmix[:, rej_idx] = resid
         comp_names = [
             io.add_decomp_prefix(comp, prefix="ica", max_value=comptable.index.max())
@@ -356,11 +350,6 @@ def post_tedana(
     if mir:
         io_generator.force = True
         gsc.minimum_image_regression(data_oc, mmix, mask_denoise, comptable, io_generator)
-        io_generator.force = False
-
-    if verbose:
-        io_generator.force = True
-        io.writeresults_echoes(catd, mmix, mask_denoise, comptable, io_generator)
         io_generator.force = False
 
     # Write out BIDS-compatible description file
@@ -428,7 +417,7 @@ def post_tedana(
         else:
             LGR.info("Generating dynamic report")
             reporting.generate_report(io_generator, tr=img_t_r)
-    
+
     io_generator.save_self()
     LGR.info("Workflow completed")
     utils.teardown_loggers()
@@ -437,6 +426,7 @@ def post_tedana(
 
 def _main(argv=None):
     """Tedana entry point"""
+    # TODO change this _main function to fix _get_parser and tedana_workflow
     options = _get_parser().parse_args(argv)
     kwargs = vars(options)
     n_threads = kwargs.pop("n_threads")
