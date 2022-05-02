@@ -4,7 +4,6 @@ TE-dependent and TE-independent components.
 """
 import os.path as op
 import inspect
-import json
 import logging
 from pkg_resources import resource_filename
 from numpy import asarray
