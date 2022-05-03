@@ -17,8 +17,8 @@ from tedana.selection.selection_utils import (
     getelbow,
     get_extend_factor,
     kappa_elbow_kundu,
-    get_new_meanmetricrank,
-    prev_classified_comps,
+    # get_new_meanmetricrank,
+    # prev_classified_comps,
 )
 
 LGR = logging.getLogger("GENERAL")
@@ -201,7 +201,7 @@ def manual_classify(
 
     comps2use, component_table = selectcomps2use(selector, decide_comps)
 
-    if comps2use is None:
+    if not comps2use:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
@@ -357,7 +357,7 @@ def dec_left_op_right(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
-    if comps2use is None:
+    if not comps2use:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
@@ -475,7 +475,7 @@ def dec_variance_lessthan_thresholds(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
-    if comps2use is None:
+    if not comps2use:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
@@ -625,10 +625,10 @@ def calc_kappa_rho_elbows_kundu(
 
     unclassified_comps2use = selectcomps2use(selector, "unclassified")[0]
 
-    if (comps2use is None) or (unclassified_comps2use is None):
-        if comps2use is None:
+    if (not comps2use) or (not unclassified_comps2use):
+        if not comps2use:
             log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-        if unclassified_comps2use is None:
+        if not unclassified_comps2use:
             log_decision_tree_step(function_name_idx, comps2use, decide_comps="unclassified")
     else:
         outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, selector.n_echos)
@@ -746,7 +746,7 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #     comps2use = selectcomps2use(comptable, decide_comps)
 #     do_comps_exist = selectcomps2use(comptable, class_comp_exists)
 
-#     if comps2use is None:
+#     if not comps2use:
 #         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
 #         numTrue = 0
 #         numFalse = 0
@@ -866,12 +866,12 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 
 #     comps2use = selectcomps2use(comptable, decide_comps)
 #     provaccept_comps2use = selectcomps2use(comptable, ["provisionalaccept"])
-#     if (comps2use is None) or (provaccept_comps2use is None):
-#         if comps2use is None:
+#     if (not comps2use) or (not provaccept_comps2use):
+#         if not comps2use:
 #             log_decision_tree_step(
 #                 function_name_idx, comps2use, decide_comps=decide_comps
 #             )
-#         if provaccept_comps2use is None:
+#         if not provaccept_comps2use:
 #             log_decision_tree_step(
 #                 function_name_idx, comps2use, decide_comps="provisionalaccept"
 #             )
@@ -994,12 +994,12 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #     comps2use = selectcomps2use(comptable, decide_comps)
 #     provaccept_comps2use = selectcomps2use(comptable, ["provisionalaccept"])
 
-#     if (comps2use is None) or (provaccept_comps2use is None):
-#         if comps2use is None:
+#     if (not comps2use) or (not provaccept_comps2use):
+#         if not comps2use:
 #             log_decision_tree_step(
 #                 function_name_idx, comps2use, decide_comps=decide_comps
 #             )
-#         if provaccept_comps2use is None:
+#         if not provaccept_comps2use:
 #             log_decision_tree_step(
 #                 function_name_idx, comps2use, decide_comps="provisionalaccept"
 #             )
@@ -1144,7 +1144,7 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #     )
 
 #     comps2use = selectcomps2use(comptable, decide_comps)
-#     if comps2use is None:
+#     if not comps2use:
 #         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
 #         numTrue = 0
 #         numFalse = 0
@@ -1339,7 +1339,7 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #     )
 
 #     comps2use = selectcomps2use(comptable, decide_comps)
-#     if comps2use is None:
+#     if not comps2use:
 #         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
 #         numTrue = 0
 #         numFalse = 0
@@ -1504,7 +1504,7 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #     )
 
 #     comps2use = selectcomps2use(comptable, decide_comps)
-#     if comps2use is None:
+#     if not comps2use:
 #         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
 #         numTrue = 0
 #         numFalse = 0

@@ -83,8 +83,8 @@ def selectcomps2use(selector, decide_comps):
     # If no components are selected, then return None.
     # The function that called this can check for None and exit before
     # attempting any computations on no data
-    if not comps2use:
-        comps2use = None
+    # if not comps2use:
+    #     comps2use = None
 
     return comps2use, component_table
 
@@ -212,7 +212,7 @@ def comptable_classification_changer(
     Returns
     -------
     selector: :obj:`tedana.selection.ComponentSelector`
-        Operates on the True OR False componets depending on boolstate
+        Operates on the True OR False components depending on boolstate
         component_table["classifications"] will reflect any new
         classifications.
         component_status_table will have a new column titled
@@ -367,9 +367,12 @@ def log_decision_tree_step(
     ifTrue, ifFalse: :obj:`str`
         If a component is true or false, the classification to assign that
         component
-    calc_outputs: :obj:`bool`
-        True if the function being logged calculated new cross component
-        metrics. If true, then log the metrics calculated and their values
+    calc_outputs: :obj:`dict`
+        A dictionary with output information from the function. If it contains a key
+        "calc_cross_comp_metrics" then the value for that key is a list of
+        cross component metrics (i.e. kappa or rho elbows) that were calculated
+        within the function. Each of those metrics will also be a key in calc_outputs
+        and those keys and values will be logged by this function
 
     Returns
     -------
@@ -379,7 +382,7 @@ def log_decision_tree_step(
     calculated
     """
 
-    if comps2use is None:
+    if not comps2use:
         LGR.info(
             f"{function_name_idx} not applied because no remaining components were "
             f"classified as {decide_comps}"
@@ -391,11 +394,16 @@ def log_decision_tree_step(
             f"{numFalse} False -> {ifFalse}."
         )
     if calc_outputs:
-        calc_summaries = [
-            f"{metric_name}={calc_outputs[metric_name]}"
-            for metric_name in calc_outputs["calc_cross_comp_metrics"]
-        ]
-        LGR.info(f"{function_name_idx} calculated: {', '.join(calc_summaries)}")
+        if "calc_cross_comp_metrics" in calc_outputs:
+            calc_summaries = [
+                f"{metric_name}={calc_outputs[metric_name]}"
+                for metric_name in calc_outputs["calc_cross_comp_metrics"]
+            ]
+            LGR.info(f"{function_name_idx} calculated: {', '.join(calc_summaries)}")
+        else:
+            LGR.warning(
+                f"{function_name_idx} logged to write out cross_component_metrics, but not were calculated"
+            )
 
 
 def log_classification_counts(decision_node_idx, component_table):
@@ -577,7 +585,7 @@ def kappa_elbow_kundu(comptable, n_echos):
 def get_extend_factor(n_vols=None, extend_factor=None):
     """
     extend_factor is a scaler used to set a threshold for the d_table_score
-    It is either defined by the number of volumes in the time series or if directly
+    It is either defined by the number of volumes in the time series or directly
     defined by the user. If it is defined by the user, that takes precedence over
     using the number of volumes in a calculation
 
@@ -602,117 +610,122 @@ def get_extend_factor(n_vols=None, extend_factor=None):
     """
 
     if extend_factor:
+        if isinstance(extend_factor, int):
+            extend_factor = float(extend_factor)
         LGR.info("extend_factor={}, as defined by user".format(extend_factor))
     elif n_vols:
         if n_vols < 90:
-            extend_factor = 3
+            extend_factor = float(3)
         elif n_vols < 110:
-            extend_factor = 2 + (n_vols - 90) / 20
+            extend_factor = float(2 + (n_vols - 90) / 20)
         else:
-            extend_factor = 2
+            extend_factor = float(2)
         LGR.info("extend_factor={}, based on number of fMRI volumes".format(extend_factor))
     else:
         error_msg = "get_extend_factor need n_vols or extend_factor as an input"
         LGR.error(error_msg)
-        ValueError(error_msg)
+        raise ValueError(error_msg)
     return extend_factor
 
 
-def get_new_meanmetricrank(comptable, comps2use, decision_node_idx, calc_new_rank=False):
-    """
-    If a revised d_table_score was already calculated, use that.
-    If not, calculate a new d_table_score based on the components
-    identified in comps2use
+# This will likely need to be revived to run the kundu decision tree, but it will be slightly differe
+#  So commenting out for now.
+# def get_new_meanmetricrank(comptable, comps2use, decision_node_idx, calc_new_rank=False):
+#     """
+#     If a revised d_table_score was already calculated, use that.
+#     If not, calculate a new d_table_score based on the components
+#     identified in comps2use
 
-    Parameters
-    ----------
-    comptable
-    comps2use
-    decision_node_idx: :obj:`int`
-        The index for the current decision node
-    calc_new_rank: :obj:`bool`
-        calculate a new d_table_score even if a revised mean
-        metric rank was already calculated
+#     Parameters
+#     ----------
+#     comptable
+#     comps2use
+#     decision_node_idx: :obj:`int`
+#         The index for the current decision node
+#     calc_new_rank: :obj:`bool`
+#         calculate a new d_table_score even if a revised mean
+#         metric rank was already calculated
 
-    Return
-    ------
-    meanmetricrank
-    comptable
-    """
-    rank_label = "d_table_score" + str(decision_node_idx)
-    if not calc_new_rank and (rank_label in comptable.columns):
-        # go ahead and return existing
-        return comptable[rank_label], comptable
-    # get the array of ranks
-    ranks = generate_decision_table_score(
-        comptable.loc[comps2use, "kappa"],
-        comptable.loc[comps2use, "dice_FT2"],
-        comptable.loc[comps2use, "signal-noise_t"],
-        comptable.loc[comps2use, "countnoise"],
-        comptable.loc[comps2use, "countsigFT2"],
-    )
-    # see if we need to make a new column
-    if rank_label not in comptable.columns:
-        comptable[rank_label] = np.zeros(comptable.shape[0]) * np.nan
+#     Return
+#     ------
+#     meanmetricrank
+#     comptable
+#     """
+#     rank_label = "d_table_score" + str(decision_node_idx)
+#     if not calc_new_rank and (rank_label in comptable.columns):
+#         # go ahead and return existing
+#         return comptable[rank_label], comptable
+#     # get the array of ranks
+#     ranks = generate_decision_table_score(
+#         comptable.loc[comps2use, "kappa"],
+#         comptable.loc[comps2use, "dice_FT2"],
+#         comptable.loc[comps2use, "signal-noise_t"],
+#         comptable.loc[comps2use, "countnoise"],
+#         comptable.loc[comps2use, "countsigFT2"],
+#     )
+#     # see if we need to make a new column
+#     if rank_label not in comptable.columns:
+#         comptable[rank_label] = np.zeros(comptable.shape[0]) * np.nan
 
-    # fill in the column with the components of interest
-    for c, rank in zip(comps2use, ranks):
-        comptable[c, rank_label] = rank
+#     # fill in the column with the components of interest
+#     for c, rank in zip(comps2use, ranks):
+#         comptable[c, rank_label] = rank
 
-    return comptable[rank_label], comptable
+#     return comptable[rank_label], comptable
 
 
-def prev_classified_comps(comptable, decision_node_idx, classification_label, prev_X_steps=0):
-    """
-    Output a list of components with a specific label during the current or
-    previous X steps of the decision tree. For example, if
-    classification_label = ['provisionalaccept'] and prev_X_steps = 0
-    then this outputs the indices of components that are currenlty
-    classsified as provisionalaccept. If prev_X_steps=2, then this will
-    output components that are classified as provisionalaccept or were
-    classified as such any time before the previous two decision tree steps
+# Not currently being used and hopefully will never again be used
+# def prev_classified_comps(comptable, decision_node_idx, classification_label, prev_X_steps=0):
+#     """
+#     Output a list of components with a specific label during the current or
+#     previous X steps of the decision tree. For example, if
+#     classification_label = ['provisionalaccept'] and prev_X_steps = 0
+#     then this outputs the indices of components that are currenlty
+#     classsified as provisionalaccept. If prev_X_steps=2, then this will
+#     output components that are classified as provisionalaccept or were
+#     classified as such any time before the previous two decision tree steps
 
-    Parameters
-    ----------
-    comptable
-    n_echos: :obj:`int`
-        The number of echos in the multi-echo data set
-    decision_node_idx: :obj:`int`
-        The index of the node in the decision tree that called this function
-    classification_label: :obj:`list[str]`
-        A list of strings containing classification labels to identify in components
-        For example: ['provisionalaccept']
-    prev_X_steps: :obj:`int`
-        If 0, then just count the number of provisionally accepted or rejected
-        or unclassified components in the current node. If this is a positive
-        integer, then also check if a component was a in one of those three
-        categories in ignore_prev_X_steps previous nodes. default=0
+#     Parameters
+#     ----------
+#     comptable
+#     n_echos: :obj:`int`
+#         The number of echos in the multi-echo data set
+#     decision_node_idx: :obj:`int`
+#         The index of the node in the decision tree that called this function
+#     classification_label: :obj:`list[str]`
+#         A list of strings containing classification labels to identify in components
+#         For example: ['provisionalaccept']
+#     prev_X_steps: :obj:`int`
+#         If 0, then just count the number of provisionally accepted or rejected
+#         or unclassified components in the current node. If this is a positive
+#         integer, then also check if a component was a in one of those three
+#         categories in ignore_prev_X_steps previous nodes. default=0
 
-    Returns
-    -------
-    full_comps2use: :obj:`list[int]`
-        A list of indices of components that have or add classification_lable
-    """
+#     Returns
+#     -------
+#     full_comps2use: :obj:`list[int]`
+#         A list of indices of components that have or add classification_lable
+#     """
 
-    full_comps2use = selectcomps2use(comptable, classification_label)
-    rationales = comptable["rationale"]
+#     full_comps2use = selectcomps2use(comptable, classification_label)
+#     rationales = comptable["rationale"]
 
-    if prev_X_steps > 0:  # if checking classifications in prevision nodes
-        for compidx in range(len(comptable)):
-            tmp_rationale = rationales.values[compidx]
-            tmp_list = re.split(":|;| ", tmp_rationale)
-            while "" in tmp_list:  # remove blank strings after splitting rationale
-                tmp_list.remove("")
-            # Check the previous nodes
-            # This is inefficient, but it should work
-            for didx in range(max(0, decision_node_idx - prev_X_steps), decision_node_idx):
-                if str(didx) in tmp_list:
-                    didx_loc = tmp_list.index(str(didx))
-                    if didx_loc > 1:
-                        tmp_classifier = tmp_list[didx_loc - 1]
-                        if tmp_classifier in classification_label:
-                            full_comps2use.append(compidx)
+#     if prev_X_steps > 0:  # if checking classifications in prevision nodes
+#         for compidx in range(len(comptable)):
+#             tmp_rationale = rationales.values[compidx]
+#             tmp_list = re.split(":|;| ", tmp_rationale)
+#             while "" in tmp_list:  # remove blank strings after splitting rationale
+#                 tmp_list.remove("")
+#             # Check the previous nodes
+#             # This is inefficient, but it should work
+#             for didx in range(max(0, decision_node_idx - prev_X_steps), decision_node_idx):
+#                 if str(didx) in tmp_list:
+#                     didx_loc = tmp_list.index(str(didx))
+#                     if didx_loc > 1:
+#                         tmp_classifier = tmp_list[didx_loc - 1]
+#                         if tmp_classifier in classification_label:
+#                             full_comps2use.append(compidx)
 
-    full_comps2use = list(set(full_comps2use))
+#     full_comps2use = list(set(full_comps2use))
 
-    return full_comps2use
+#     return full_comps2use
