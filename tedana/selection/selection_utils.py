@@ -617,7 +617,7 @@ def get_extend_factor(n_vols=None, extend_factor=None):
         if n_vols < 90:
             extend_factor = 3.0
         elif n_vols < 110:
-            extend_factor = float(2 + (n_vols - 90) / 20)
+            extend_factor = 2.0 + (n_vols - 90) / 20.0
         else:
             extend_factor = float(2)
         LGR.info("extend_factor={}, based on number of fMRI volumes".format(extend_factor))
