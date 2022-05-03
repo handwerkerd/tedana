@@ -615,7 +615,7 @@ def get_extend_factor(n_vols=None, extend_factor=None):
         LGR.info("extend_factor={}, as defined by user".format(extend_factor))
     elif n_vols:
         if n_vols < 90:
-            extend_factor = float(3)
+            extend_factor = 3.0
         elif n_vols < 110:
             extend_factor = float(2 + (n_vols - 90) / 20)
         else:
