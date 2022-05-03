@@ -18,7 +18,6 @@ from tedana.selection.selection_utils import (
     get_extend_factor,
     kappa_elbow_kundu,
     # get_new_meanmetricrank,
-    # prev_classified_comps,
 )
 
 LGR = logging.getLogger("GENERAL")
