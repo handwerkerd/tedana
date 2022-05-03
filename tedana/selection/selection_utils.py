@@ -63,7 +63,7 @@ def selectcomps2use(selector, decide_comps):
                 component_table["classification"] == decide_comps[didx]
             ].tolist()
             comps2use = list(set(comps2use + newcomps2use))
-    elif (type(decide_comps) == list) and all(isinstance(elem, int) for elem in decide_comps):
+    elif (type(decide_comps) == list) and all(type(elem) == int for elem in decide_comps):
         # decide_comps is already a string of indices
         if len(component_table) <= max(decide_comps):
             raise ValueError(
