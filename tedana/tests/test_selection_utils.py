@@ -43,6 +43,7 @@ def sample_selector(options=None):
     xcomp = {
         "n_echos": 3,
         "n_vols": 201,
+        "test_elbow": 21,
     }
     selector = ComponentSelector(tree, component_table, cross_component_metrics=xcomp)
     selector.current_node_idx = 0
