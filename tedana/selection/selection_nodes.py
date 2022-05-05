@@ -487,8 +487,8 @@ def dec_variance_lessthan_thresholds(
         # way to do this, but it works & should never cause an infinite loop
         if variance[decision_boolean].sum() > all_comp_threshold:
             while variance[decision_boolean].sum() > all_comp_threshold:
-                cutcomp = variance[decision_boolean].idxmax
-                decision_boolean[cutcomp] = False
+                tmpmax = variance == variance[decision_boolean].max()
+                decision_boolean[tmpmax] = False
         (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
             selector,
             ifTrue,
@@ -565,29 +565,55 @@ def calc_kappa_rho_elbows_kundu(
 
     outputs = {
         "decision_node_idx": selector.current_node_idx,
-        "used_metrics": set(["kappa", "rho"]),
-        "calc_cross_comp_metrics": [
-            "kappa_elbow_kundu",
-            "rho_elbow_kundu",
-            "varex_upper_p",
-        ],
         "node_label": None,
         "n_echos": selector.n_echos,
         "varex_upper_p": None,
-        "kappa_elbow_kundu": None,
-        "rho_elbow_kundu": None,
     }
+    if not (kappa_only ^ rho_only):
+        # if neither or both kappa and rho_only are set
+        outputs["used_metrics"] = set(["kappa", "rho"])
+        outputs["calc_cross_comp_metrics"] = [
+            "kappa_elbow_kundu",
+            "rho_elbow_kundu",
+            "varex_upper_p",
+        ]
+        outputs["kappa_elbow_kundu"] = None
+        outputs["rho_elbow_kundu"] = None
+        calc_kappa = True
+        calc_rho = True
+    elif kappa_only:
+        outputs["used_metrics"] = set(["kappa"])
+        outputs["calc_cross_comp_metrics"] = [
+            "kappa_elbow_kundu",
+            "varex_upper_p",
+        ]
+        outputs["kappa_elbow_kundu"] = None
+        calc_kappa = True
+        calc_rho = False
+    elif rho_only:
+        outputs["used_metrics"] = set(["rho"])
+        outputs["calc_cross_comp_metrics"] = [
+            "rho_elbow_kundu",
+            "varex_upper_p",
+        ]
+        outputs["rho_elbow_kundu"] = None
+        calc_kappa = False
+        calc_rho = True
 
     if only_used_metrics:
         return outputs["used_metrics"]
 
     function_name_idx = f"Step {selector.current_node_idx}: calc_kappa_rho_elbows_kundu"
 
-    if "kappa_elbow_kundu" in selector.cross_component_metrics:
+    if ("kappa_elbow_kundu" in selector.cross_component_metrics) and (
+        "kappa_elbow_kundu" in outputs["calc_cross_comp_metrics"]
+    ):
         LGR.warning(
             f"kappa_elbow_kundu already calculated. Overwriting previous value in {function_name_idx}"
         )
-    if "rho_elbow_kundu" in selector.cross_component_metrics:
+    if ("rho_elbow_kundu" in selector.cross_component_metrics) and (
+        "rho_elbow_kundu" in outputs["calc_cross_comp_metrics"]
+    ):
         LGR.warning(
             f"rho_elbow_kundu already calculated. Overwriting previous value in {function_name_idx}"
         )
@@ -599,12 +625,12 @@ def calc_kappa_rho_elbows_kundu(
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
-        if kappa_only:
+        if not (kappa_only ^ rho_only):
+            outputs["node_label"] = "Calc Kappa & Rho Elbows"
+        elif kappa_only:
             outputs["node_label"] = "Calc Kappa Elbow"
         elif rho_only:
             outputs["node_label"] = "Calc Rho Elbow"
-        else:
-            outputs["node_label"] = "Calc Kappa & Rho Elbows"
 
     LGR.info(
         "Note: This matches the elbow selecton criteria in Kundu's MEICA v2.7"
@@ -630,8 +656,9 @@ def calc_kappa_rho_elbows_kundu(
         if not unclassified_comps2use:
             log_decision_tree_step(function_name_idx, comps2use, decide_comps="unclassified")
     else:
-        outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, selector.n_echos)
-        selector.cross_component_metrics["kappa_elbow_kundu"] = outputs["kappa_elbow_kundu"]
+        if calc_kappa:
+            outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, selector.n_echos)
+            selector.cross_component_metrics["kappa_elbow_kundu"] = outputs["kappa_elbow_kundu"]
 
         # The first elbow used to be for rho values of the unclassified components
         # excluding a few based on differences of variance. Now it's all unclassified
@@ -655,7 +682,7 @@ def calc_kappa_rho_elbows_kundu(
             diff_vals = temp_comptable["variance explained"].diff(-1)
             diff_vals = diff_vals.fillna(0)
             ncls = temp_comptable.loc[diff_vals < outputs["varex_upper_p"]].index.values
-        # kappa_elbow was altready calculated in kappa_elbow_kundu above
+        # kappa_elbow was already calculated in kappa_elbow_kundu above
         # kappas_nonsig = comptable.loc[comptable["kappa"] < f01, "kappa"]
         # kappa_elbow = np.min(
         #     (
@@ -663,14 +690,15 @@ def calc_kappa_rho_elbows_kundu(
         #         getelbow(comptable["kappa"], return_val=True),
         #     )
         # )
-        outputs["rho_elbow_kundu"] = np.mean(
-            (
-                getelbow(component_table.loc[ncls, "rho"], return_val=True),
-                getelbow(component_table["rho"], return_val=True),
-                f05,
+        if calc_rho:
+            outputs["rho_elbow_kundu"] = np.mean(
+                (
+                    getelbow(component_table.loc[ncls, "rho"], return_val=True),
+                    getelbow(component_table["rho"], return_val=True),
+                    f05,
+                )
             )
-        )
-        selector.cross_component_metrics["rho_elbow_kundu"] = outputs["rho_elbow_kundu"]
+            selector.cross_component_metrics["rho_elbow_kundu"] = outputs["rho_elbow_kundu"]
 
         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
         #        numTrue, numFalse, len(comps2use))))

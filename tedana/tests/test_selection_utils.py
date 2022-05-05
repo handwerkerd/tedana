@@ -17,12 +17,15 @@ def sample_component_table(options=None):
 
     Options: Different strings will also the contents of the component table
         'provclass': Change the classifications to "provisional accept" for 4 components
+        'unclass': Change 4 classifications to "provisional accept" and the rest to "unclassified"
     """
 
     sample_fname = os.path.join(THIS_DIR, "data", "sample_comptable.tsv")
     component_table = pd.read_csv(sample_fname, delimiter="\t")
     component_table["classification_tags"] = ""
-    if options == "provclass":
+    if options == "unclass":
+        component_table["classification"] = "unclassified"
+    if (options == "provclass") or (options == "unclass"):
         component_table["classification"].iloc[[2, 4, 6, 8]] = "provisional accept"
     return component_table
 
@@ -34,6 +37,8 @@ def sample_selector(options=None):
 
     options: Different strings will alter the selector
        'provclass': Change the classifications to "provisional accept" for 4 components
+        'unclass': Change 4 classifications to "provisional accept" and the rest to "unclassified"
+
     """
 
     tree = "minimal"
@@ -324,7 +329,7 @@ def test_kappa_elbow_kundu_smoke():
 def test_get_extend_factor_smoke():
     """A smoke test for get_extend_factor"""
 
-    val = selection_utils.get_extend_factor(extend_factor=10.5)
+    val = selection_utils.get_extend_factor(extend_factor=int(10))
     assert isinstance(val, float)
 
     for n_vols in [80, 100, 120]:

@@ -169,7 +169,9 @@ def test_minimal():
         "n_echos": 3,
     }
     tree = ComponentSelector.ComponentSelector(
-        "minimal", sample_comptable(), cross_component_metrics=xcomp,
+        "minimal",
+        sample_comptable(),
+        cross_component_metrics=xcomp,
     )
     tree.select()
 
@@ -196,6 +198,14 @@ def test_validate_tree_succeeds():
         f = open(tree_name)
         tree = json.load(f)
         assert ComponentSelector.validate_tree(tree)
+
+        # Test a few extra possabilities just using the minimal.json tree
+        if "/minimal.json" in tree_name:
+            # Should remove/ignore the "reconstruct_from" key during validation
+            tree["reconstruct_from"] = "testinput"
+            # Need to test handling of the tag_ifFalse kwarg somewhere
+            tree["nodes"][1]["kwargs"]["tag_ifFalse"] = "testing tag"
+            assert ComponentSelector.validate_tree(tree)
 
 
 def test_validate_tree_warnings():
