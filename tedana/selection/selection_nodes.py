@@ -854,6 +854,8 @@ def dec_classification_exists(
     return selector
 
 
+dec_classification_exists.__doc__ = dec_classification_exists.__doc__.format(**decision_docs)
+
 # def meanmetricrank_and_variance_greaterthan_thresh(
 #     comptable,
 #     decision_node_idx,

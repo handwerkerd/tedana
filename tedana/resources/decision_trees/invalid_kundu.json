@@ -157,6 +157,23 @@
                 "log_extra_info": "",
                 "log_extra_report": ""
             }
-        }
+        },
+        {
+            "functionname": "meanmetricrank_and_variance_greaterthan_thresh",
+            "parameters": {
+                "ifTrue": "rejected",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
+                "n_vols": null
+            },
+            "kwargs": {
+                "high_perc": 90,
+                "log_extra_info": "",
+                "log_extra_report": ""
+            }
+        },
     ]
 }
