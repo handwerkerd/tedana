@@ -21,7 +21,8 @@
     "classification_tags": [
         "Likely BOLD",
         "Unlikely BOLD",
-        "Low variance"
+        "Low variance",
+        "No_provisionalaccept"
     ],
     "nodes": [
         {
@@ -38,239 +39,123 @@
             }
         },
         {
-            "functionname": "metric1_greaterthan_metric2",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
-                "metric1": "rho",
-                "metric2": "kappa"
+                "op": ">",
+                "left": "rho",
+                "right": "kappa"
             },
             "kwargs": {
                 "log_extra_info": "Reject if Kappa>Rho",
-                "log_extra_report": "",
-                "metric2_scale": 1
+                "log_extra_report": ""
             }
         },
         {
-            "functionname": "metric1_greaterthan_metric2",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
-                "metric1": "countsigFS0",
-                "metric2": "countsigFT2"
+                "op": ">",
+                "left": "countsigFS0",
+                "right": "countsigFT2"
             },
             "kwargs": {
                 "log_extra_info": "Reject if countsig_in S0clusters > T2clusters",
-                "log_extra_report": "",
-                "metric2_scale": 1
+                "log_extra_report": ""
             }
         },
         {
-            "functionname": "metric1_greaterthan_metric2",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
-                "metric1": "dice_FS0",
-                "metric2": "dice_FT2"
+                "op": ">",
+                "left": "dice_FS0",
+                "right": "dice_FT2"
             },
             "kwargs": {
                 "log_extra_info": "Reject if DICE S0>T2",
-                "log_extra_report": "",
-                "metric2_scale": 1
+                "log_extra_report": ""
             }
         },
         {
-            "functionname": "metric1_greaterthan_metric2",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
                 "ifFalse": "nochange",
                 "decide_comps": "all",
-                "metric1": 0,
-                "metric2": "signal-noise_t"
+                "op": ">",
+                "left": 0,
+                "right": "signal-noise_t"
             },
             "kwargs": {
                 "log_extra_info": "Reject if T2fitdiff_invsout_ICAmap_Tstat<0",
-                "log_extra_report": "",
-                "metric2_scale": 1
+                "log_extra_report": ""
             }
         },
         {
-            "functionname": "kappa_rho_elbow_cutoffs_kundu",
+            "functionname": "calc_kappa_rho_elbows_kundu",
+            "parameters": {
+                "decide_comps": "unclassified"
+            },
+            "kwargs": {
+                "log_extra_info": "",
+                "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "provisionalaccept",
-                "ifFalse": "provisionalreject",
+                "ifFalse": "nochange",
                 "decide_comps": "unclassified",
-                "n_echos": null
+                "op": ">",
+                "left": "kappa",
+                "right": "kappa_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "",
+                "log_extra_info": "kappa>elbow",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "classification_exists",
+            "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "nochange",
-                "ifFalse": "ignored",
+                "ifFalse": "provisionalreject",
                 "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified",
+                    "provisionalaccept"
                 ],
-                "class_comp_exists": "provisionalaccept"
+                "op": ">",
+                "left": "rho",
+                "right": "rho_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "",
+                "log_extra_info": "rho>elbow",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "meanmetricrank_and_variance_greaterthan_thresh",
-            "parameters": {
-                "ifTrue": "rejected",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_vols": null
-            },
-            "kwargs": {
-                "high_perc": 90,
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "lowvariance_highmeanmetricrank_lowkappa",
-            "parameters": {
-                "ifTrue": "ignored",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_echos": null,
-                "n_vols": null
-            },
-            "kwargs": {
-                "low_perc": 25,
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "classification_exists",
-            "parameters": {
-                "ifTrue": "nochange",
-                "ifFalse": "accepted",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "class_comp_exists": "provisionalreject"
-            },
-            "kwargs": {
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "highvariance_highmeanmetricrank_highkapparatio",
-            "parameters": {
-                "ifTrue": "rejected",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_echos": null,
-                "n_vols": null
-            },
-            "kwargs": {
-                "prev_X_steps": 3,
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "highvariance_highmeanmetricrank",
-            "parameters": {
-                "ifTrue": "rejected",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_echos": null,
-                "n_vols": null
-            },
-            "kwargs": {
-                "prev_X_steps": 1,
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "highvariance_highmeanmetricrank",
-            "parameters": {
-                "ifTrue": "ignored",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_echos": null
-            },
-            "kwargs": {
-                "prev_X_steps": 2,
-                "high_perc": 100,
-                "extend_factor": 1,
-                "recalc_varex_lower_thresh": true,
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "highvariance_lowkappa",
-            "parameters": {
-                "ifTrue": "ignored",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_echos": null
-            },
-            "kwargs": {
-                "log_extra_info": "",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "manual_classify",
+            "functionname": "dec_classification_exists",
             "parameters": {
                 "new_classification": "accepted",
-                "decide_comps": "provisionalaccept"
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject",
+                    "unclassified"
+                ],
+                "class_comp_exists": "provisional accept"
             },
             "kwargs": {
+                "tag_ifFalse": "No_provisionalaccept",
                 "log_extra_info": "",
-                "log_extra_report": "",
-                "clear_rationale": false
-            }
-        },
-        {
-            "functionname": "manual_classify",
-            "parameters": {
-                "new_classification": "rejected",
-                "decide_comps": "provisionalreject"
-            },
-            "kwargs": {
-                "log_extra_info": "",
-                "log_extra_report": "",
-                "clear_rationale": false
+                "log_extra_report": ""
             }
         }
     ]

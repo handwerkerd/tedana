@@ -206,7 +206,7 @@ def manual_classify(
         outputs["numFalse"] = 0
     else:
         decision_boolean = pd.Series(True, index=comps2use)
-        (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
+        selector, outputs["numTrue"], outputs["numFalse"] = change_comptable_classifications(
             selector,
             ifTrue,
             ifFalse,
@@ -357,9 +357,16 @@ def dec_left_op_right(
     )
 
     if not comps2use:
-        log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+            ifTrue=outputs["numTrue"],
+            ifFalse=outputs["numFalse"],
+        )
+
     else:
         if isinstance(left, str):
             val1 = component_table.loc[comps2use, left]
@@ -475,9 +482,15 @@ def dec_variance_lessthan_thresholds(
     )
 
     if not comps2use:
-        log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+            ifTrue=outputs["numTrue"],
+            ifFalse=outputs["numFalse"],
+        )
     else:
         variance = component_table.loc[comps2use, var_metric]
         decision_boolean = variance < single_comp_threshold
@@ -652,9 +665,25 @@ def calc_kappa_rho_elbows_kundu(
 
     if (not comps2use) or (not unclassified_comps2use):
         if not comps2use:
-            log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
+            outputs["numTrue"] = 0
+            outputs["numFalse"] = 0
+            log_decision_tree_step(
+                function_name_idx,
+                comps2use,
+                decide_comps=decide_comps,
+                ifTrue=outputs["numTrue"],
+                ifFalse=outputs["numFalse"],
+            )
         if not unclassified_comps2use:
-            log_decision_tree_step(function_name_idx, comps2use, decide_comps="unclassified")
+            outputs["numTrue"] = 0
+            outputs["numFalse"] = 0
+            log_decision_tree_step(
+                function_name_idx,
+                comps2use,
+                decide_comps="unclassified",
+                ifTrue=outputs["numTrue"],
+                ifFalse=outputs["numFalse"],
+            )
     else:
         if calc_kappa:
             outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, selector.n_echos)
@@ -716,103 +745,113 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 """
 
 
-# def classification_exists(
-#     comptable,
-#     decision_node_idx,
-#     ifTrue,
-#     ifFalse,
-#     decide_comps,
-#     class_comp_exists,
-#     log_extra_report="",
-#     log_extra_info="",
-#     custom_node_label="",
-#     only_used_metrics=False,
-# ):
-#     """
-#     If there are not compontents with a classification specified in class_comp_exists,
-#     change the classification of all components in decide_comps
-#     Parameters
-#     ----------
-#     {comptable}
-#     {decision_node_idx}
-#     {ifTrue}
-#     {ifFalse}
-#     {decide_comps}
-#     class_comp_exists: :obj:`str` or :obj:`list[str]` or :obj:`int` or :obj:`list[int]`
-#         This has the same structure options as decide_comps. This function tests
-#         whether any components have the classifications defined in this variable.
-#     {log_extra}
-#     {custom_node_label}
-#     {only_used_metrics}
+def dec_classification_exists(
+    selector,
+    new_classification,
+    decide_comps,
+    class_comp_exists,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+    tag_ifTrue=None,
+    tag_ifFalse=None,
+):
+    """
+    If there are not compontents with a classification specified in class_comp_exists,
+    change the classification of all components in decide_comps
+    Parameters
+    ----------
+    {selector}
+    new_classification: :obj: `str`
+        Assign all components identified in decide_comps the classification
+        in new_classification. Options are 'unclassified', 'accepted',
+        'rejected', or intermediate_classification labels predefined in the
+        decision tree
+    {decide_comps}
+    class_comp_exists: :obj:`str` or :obj:`list[str]` or :obj:`int` or :obj:`list[int]`
+        This has the same structure options as decide_comps. This function tests
+        whether any components have the classifications defined in this variable.
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+    {tag_ifTrueFalse}
 
-#     Returns
-#     -------
-#     {basicreturns}
 
-#     """
+    Returns
+    -------
+    {basicreturns}
 
-#     used_metrics = []
-#     if only_used_metrics:
-#         return used_metrics
+    """
 
-#     function_name_idx = "Step {}: classification_exists".format(decision_node_idx)
-#     if custom_node_label:
-#         node_label = custom_node_label
-#     else:
-#         node_label = "Change {} if {} doesn't exist".format(
-#             decide_comps, classification_exists
-#         )
+    # predefine all outputs that should be logged
+    outputs = {
+        "decision_node_idx": selector.current_node_idx,
+        "used_metrics": set(),
+        "used_cross_component_metrics": set(),
+        "node_label": None,
+        "numTrue": None,
+        "numFalse": None,
+    }
 
-#     # Might want to add additional default logging to functions here
-#     # The function input will be logged before the function call
-#     if log_extra_info:
-#         LGR.info(log_extra_info)
-#     if log_extra_report:
-#         RepLGR.info(log_extra_report)
+    if only_used_metrics:
+        return outputs["used_metrics"]
 
-#     comps2use = selectcomps2use(comptable, decide_comps)
-#     do_comps_exist = selectcomps2use(comptable, class_comp_exists)
+    function_name_idx = "Step {}: classification_exists".format((selector.current_node_idx))
+    if custom_node_label:
+        outputs["node_label"] = custom_node_label
+    else:
+        outputs["node_label"] = f"Change {decide_comps} if {class_comp_exists} doesn't exist"
 
-#     if not comps2use:
-#         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-#         numTrue = 0
-#         numFalse = 0
-#     elif do_comps_exist is None:
-#         # should be false for all components
-#         decision_boolean = comptable.loc[comps2use, "component"] < -100
-#         comptable = change_comptable_classifications(
-#             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
-#         )
-#         numTrue = np.asarray(decision_boolean).sum()
-#         # numtrue should always be 0 in this situation
-#         numFalse = np.logical_not(decision_boolean).sum()
-#         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-#         #    numTrue, numFalse, len(comps2use))))
-#         log_decision_tree_step(
-#             function_name_idx,
-#             comps2use,
-#             numTrue=numTrue,
-#             numFalse=numFalse,
-#             ifTrue=ifTrue,
-#             ifFalse=ifFalse,
-#         )
-#     else:
-#         numTrue = len(comps2use)
-#         numFalse = 0
-#         log_decision_tree_step(
-#             function_name_idx,
-#             comps2use,
-#             numTrue=numTrue,
-#             numFalse=numFalse,
-#             ifTrue=ifTrue,
-#             ifFalse=ifFalse,
-#         )
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
 
-#     dnode_outputs = create_dnode_outputs(
-#         decision_node_idx, used_metrics, node_label, numTrue, numFalse
-#     )
+    ifTrue = new_classification
+    ifFalse = "nochange"
 
-#     return comptable, dnode_outputs
+    comps2use, component_table = selectcomps2use(selector, decide_comps)
+
+    do_comps_exist, _ = selectcomps2use(selector, class_comp_exists)
+
+    if (not comps2use) or (do_comps_exist):
+        outputs["numTrue"] = 0
+        outputs["numFalse"] = 0
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+            ifTrue=outputs["numTrue"],
+            ifFalse=outputs["numFalse"],
+        )
+    else:  # do_comps_exist is None:
+        # should be True for all components in comps2use
+        # decision_boolean = pd.Series(data=False, index=np.arange(len(component_table)), dtype=bool)
+        # decision_boolean.iloc[comps2use] = True
+        decision_boolean = pd.Series(True, index=comps2use)
+
+        selector, outputs["numTrue"], outputs["numFalse"] = change_comptable_classifications(
+            selector,
+            ifTrue,
+            ifFalse,
+            decision_boolean,
+            tag_ifTrue=tag_ifTrue,
+            tag_ifFalse=tag_ifFalse,
+        )
+
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            numTrue=outputs["numTrue"],
+            numFalse=outputs["numFalse"],
+            ifTrue=ifTrue,
+            ifFalse=ifFalse,
+        )
+
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
+
+    return selector
 
 
 # def meanmetricrank_and_variance_greaterthan_thresh(

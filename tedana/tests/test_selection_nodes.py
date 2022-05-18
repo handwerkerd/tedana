@@ -40,6 +40,7 @@ def test_manual_classify_smoke():
     )
     # There should be 4 selected components and component_status_table should have a new column "Node 0"
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 4
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 0
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
     # No components with "NotALabel" classification so nothing selected and no
@@ -378,3 +379,70 @@ def test_calc_kappa_rho_elbows_kundu():
     )
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_kundu"] == None
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] == None
+
+
+def test_dec_classification_exists_smoke():
+    """Smoke tests for dec_classification_exists"""
+
+    selector = sample_selector(options="unclass")
+    decide_comps = ["unclassified", "provisional accept"]
+
+    # Outputs just the metrics used in this function {"variance explained"}
+    used_metrics = selection_nodes.dec_classification_exists(
+        selector,
+        "rejected",
+        decide_comps,
+        class_comp_exists="provisional accept",
+        only_used_metrics=True,
+    )
+    assert len(used_metrics) == 0
+
+    # Standard execution where with all extra logging code and options changed from defaults
+    selector = selection_nodes.dec_classification_exists(
+        selector,
+        "accepted",
+        decide_comps,
+        class_comp_exists="provisional accept",
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+        tag_ifTrue="test true tag",
+        tag_ifFalse="test false tag",
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 0
+    # During normal execution, it will find provionally accepted components
+    #  and do nothing so another node isn't created
+    assert f"Node {selector.current_node_idx}" not in selector.component_status_table
+
+    # No components with "NotALabel" classification so nothing selected and no
+    #   Node 1 column not created in component_status_table
+    # Running without specifying logging text generates internal text
+    selector.current_node_idx = 1
+    selector = selection_nodes.dec_classification_exists(
+        selector,
+        "accepted",
+        "NotAClassification",
+        class_comp_exists="provisional accept",
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 0
+    assert f"Node {selector.current_node_idx}" not in selector.component_status_table
+
+    # Other normal state is to change classifications when there are
+    # no components with class_comp_exists. Since the component_table
+    # initialized with sample_selector as not "provisional reject"
+    # components, using that for class_comp_exists
+    selector = sample_selector()
+    decide_comps = "accepted"
+    selector = selection_nodes.dec_classification_exists(
+        selector,
+        "changed accepted",
+        decide_comps,
+        class_comp_exists="provisional reject",
+        tag_ifTrue="test true tag",
+        tag_ifFalse="test false tag",
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 17
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 0
+    assert f"Node {selector.current_node_idx}" in selector.component_status_table
