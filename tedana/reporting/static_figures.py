@@ -9,6 +9,8 @@ import numpy as np
 
 matplotlib.use("AGG")
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as font_manager
+
 from nilearn import plotting
 
 from tedana import io, stats, utils
@@ -306,9 +308,9 @@ def pca_results(criteria, n_components, all_varex, io_generator):
 
     # Plot the PCA optimization curve for each criteria
     plt.figure(figsize=(10, 9))
-    plt.title("PCA Criteria")
-    plt.xlabel("PCA components")
-    plt.ylabel("Arbitrary Units")
+    plt.title("PCA Criteria", fontsize=36, font="Baskerville")
+    plt.xlabel("PCA components", fontsize=36, font="Baskerville")
+    plt.ylabel("Arbitrary Units", fontsize=36, font="Baskerville")
 
     # AIC curve
     plt.plot(criteria[0, :], color="tab:blue", label="AIC")
@@ -360,19 +362,23 @@ def pca_results(criteria, n_components, all_varex, io_generator):
         label="95% varexp",
     )
 
-    plt.legend()
+    plt.xticks(font="Baskerville", fontsize=24)
+    plt.yticks(font="Baskerville", fontsize=24)
+
+    font = font_manager.FontProperties(family="Baskerville", style="normal", size=28)
+    plt.legend(prop=font)
 
     #  Save the plot
-    plot_name = "pca_criteria.png"
+    plot_name = "pca_criteria.svg"
     pca_criteria_name = os.path.join(io_generator.out_dir, "figures", plot_name)
     plt.savefig(pca_criteria_name)
     plt.close()
 
     # Plot the variance explained curve
     plt.figure(figsize=(10, 9))
-    plt.title("Variance Explained")
-    plt.xlabel("PCA components")
-    plt.ylabel("Variance Explained")
+    plt.title("Variance Explained", fontsize=36, font="Baskerville")
+    plt.xlabel("PCA components", fontsize=36, font="Baskerville")
+    plt.ylabel("Variance Explained", fontsize=36, font="Baskerville")
 
     plt.plot(all_varex, color="black", label="Variance Explained")
 
@@ -422,10 +428,13 @@ def pca_results(criteria, n_components, all_varex, io_generator):
         label="95% varexp",
     )
 
-    plt.legend()
+    plt.xticks(font="Baskerville", fontsize=24)
+    plt.yticks(font="Baskerville", fontsize=24)
+
+    plt.legend(prop=font)
 
     #  Save the plot
-    plot_name = "pca_variance_explained.png"
+    plot_name = "pca_variance_explained.svg"
     pca_variance_explained_name = os.path.join(io_generator.out_dir, "figures", plot_name)
     plt.savefig(pca_variance_explained_name)
     plt.close()
