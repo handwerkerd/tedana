@@ -15,14 +15,14 @@
         "d_table_score"
     ],
     "intermediate_classifications": [
-        "provisionalaccept",
-        "provisionalreject"
+        "provisional accept",
+        "provisional reject"
     ],
     "classification_tags": [
         "Likely BOLD",
         "Unlikely BOLD",
         "Low variance",
-        "No_provisionalaccept"
+        "No provision alaccept"
     ],
     "nodes": [
         {
@@ -111,7 +111,7 @@
         {
             "functionname": "dec_left_op_right",
             "parameters": {
-                "ifTrue": "provisionalaccept",
+                "ifTrue": "provisional accept",
                 "ifFalse": "nochange",
                 "decide_comps": "unclassified",
                 "op": ">",
@@ -127,10 +127,10 @@
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "nochange",
-                "ifFalse": "provisionalreject",
+                "ifFalse": "provisional reject",
                 "decide_comps": [
                     "unclassified",
-                    "provisionalaccept"
+                    "provisiona laccept"
                 ],
                 "op": ">",
                 "left": "rho",
@@ -146,34 +146,98 @@
             "parameters": {
                 "new_classification": "accepted",
                 "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject",
+                    "provisional accept",
+                    "provisional reject",
                     "unclassified"
                 ],
                 "class_comp_exists": "provisional accept"
             },
             "kwargs": {
-                "tag_ifFalse": "No_provisionalaccept",
+                "tag_ifFalse": "No provisional accept",
                 "log_extra_info": "",
                 "log_extra_report": ""
             }
         },
         {
-            "functionname": "meanmetricrank_and_variance_greaterthan_thresh",
+            "functionname": "calc_varex_upper_thresh",
             "parameters": {
-                "ifTrue": "rejected",
-                "ifFalse": "nochange",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject"
-                ],
-                "n_vols": null
+                "decide_comps": "provisional accept"
             },
             "kwargs": {
-                "high_perc": 90,
-                "log_extra_info": "",
+                "high_perc": 90
+            }
+        },
+        {
+            "functionname": "calc_extend_factor",
+            "parameters": {},
+            "kwargs": {}
+        },
+        {
+            "functionname": "calc_max_good_meanmetricrank",
+            "parameters": {
+                "decide_comps": "provisional accept"
+            },
+            "kwargs": {}
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "GT_meanmetricrank",
+                "ifFalse": "nochange",
+                "decide_comps": "provisional accept",
+                "op": ">",
+                "left": "d_table_score",
+                "right": "max_good_meanmetricrank"
+            },
+            "kwargs": {
+                "log_extra_info": "metric_rank>max_good_meanmetricrank",
                 "log_extra_report": ""
             }
         },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "reject",
+                "ifFalse": "provisional accept",
+                "decide_comps": "GT_meanmetricrank",
+                "op": ">",
+                "left": "variance explained",
+                "right": "varex_upper_thresh"
+            },
+            "kwargs": {
+                "log_extra_info": "metric_rank>max_good_meanmetricrank",
+                "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "GT_meanmetricrank",
+                "ifFalse": "nochange",
+                "decide_comps": "provisional reject",
+                "op": ">",
+                "left": "d_table_score",
+                "right": "max_good_meanmetricrank"
+            },
+            "kwargs": {
+                "log_extra_info": "metric_rank>max_good_meanmetricrank",
+                "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "reject",
+                "ifFalse": "provisional reject",
+                "decide_comps": "GT_meanmetricrank",
+                "op": ">",
+                "left": "variance explained",
+                "right": "varex_upper_thresh"
+            },
+            "kwargs": {
+                "log_extra_info": "metric_rank>max_good_meanmetricrank",
+                "log_extra_report": ""
+            }
+        }
     ]
 }

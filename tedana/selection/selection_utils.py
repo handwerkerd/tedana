@@ -345,6 +345,7 @@ def log_decision_tree_step(
     ifTrue=None,
     ifFalse=None,
     calc_outputs=None,
+    comps_needed=True,
 ):
     """
     Logging text to add for every decision tree calculation
@@ -373,6 +374,11 @@ def log_decision_tree_step(
         cross component metrics (i.e. kappa or rho elbows) that were calculated
         within the function. Each of those metrics will also be a key in calc_outputs
         and those keys and values will be logged by this function
+    comps_needed: :obj:`bool`
+        Thresholds, like extend_factor need to be calculated because they use the number
+        of volumes, but they don't use the components. In this case, comps2use might be
+        none, but that's not an problem. Set comps_needed to False so that a warning is
+        not logged
 
     Returns
     -------
@@ -382,7 +388,7 @@ def log_decision_tree_step(
     calculated
     """
 
-    if not comps2use:
+    if not comps2use and comps_needed:
         LGR.info(
             f"{function_name_idx} not applied because no remaining components were "
             f"classified as {decide_comps}"
