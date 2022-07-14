@@ -299,8 +299,11 @@ def _get_parser():
         "--quiet", dest="quiet", help=argparse.SUPPRESS, action="store_true", default=False
     )
     parser.add_argument(
-        "--force", "-f", dest="force", action="store_true",
-        help="Force overwriting of files. Default False."
+        "--force",
+        "-f",
+        dest="force",
+        action="store_true",
+        help="Force overwriting of files. Default False.",
     )
     optional.add_argument("-v", "--version", action="version", version=verstr)
     parser._action_groups.append(optional)
@@ -657,12 +660,7 @@ def tedana_workflow(
                 "ICA",
                 metrics=required_metrics,
             )
-            ica_selection = selection.automatic_selection(
-                comptable,
-                n_echos,
-                n_vols,
-                tree=tree
-            )
+            ica_selection = selection.automatic_selection(comptable, n_echos, n_vols, tree=tree)
             n_bold_comps = ica_selection.n_bold_comps
             if (n_restarts < maxrestart) and (n_bold_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")
@@ -708,7 +706,10 @@ def tedana_workflow(
             n_vols,
             tree=tree,
         )
-        
+
+    # TODO The ICA mixing matrix should be written out after it is created
+    #     It is currently being writen after component selection is done
+    #     and rewritten if an existing mixing matrix is given as an input
     comp_names = comptable["Component"].values
     mixing_df = pd.DataFrame(data=mmix, columns=comp_names)
     io_generator.save_file(mixing_df, "ICA mixing tsv")

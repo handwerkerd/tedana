@@ -15,8 +15,8 @@
         "d_table_score"
     ],
     "intermediate_classifications": [
-        "provisional accept",
-        "provisional reject"
+        "provisionalaccept",
+        "provisionalreject"
     ],
     "classification_tags": [
         "Likely BOLD",
@@ -50,7 +50,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if Kappa>Rho",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -65,7 +66,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if countsig_in S0clusters > T2clusters",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -80,7 +82,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if DICE S0>T2",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -95,7 +98,8 @@
             },
             "kwargs": {
                 "log_extra_info": "Reject if T2fitdiff_invsout_ICAmap_Tstat<0",
-                "log_extra_report": ""
+                "log_extra_report": "",
+                "tag_ifTrue": "Unlikely BOLD"
             }
         },
         {
@@ -111,7 +115,7 @@
         {
             "functionname": "dec_left_op_right",
             "parameters": {
-                "ifTrue": "provisional accept",
+                "ifTrue": "provisionalaccept",
                 "ifFalse": "nochange",
                 "decide_comps": "unclassified",
                 "op": ">",
@@ -127,10 +131,10 @@
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "nochange",
-                "ifFalse": "provisional reject",
+                "ifFalse": "provisionalreject",
                 "decide_comps": [
                     "unclassified",
-                    "provisiona laccept"
+                    "provisionalaccept"
                 ],
                 "op": ">",
                 "left": "rho",
@@ -146,11 +150,11 @@
             "parameters": {
                 "new_classification": "accepted",
                 "decide_comps": [
-                    "provisional accept",
-                    "provisional reject",
+                    "provisionalaccept",
+                    "provisionalreject",
                     "unclassified"
                 ],
-                "class_comp_exists": "provisional accept"
+                "class_comp_exists": "provisionalaccept"
             },
             "kwargs": {
                 "tag_ifFalse": "No provisional accept",
@@ -161,7 +165,7 @@
         {
             "functionname": "calc_varex_upper_thresh",
             "parameters": {
-                "decide_comps": "provisional accept"
+                "decide_comps": "provisionalaccept"
             },
             "kwargs": {
                 "high_perc": 90
@@ -175,7 +179,7 @@
         {
             "functionname": "calc_max_good_meanmetricrank",
             "parameters": {
-                "decide_comps": "provisional accept"
+                "decide_comps": "provisionalaccept"
             },
             "kwargs": {}
         },
@@ -184,7 +188,7 @@
             "parameters": {
                 "ifTrue": "GT_meanmetricrank",
                 "ifFalse": "nochange",
-                "decide_comps": "provisional accept",
+                "decide_comps": "provisionalaccept",
                 "op": ">",
                 "left": "d_table_score",
                 "right": "max_good_meanmetricrank"
@@ -198,7 +202,7 @@
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "reject",
-                "ifFalse": "provisional accept",
+                "ifFalse": "provisionalaccept",
                 "decide_comps": "GT_meanmetricrank",
                 "op": ">",
                 "left": "variance explained",
@@ -214,7 +218,7 @@
             "parameters": {
                 "ifTrue": "GT_meanmetricrank",
                 "ifFalse": "nochange",
-                "decide_comps": "provisional reject",
+                "decide_comps": "provisionalreject",
                 "op": ">",
                 "left": "d_table_score",
                 "right": "max_good_meanmetricrank"
@@ -228,7 +232,7 @@
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "reject",
-                "ifFalse": "provisional reject",
+                "ifFalse": "provisionalreject",
                 "decide_comps": "GT_meanmetricrank",
                 "op": ">",
                 "left": "variance explained",
@@ -237,6 +241,33 @@
             "kwargs": {
                 "log_extra_info": "metric_rank>max_good_meanmetricrank",
                 "log_extra_report": ""
+            }
+        },
+        {
+            "functionname": "manual_classify",
+            "parameters": {
+                "new_classification": "accepted",
+                "decide_comps": "provisionalaccept"
+            },
+            "kwargs": {
+                "log_extra_info": "",
+                "log_extra_report": "",
+                "tag": "Likely BOLD"
+            }
+        },
+        {
+            "functionname": "manual_classify",
+            "parameters": {
+                "new_classification": "rejected",
+                "decide_comps": [
+                    "provisionalreject",
+                    "unclassified"
+                ]
+            },
+            "kwargs": {
+                "log_extra_info": "",
+                "log_extra_report": "",
+                "tag": "Unlikely BOLD"
             }
         }
     ]
