@@ -248,6 +248,11 @@ def dec_left_op_right(
     right,
     left_scale=1,
     right_scale=1,
+    op2=None,
+    left2=None,
+    right2=None,
+    left2_scale=1,
+    right2_scale=1,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
@@ -278,9 +283,20 @@ def dec_left_op_right(
         For example left='T2fitdiff_invsout_ICAmap_Tstat', right=0, and op='>'
         means this function will test T2fitdiff_invsout_ICAmap_Tstat>0
     left_scale, right_scale: :obj:`float`, optional
-            Multiply the left or right metrics value by a constant. For example
-            if left='kappa', right='rho', right_scale=2, and op='>' this tests
-            kappa>(2*rho). default=1
+        Multiply the left or right metrics value by a constant. For example
+        if left='kappa', right='rho', right_scale=2, and op='>' this tests
+        kappa>(2*rho). default=1
+    op2: :ojb:`str`, optional
+    left2, right2: :obj:`str` or :obj:`float`, optional
+    left2_scale, right2_scale: :obj:`float`, optional
+        This function can be used to calculate the intersection of two
+        boolean statements. If op2, left2, and right2 are defined then
+        this function returns
+        (left_scale*)left op (right_scale*right) AND (left2_scale*)left2 op2 (right2_scale*right2)
+        Note: This is designed to only allow an "and" not an "or" for the two statements. If there
+        is a reason to use "or" then run this function once for each boolean statement. This is an
+        intentional decision so that, if a change happens if A or B is True, then the output logging
+        will log the status of both.
     {log_extra}
     {custom_node_label}
     {only_used_metrics}
@@ -301,47 +317,74 @@ def dec_left_op_right(
         "numFalse": None,
     }
 
-    if isinstance(left, str):
-        if left in selector.component_table.columns:
-            outputs["used_metrics"].update([left])
-        elif left in selector.cross_component_metrics:
-            outputs["used_cross_component_metrics"].update([left])
-            left = selector.cross_component_metrics[left]
-        else:
-            raise ValueError(
-                f"{left} is neither a metric in component_table nor selector.cross_component_metrics"
-            )
-    if isinstance(right, str):
-        if right in selector.component_table.columns:
-            outputs["used_metrics"].update([right])
-        elif right in selector.cross_component_metrics:
-            outputs["used_cross_component_metrics"].update([right])
-            right = selector.cross_component_metrics[right]
-        else:
-            raise ValueError(
-                f"{right} is neither a metric in component_table nor selector.cross_component_metrics"
-            )
+    def identify_used_metric(val):
+        """
+        Parse the left or right values if they're an existing using_metric cross_component_metric
+        If it's already an integer, no parse would be needed
+        """
+        if isinstance(val, str):
+            if val in selector.component_table.columns:
+                outputs["used_metrics"].update([val])
+            elif val in selector.cross_component_metrics:
+                outputs["used_cross_component_metrics"].update([val])
+                val = selector.cross_component_metrics[val]
+            else:
+                raise ValueError(
+                    f"{val} is neither a metric in component_table nor selector.cross_component_metrics"
+                )
+        return val
 
-    if only_used_metrics:
-        return outputs["used_metrics"]
+    left = identify_used_metric(left)
+    right = identify_used_metric(right)
 
     legal_ops = (">", ">=", "==", "<=", "<")
     if op not in legal_ops:
         raise ValueError(f"{op} is not a binary comparison operator, like > or <")
 
+    # If any of the values for the second boolean statement are set
+    if left2 or right2 or op2:
+        # Check if they're all set & use them all or raise an error
+        if left2 and right2 and op2:
+            SecondBool = True
+            left2 = identify_used_metric(left2)
+            right2 = identify_used_metric(right2)
+            if op2 not in legal_ops:
+                raise ValueError(f"{op2} is not a binary comparison operator, like > or <")
+        else:
+            raise ValueError(
+                "left_op_right can check if a first and second boolean "
+                "statement are both true. This call includes some but not "
+                "all variables to define the second boolean statement "
+                f"left2={left2}, righ2={right2}, op2={op2}"
+            )
+    else:
+        SecondBool = False
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
+    def operator_scale_descript(val_scale):
+        """For equation description either include scaling factor or send an empty string if it's just 1"""
+        if val_scale == 1:
+            return ""
+        else:
+            return f"{left_scale}*"
+
     function_name_idx = f"Step {selector.current_node_idx}: left_op_right"
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
-        if left_scale == 1:
-            tmp_left_scale = ""
+        tmp_left_scale = operator_scale_descript(left_scale)
+        tmp_right_scale = operator_scale_descript(right_scale)
+        if SecondBool:
+            tmp_left2_scale = operator_scale_descript(left2_scale)
+            tmp_right2_scale = operator_scale_descript(right2_scale)
+            outputs["node_label"] = [
+                f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right} and "
+                f"{tmp_left2_scale}{left2}{op2}{tmp_right2_scale}{right2}"
+            ]
         else:
-            tmp_left_scale = f"{left_scale}*"
-        if right_scale == 1:
-            tmp_right_scale = ""
-        else:
-            tmp_right_scale = f"{right_scale}*"
-        outputs["node_label"] = f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right}"
+            outputs["node_label"] = f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right}"
 
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
@@ -356,6 +399,13 @@ def dec_left_op_right(
         component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
+    def parse_vals(val):
+        """Get the actual metric values for the selected components or return the constant int or float"""
+        if isinstance(val, str):
+            return component_table.loc[comps2use, val]
+        else:
+            return val  # should be a fixed number
+
     if not comps2use:
         outputs["numTrue"] = 0
         outputs["numFalse"] = 0
@@ -368,15 +418,16 @@ def dec_left_op_right(
         )
 
     else:
-        if isinstance(left, str):
-            val1 = component_table.loc[comps2use, left]
-        else:
-            val1 = left  # should be a fixed number
-        if isinstance(right, str):
-            val2 = component_table.loc[comps2use, right]
-        else:
-            val2 = right  # should be a fixed number
-        decision_boolean = eval(f"(left_scale*val1) {op} (right_scale * val2)")
+        left1_val = parse_vals(left)
+        right1_val = parse_vals(right)
+        decision_boolean = eval(f"(left_scale*left1_val) {op} (right_scale * right1_val)")
+        if SecondBool:
+            left2_val = parse_vals(left2)
+            right2_val = parse_vals(right2)
+            tmp = decision_boolean
+            decision_boolean = tmp and eval(
+                f"(left2_scale*left2_val) {op2} (right2_scale * right2_val)"
+            )
 
         (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
             selector,
