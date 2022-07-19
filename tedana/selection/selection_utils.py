@@ -43,6 +43,9 @@ def selectcomps2use(selector, decide_comps):
         component, with a column for each metric. Since the component table
         is assigned rather than copied, changes to this variable will change
         `selector.component_table`
+
+    TODO: Confirm that multiple decide_comps with a space in their name causes problems
+       If so, then figure out why an fix or remove spaces: x = [s.replace(‘ ‘, ‘’) for s in x]
     """
 
     component_table = selector.component_table

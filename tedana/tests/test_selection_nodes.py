@@ -179,6 +179,24 @@ def test_dec_left_op_right_succeeds():
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 3
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
+    # Testing combination of two statements. kappa>21 AND rho<13
+    selector = sample_selector(options="provclass")
+    selector = selection_nodes.dec_left_op_right(
+        selector,
+        "accepted",
+        "rejected",
+        decide_comps,
+        "<",
+        21.0,
+        "kappa",
+        left2="rho",
+        op2="<",
+        right2=14,
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 2
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 2
+    assert f"Node {selector.current_node_idx}" in selector.component_status_table
+
 
 def test_dec_left_op_right_fails():
     """tests for calls to dec_left_op_right that raise errors"""

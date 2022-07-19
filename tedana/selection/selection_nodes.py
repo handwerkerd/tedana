@@ -425,7 +425,7 @@ def dec_left_op_right(
             left2_val = parse_vals(left2)
             right2_val = parse_vals(right2)
             tmp = decision_boolean
-            decision_boolean = tmp and eval(
+            decision_boolean = tmp * eval(
                 f"(left2_scale*left2_val) {op2} (right2_scale * right2_val)"
             )
 
