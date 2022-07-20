@@ -345,7 +345,7 @@ def dec_left_op_right(
     if left2 or right2 or op2:
         # Check if they're all set & use them all or raise an error
         if left2 and right2 and op2:
-            SecondBool = True
+            is_compound = True
             left2 = identify_used_metric(left2)
             right2 = identify_used_metric(right2)
             if op2 not in legal_ops:
@@ -358,7 +358,7 @@ def dec_left_op_right(
                 f"left2={left2}, righ2={right2}, op2={op2}"
             )
     else:
-        SecondBool = False
+        is_compound = False
 
     if only_used_metrics:
         return outputs["used_metrics"]
@@ -376,11 +376,11 @@ def dec_left_op_right(
     else:
         tmp_left_scale = operator_scale_descript(left_scale)
         tmp_right_scale = operator_scale_descript(right_scale)
-        if SecondBool:
+        if is_compound:
             tmp_left2_scale = operator_scale_descript(left2_scale)
             tmp_right2_scale = operator_scale_descript(right2_scale)
             outputs["node_label"] = [
-                f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right} and "
+                f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right} & "
                 f"{tmp_left2_scale}{left2}{op2}{tmp_right2_scale}{right2}"
             ]
         else:
@@ -421,13 +421,13 @@ def dec_left_op_right(
         left1_val = parse_vals(left)
         right1_val = parse_vals(right)
         decision_boolean = eval(f"(left_scale*left1_val) {op} (right_scale * right1_val)")
-        if SecondBool:
+        if is_compound:
             left2_val = parse_vals(left2)
             right2_val = parse_vals(right2)
-            tmp = decision_boolean
-            decision_boolean = tmp * eval(
-                f"(left2_scale*left2_val) {op2} (right2_scale * right2_val)"
-            )
+            statement1 = decision_boolean.copy()
+            statement2 = eval(f"(left2_scale*left2_val) {op2} (right2_scale * right2_val)")
+            # logical dot product for compound statement
+            decision_boolean = statement1 * statement2
 
         (selector, outputs["numTrue"], outputs["numFalse"],) = change_comptable_classifications(
             selector,
