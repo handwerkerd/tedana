@@ -243,6 +243,38 @@ def test_dec_left_op_right_fails():
             21,
         )
 
+    # Raise error if some but not all parameters for the second conditional statement are defined
+    #  In this case, op2 is not defined
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selection_nodes.dec_left_op_right(
+            selector,
+            "accepted",
+            "rejected",
+            decide_comps,
+            ">",
+            "kappa",
+            21,
+            left2="rho",
+            right2=14,
+        )
+
+    # Raise error for invalid operator for op2
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selection_nodes.dec_left_op_right(
+            selector,
+            "accepted",
+            "rejected",
+            decide_comps,
+            ">",
+            "kappa",
+            21,
+            left2="rho",
+            op2="<>",
+            right2=14,
+        )
+
 
 def test_dec_variance_lessthan_thresholds_smoke():
     """Smoke tests for dec_variance_lessthan_thresholds"""
