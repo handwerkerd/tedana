@@ -48,29 +48,30 @@ def selectcomps2use(selector, decide_comps):
        If so, then figure out why an fix or remove spaces: x = [s.replace(‘ ‘, ‘’) for s in x]
     """
 
-    component_table = selector.component_table
-    if "classification" not in component_table:
-        raise ValueError("component_table needs a 'classification' column to run selectcomp2suse")
+    if "classification" not in selector.component_table:
+        raise ValueError(
+            "selector.component_table needs a 'classification' column to run selectcomp2suse"
+        )
 
     if (type(decide_comps) == str) or (type(decide_comps) == int):
         decide_comps = [decide_comps]
     if (type(decide_comps) == list) and (decide_comps[0] == "all"):
         # All components with any string in the classification field
         # are set to True
-        comps2use = list(range(component_table.shape[0]))
+        comps2use = list(range(selector.component_table.shape[0]))
 
     elif (type(decide_comps) == list) and all(isinstance(elem, str) for elem in decide_comps):
         comps2use = []
         for didx in range(len(decide_comps)):
-            newcomps2use = component_table.index[
-                component_table["classification"] == decide_comps[didx]
+            newcomps2use = selector.component_table.index[
+                selector.component_table["classification"] == decide_comps[didx]
             ].tolist()
             comps2use = list(set(comps2use + newcomps2use))
     elif (type(decide_comps) == list) and all(type(elem) == int for elem in decide_comps):
         # decide_comps is already a string of indices
-        if len(component_table) <= max(decide_comps):
+        if len(selector.component_table) <= max(decide_comps):
             raise ValueError(
-                f"decide_comps for selectcomps2use is selecting for a component with index {max(decide_comps)} (0 indexing) which is greater than the number of components: {len(component_table)}"
+                f"decide_comps for selectcomps2use is selecting for a component with index {max(decide_comps)} (0 indexing) which is greater than the number of components: {len(selector.component_table)}"
             )
         elif min(decide_comps) < 0:
             raise ValueError(
@@ -89,7 +90,7 @@ def selectcomps2use(selector, decide_comps):
     # if not comps2use:
     #     comps2use = None
 
-    return comps2use, component_table
+    return comps2use
 
 
 def change_comptable_classifications(

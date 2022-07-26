@@ -198,7 +198,7 @@ def manual_classify(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
 
     if not comps2use:
         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
@@ -227,7 +227,7 @@ def manual_classify(
         )
 
     if clear_classification_tags:
-        component_table["classification_tags"] = ""
+        selector.component_table["classification_tags"] = ""
         LGR.info(function_name_idx + " component classification tags are cleared")
 
     selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
@@ -330,7 +330,7 @@ def dec_left_op_right(
                 val = selector.cross_component_metrics[val]
             else:
                 raise ValueError(
-                    f"{val} is neither a metric in component_table nor selector.cross_component_metrics"
+                    f"{val} is neither a metric in selector.component_table nor selector.cross_component_metrics"
                 )
         return val
 
@@ -393,16 +393,16 @@ def dec_left_op_right(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
 
     confirm_metrics_exist(
-        component_table, outputs["used_metrics"], function_name=function_name_idx
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
     def parse_vals(val):
         """Get the actual metric values for the selected components or return the constant int or float"""
         if isinstance(val, str):
-            return component_table.loc[comps2use, val]
+            return selector.component_table.loc[comps2use, val]
         else:
             return val  # should be a fixed number
 
@@ -527,9 +527,9 @@ def dec_variance_lessthan_thresholds(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
     confirm_metrics_exist(
-        component_table, outputs["used_metrics"], function_name=function_name_idx
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
     if not comps2use:
@@ -543,7 +543,7 @@ def dec_variance_lessthan_thresholds(
             ifFalse=outputs["numFalse"],
         )
     else:
-        variance = component_table.loc[comps2use, var_metric]
+        variance = selector.component_table.loc[comps2use, var_metric]
         decision_boolean = variance < single_comp_threshold
         # if all the low variance components sum above all_comp_threshold
         # keep removing the highest remaining variance component until
@@ -707,12 +707,12 @@ def calc_kappa_rho_elbows_kundu(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
     confirm_metrics_exist(
-        component_table, outputs["used_metrics"], function_name=function_name_idx
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
-    unclassified_comps2use = selectcomps2use(selector, "unclassified")[0]
+    unclassified_comps2use = selectcomps2use(selector, "unclassified")
 
     if (not comps2use) or (not unclassified_comps2use):
         if not comps2use:
@@ -737,7 +737,9 @@ def calc_kappa_rho_elbows_kundu(
             )
     else:
         if calc_kappa:
-            outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(component_table, selector.n_echos)
+            outputs["kappa_elbow_kundu"] = kappa_elbow_kundu(
+                selector.component_table, selector.n_echos
+            )
             selector.cross_component_metrics["kappa_elbow_kundu"] = outputs["kappa_elbow_kundu"]
 
         # The first elbow used to be for rho values of the unclassified components
@@ -747,8 +749,9 @@ def calc_kappa_rho_elbows_kundu(
         # Kappa values. High Kappa is defined as Kappa above Kappa elbow.
         f05, _, f01 = getfbounds(selector.n_echos)
         outputs["varex_upper_p"] = np.median(
-            component_table.loc[
-                component_table["kappa"] > getelbow(component_table["kappa"], return_val=True),
+            selector.component_table.loc[
+                selector.component_table["kappa"]
+                > getelbow(selector.component_table["kappa"], return_val=True),
                 "variance explained",
             ]
         )
@@ -756,7 +759,7 @@ def calc_kappa_rho_elbows_kundu(
 
         ncls = unclassified_comps2use.copy()
         for i_loop in range(3):
-            temp_comptable = component_table.loc[ncls].sort_values(
+            temp_comptable = selector.component_table.loc[ncls].sort_values(
                 by=["variance explained"], ascending=False
             )
             diff_vals = temp_comptable["variance explained"].diff(-1)
@@ -773,8 +776,8 @@ def calc_kappa_rho_elbows_kundu(
         if calc_rho:
             outputs["rho_elbow_kundu"] = np.mean(
                 (
-                    getelbow(component_table.loc[ncls, "rho"], return_val=True),
-                    getelbow(component_table["rho"], return_val=True),
+                    getelbow(selector.component_table.loc[ncls, "rho"], return_val=True),
+                    getelbow(selector.component_table["rho"], return_val=True),
                     f05,
                 )
             )
@@ -862,9 +865,9 @@ def dec_classification_exists(
     ifTrue = new_classification
     ifFalse = "nochange"
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
 
-    do_comps_exist, _ = selectcomps2use(selector, class_comp_exists)
+    do_comps_exist = selectcomps2use(selector, class_comp_exists)
 
     if (not comps2use) or (do_comps_exist):
         outputs["numTrue"] = 0
@@ -878,7 +881,7 @@ def dec_classification_exists(
         )
     else:  # do_comps_exist is None:
         # should be True for all components in comps2use
-        # decision_boolean = pd.Series(data=False, index=np.arange(len(component_table)), dtype=bool)
+        # decision_boolean = pd.Series(data=False, index=np.arange(len(selector.component_table)), dtype=bool)
         # decision_boolean.iloc[comps2use] = True
         decision_boolean = pd.Series(True, index=comps2use)
 
@@ -983,9 +986,9 @@ def calc_varex_upper_thresh(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
     confirm_metrics_exist(
-        component_table, outputs["used_metrics"], function_name=function_name_idx
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
     if not comps2use:
@@ -996,7 +999,7 @@ def calc_varex_upper_thresh(
         )
     else:
         outputs["varex_upper_thresh"] = scoreatpercentile(
-            component_table.loc[comps2use, "variance explained"], high_perc
+            selector.component_table.loc[comps2use, "variance explained"], high_perc
         )
 
         selector.cross_component_metrics["varex_upper_thresh"] = outputs["varex_upper_thresh"]
@@ -1136,9 +1139,9 @@ def calc_max_good_meanmetricrank(
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
-    comps2use, component_table = selectcomps2use(selector, decide_comps)
+    comps2use = selectcomps2use(selector, decide_comps)
     confirm_metrics_exist(
-        component_table, outputs["used_metrics"], function_name=function_name_idx
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
     )
 
     if not comps2use:

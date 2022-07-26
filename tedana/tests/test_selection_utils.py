@@ -26,7 +26,7 @@ def sample_component_table(options=None):
     if options == "unclass":
         component_table["classification"] = "unclassified"
     if (options == "provclass") or (options == "unclass"):
-        component_table["classification"].iloc[[2, 4, 6, 8]] = "provisional accept"
+        component_table.loc[[2, 4, 6, 8], "classification"] = "provisional accept"
     return component_table
 
 
@@ -84,7 +84,7 @@ def test_selectcomps2use_succeeds():
     decide_comps_lengths = [4, 17, 21, 21, 1, 3, 0]
 
     for idx, decide_comps in enumerate(decide_comps_options):
-        comps2use, _ = selection_utils.selectcomps2use(selector, decide_comps)
+        comps2use = selection_utils.selectcomps2use(selector, decide_comps)
         assert (
             len(comps2use) == decide_comps_lengths[idx]
         ), f"selectcomps2use test should select {decide_comps_lengths[idx]} with decide_comps={decide_comps}, but it selected {len(comps2use)}"
@@ -118,7 +118,7 @@ def test_comptable_classification_changer_succeeds():
     selector = sample_selector(options="provclass")
 
     # Change if true
-    comps2use, _ = selection_utils.selectcomps2use(selector, "provisional accept")
+    comps2use = selection_utils.selectcomps2use(selector, "provisional accept")
     decision_boolean = pd.Series(True, index=comps2use)
     out_selector = selection_utils.comptable_classification_changer(
         selector, True, "accept", decision_boolean, tag_if="testing_tag"
@@ -135,7 +135,7 @@ def test_comptable_classification_changer_succeeds():
     )
 
     # Change from reject to accept, which should output a warning (test if the warning appears?)
-    comps2use, _ = selection_utils.selectcomps2use(selector, "accept")
+    comps2use = selection_utils.selectcomps2use(selector, "accept")
     decision_boolean = pd.Series(True, index=comps2use)
     out_selector = selection_utils.comptable_classification_changer(
         selector, False, "reject", decision_boolean, tag_if="testing_tag"
@@ -158,7 +158,7 @@ def test_change_comptable_classifications_succeeds():
     selector = sample_selector(options="provclass")
 
     # Given the rho values in the sample table, decision_boolean should have 2 True and 2 False values
-    comps2use, _ = selection_utils.selectcomps2use(selector, "provisional accept")
+    comps2use = selection_utils.selectcomps2use(selector, "provisional accept")
     rho = selector.component_table.loc[comps2use, "rho"]
     decision_boolean = rho < 13.5
 
@@ -213,7 +213,7 @@ def test_log_decision_tree_step_smoke():
     selector = sample_selector()
 
     # Standard run for logging classification changes
-    comps2use, _ = selection_utils.selectcomps2use(selector, "reject")
+    comps2use = selection_utils.selectcomps2use(selector, "reject")
     selection_utils.log_decision_tree_step(
         "Step 0: test_function_name",
         comps2use,
@@ -247,7 +247,7 @@ def test_log_decision_tree_step_smoke():
     )
 
     # Logging no components found with a specified classification
-    comps2use, _ = selection_utils.selectcomps2use(selector, "NotALabel")
+    comps2use = selection_utils.selectcomps2use(selector, "NotALabel")
     selection_utils.log_decision_tree_step(
         "Step 0: test_function_name",
         comps2use,
