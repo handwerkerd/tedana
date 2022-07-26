@@ -115,41 +115,61 @@ def test_comptable_classification_changer_succeeds():
     check the logger
     """
 
-    selector = sample_selector(options="provclass")
+    def validate_changes(expected_classification):
+        # check every element that was supposed to change, did change
+        changeidx = decision_boolean.index[np.asarray(decision_boolean) == boolstate]
+        new_vals = selector.component_table.loc[changeidx, "classification"]
+        for val in new_vals:
+            assert val == expected_classification
 
     # Change if true
-    comps2use = selection_utils.selectcomps2use(selector, "provisional accept")
-    decision_boolean = pd.Series(True, index=comps2use)
-    out_selector = selection_utils.comptable_classification_changer(
-        selector, True, "accept", decision_boolean, tag_if="testing_tag"
+    selector = sample_selector(options="provclass")
+    decision_boolean = selector.component_table["classification"] == "provisional accept"
+    boolstate = True
+    selector = selection_utils.comptable_classification_changer(
+        selector, boolstate, "accepted", decision_boolean, tag_if="testing_tag"
     )
+    validate_changes("accepted")
 
     # Run nochange condition
-    out_selector = selection_utils.comptable_classification_changer(
-        selector, True, "nochange", decision_boolean, tag_if="testing_tag"
+    selector = sample_selector(options="provclass")
+    decision_boolean = selector.component_table["classification"] == "provisional accept"
+    selector = selection_utils.comptable_classification_changer(
+        selector, boolstate, "nochange", decision_boolean, tag_if="testing_tag"
     )
+    validate_changes("provisional accept")
 
     # Change if false
-    out_selector = selection_utils.comptable_classification_changer(
-        selector, False, "reject", decision_boolean, tag_if="testing_tag1, testing_tag2"
+    selector = sample_selector(options="provclass")
+    decision_boolean = selector.component_table["classification"] != "provisional accept"
+    boolstate = False
+    selector = selection_utils.comptable_classification_changer(
+        selector, boolstate, "rejected", decision_boolean, tag_if="testing_tag1, testing_tag2"
     )
+    validate_changes("rejected")
 
-    # Change from reject to accept, which should output a warning (test if the warning appears?)
-    comps2use = selection_utils.selectcomps2use(selector, "accept")
-    decision_boolean = pd.Series(True, index=comps2use)
-    out_selector = selection_utils.comptable_classification_changer(
-        selector, False, "reject", decision_boolean, tag_if="testing_tag"
+    # Change from accepted to rejected, which should output a warning (test if the warning appears?)
+    selector = sample_selector(options="provclass")
+    decision_boolean = selector.component_table["classification"] == "accepted"
+    boolstate = True
+    selector = selection_utils.comptable_classification_changer(
+        selector, boolstate, "rejected", decision_boolean, tag_if="testing_tag"
     )
+    validate_changes("rejected")
 
-    # Change from reject to accept and suppress warning
-    out_selector = selection_utils.comptable_classification_changer(
+    # Change from rejected to accepted and suppress warning
+    selector = sample_selector(options="provclass")
+    decision_boolean = selector.component_table["classification"] == "rejected"
+    boolstate = True
+    selector = selection_utils.comptable_classification_changer(
         selector,
-        False,
-        "reject",
+        boolstate,
+        "accepted",
         decision_boolean,
         tag_if="testing_tag",
         dont_warn_reclassify=True,
     )
+    validate_changes("accepted")
 
 
 def test_change_comptable_classifications_succeeds():
@@ -162,14 +182,22 @@ def test_change_comptable_classifications_succeeds():
     rho = selector.component_table.loc[comps2use, "rho"]
     decision_boolean = rho < 13.5
 
-    out_selector = selection_utils.change_comptable_classifications(
+    selector, numTrue, numFalse = selection_utils.change_comptable_classifications(
         selector,
-        "accept",
+        "accepted",
         "nochange",
         decision_boolean,
         tag_ifTrue="testing_tag1",
         tag_ifFalse="testing_tag2",
     )
+
+    assert numTrue == 2
+    assert numFalse == 2
+    # check every element that was supposed to change, did change
+    changeidx = decision_boolean.index[np.asarray(decision_boolean) == True]
+    new_vals = selector.component_table.loc[changeidx, "classification"]
+    for val in new_vals:
+        assert val == "accepted"
 
 
 def test_clean_dataframe_smoke():

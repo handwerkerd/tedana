@@ -38,11 +38,6 @@ def selectcomps2use(selector, decide_comps):
     -------
     comps2use: :obj:`list[int]`
         A list of component indices that should be used by a function
-    component_table : (C x M) :obj:`pandas.DataFrame`
-        Reference to component metric table in `selector`. One row for each
-        component, with a column for each metric. Since the component table
-        is assigned rather than copied, changes to this variable will change
-        `selector.component_table`
 
     TODO: Confirm that multiple decide_comps with a space in their name causes problems
        If so, then figure out why an fix or remove spaces: x = [s.replace(‘ ‘, ‘’) for s in x]
@@ -230,32 +225,37 @@ def comptable_classification_changer(
     """
     if classify_if != "nochange":
         changeidx = decision_boolean.index[np.asarray(decision_boolean) == boolstate]
-        current_classifications = set(
-            selector.component_table.loc[changeidx, "classification"].tolist()
-        )
-        if current_classifications.intersection({"accepted", "rejected"}):
-            if not dont_warn_reclassify:
-                # don't make a warning if classify_if matches the current classification
-                # That is reject->reject shouldn't throw a warning
-                if (("accepted" in current_classifications) and (classify_if != "accepted")) or (
-                    ("rejected" in current_classifications) and (classify_if != "rejected")
-                ):
-                    LGR.warning(
-                        f"Step {selector.current_node_idx}: Some classifications are"
-                        " changing away from accepted or rejected. Once a component is "
-                        "accepted or rejected, it shouldn't be reclassified"
-                    )
-        selector.component_table.loc[changeidx, "classification"] = classify_if
+        if not changeidx.empty:
+            current_classifications = set(
+                selector.component_table.loc[changeidx, "classification"].tolist()
+            )
+            if current_classifications.intersection({"accepted", "rejected"}):
+                if not dont_warn_reclassify:
+                    # don't make a warning if classify_if matches the current classification
+                    # That is reject->reject shouldn't throw a warning
+                    if (
+                        ("accepted" in current_classifications) and (classify_if != "accepted")
+                    ) or (("rejected" in current_classifications) and (classify_if != "rejected")):
+                        LGR.warning(
+                            f"Step {selector.current_node_idx}: Some classifications are"
+                            " changing away from accepted or rejected. Once a component is "
+                            "accepted or rejected, it shouldn't be reclassified"
+                        )
+            selector.component_table.loc[changeidx, "classification"] = classify_if
 
-        for idx in changeidx:
-            tmpstr = selector.component_table.loc[idx, "classification_tags"]
-            if tmpstr != "":
-                tmpset = set(tmpstr.split(","))
-                tmpset.update([tag_if])
-            else:
-                tmpset = set([tag_if])
-            selector.component_table.loc[idx, "classification_tags"] = ",".join(
-                str(s) for s in tmpset
+            for idx in changeidx:
+                tmpstr = selector.component_table.loc[idx, "classification_tags"]
+                if tmpstr != "":
+                    tmpset = set(tmpstr.split(","))
+                    tmpset.update([tag_if])
+                else:
+                    tmpset = set([tag_if])
+                selector.component_table.loc[idx, "classification_tags"] = ",".join(
+                    str(s) for s in tmpset
+                )
+        else:
+            LGR.info(
+                f"Step {selector.current_node_idx}: No components fit criterion {boolstate} to change classification"
             )
     return selector
 
