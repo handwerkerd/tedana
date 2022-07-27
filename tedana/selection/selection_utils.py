@@ -242,6 +242,19 @@ def comptable_classification_changer(
                             "accepted or rejected, it shouldn't be reclassified"
                         )
             selector.component_table.loc[changeidx, "classification"] = classify_if
+            # NOTE: CAUTION: extremely bizarre pandas behavior violates guarantee
+            # that df['COLUMN'] matches the df as a a whole in this case.
+            # We cannot replicate this consistently, but it seems to happen in some
+            # datasets where decide_comps does not select all components. We strongly
+            # suspect it has something to do with passing via reference a pandas
+            # data series.
+            # We do not understand why, but copying the table and thus removing references
+            # to past memory locations seems to reliably solve this issue.
+            # TODO: understand why this happens and avoid the problem without this hack.
+            #   Comment line below to re-introduce original bug. For the kundu decision
+            #   tree it happens on node 6 which is the first time decide_comps is for
+            #   a subset of components
+            selector.component_table = selector.component_table.copy()
 
             if tag_if is not None:  # only run if a tag is provided
                 for idx in changeidx:
