@@ -146,7 +146,7 @@
             }
         },
         {
-            "functionname": "dec_classification_exists",
+            "functionname": "dec_classification_doesnt_exist",
             "parameters": {
                 "new_classification": "accepted",
                 "decide_comps": [

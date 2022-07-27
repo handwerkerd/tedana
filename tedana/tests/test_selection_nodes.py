@@ -428,14 +428,14 @@ def test_calc_kappa_rho_elbows_kundu():
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] == None
 
 
-def test_dec_classification_exists_smoke():
-    """Smoke tests for dec_classification_exists"""
+def test_dec_classification_doesnt_exist_smoke():
+    """Smoke tests for dec_classification_doesnt_exist"""
 
     selector = sample_selector(options="unclass")
     decide_comps = ["unclassified", "provisional accept"]
 
     # Outputs just the metrics used in this function {"variance explained"}
-    used_metrics = selection_nodes.dec_classification_exists(
+    used_metrics = selection_nodes.dec_classification_doesnt_exist(
         selector,
         "rejected",
         decide_comps,
@@ -445,7 +445,7 @@ def test_dec_classification_exists_smoke():
     assert len(used_metrics) == 0
 
     # Standard execution where with all extra logging code and options changed from defaults
-    selector = selection_nodes.dec_classification_exists(
+    selector = selection_nodes.dec_classification_doesnt_exist(
         selector,
         "accepted",
         decide_comps,
@@ -466,7 +466,7 @@ def test_dec_classification_exists_smoke():
     #   Node 1 column not created in component_status_table
     # Running without specifying logging text generates internal text
     selector.current_node_idx = 1
-    selector = selection_nodes.dec_classification_exists(
+    selector = selection_nodes.dec_classification_doesnt_exist(
         selector,
         "accepted",
         "NotAClassification",
@@ -482,7 +482,7 @@ def test_dec_classification_exists_smoke():
     # components, using that for class_comp_exists
     selector = sample_selector()
     decide_comps = "accepted"
-    selector = selection_nodes.dec_classification_exists(
+    selector = selection_nodes.dec_classification_doesnt_exist(
         selector,
         "changed accepted",
         decide_comps,
@@ -584,7 +584,7 @@ def test_calc_extend_factor_smoke():
 
     # Outputs just the metrics used in this function {""}
     used_metrics = selection_nodes.calc_extend_factor(selector, only_used_metrics=True)
-    assert used_metrics == {""}
+    assert used_metrics == set()
 
     # Standard call to this function.
     selector = selection_nodes.calc_extend_factor(

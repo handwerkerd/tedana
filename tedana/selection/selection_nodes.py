@@ -317,6 +317,11 @@ def dec_left_op_right(
         "numFalse": None,
     }
 
+    function_name_idx = f"Step {selector.current_node_idx}: left_op_right"
+    # Only select components if the decision tree is being run
+    if not only_used_metrics:
+        comps2use = selectcomps2use(selector, decide_comps)
+
     def identify_used_metric(val):
         """
         Parse the left or right values if they're an existing using_metric cross_component_metric
@@ -328,10 +333,21 @@ def dec_left_op_right(
             elif val in selector.cross_component_metrics:
                 outputs["used_cross_component_metrics"].update([val])
                 val = selector.cross_component_metrics[val]
-            else:
-                raise ValueError(
-                    f"{val} is neither a metric in selector.component_table nor selector.cross_component_metrics"
-                )
+            # If decision tree is being run, then throw errors or messages
+            #  if a component doesn't exist. If this is just getting a list
+            #  of metrics to be used, then don't bring up warnings
+            elif not only_used_metrics:
+                if not comps2use:
+                    LGR.info(
+                        f"{function_name_idx}: {val} is neither a metric in "
+                        "selector.component_table nor selector.cross_component_metrics, "
+                        f"but no components with {decide_comps} remain by this node "
+                        "so nothing happens"
+                    )
+                else:
+                    raise ValueError(
+                        f"{val} is neither a metric in selector.component_table nor selector.cross_component_metrics"
+                    )
         return val
 
     left = identify_used_metric(left)
@@ -370,7 +386,6 @@ def dec_left_op_right(
         else:
             return f"{left_scale}*"
 
-    function_name_idx = f"Step {selector.current_node_idx}: left_op_right"
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
@@ -392,8 +407,6 @@ def dec_left_op_right(
         LGR.info(log_extra_info)
     if log_extra_report:
         RepLGR.info(log_extra_report)
-
-    comps2use = selectcomps2use(selector, decide_comps)
 
     confirm_metrics_exist(
         selector.component_table, outputs["used_metrics"], function_name=function_name_idx
@@ -799,7 +812,7 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 """
 
 
-def dec_classification_exists(
+def dec_classification_doesnt_exist(
     selector,
     new_classification,
     decide_comps,
@@ -851,7 +864,7 @@ def dec_classification_exists(
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    function_name_idx = "Step {}: classification_exists".format((selector.current_node_idx))
+    function_name_idx = "Step {}: classification_doesnt_exist".format((selector.current_node_idx))
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
@@ -908,7 +921,9 @@ def dec_classification_exists(
     return selector
 
 
-dec_classification_exists.__doc__ = dec_classification_exists.__doc__.format(**decision_docs)
+dec_classification_doesnt_exist.__doc__ = dec_classification_doesnt_exist.__doc__.format(
+    **decision_docs
+)
 
 
 def calc_varex_upper_thresh(
@@ -1046,7 +1061,6 @@ def calc_extend_factor(
         "decision_node_idx": selector.current_node_idx,
         "node_label": None,
         "extend_factor": None,
-        "used_metrics": set([""]),
         "calc_cross_comp_metrics": ["extend_factor"],
     }
 
