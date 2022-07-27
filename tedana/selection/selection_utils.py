@@ -243,16 +243,17 @@ def comptable_classification_changer(
                         )
             selector.component_table.loc[changeidx, "classification"] = classify_if
 
-            for idx in changeidx:
-                tmpstr = selector.component_table.loc[idx, "classification_tags"]
-                if tmpstr != "":
-                    tmpset = set(tmpstr.split(","))
-                    tmpset.update([tag_if])
-                else:
-                    tmpset = set([tag_if])
-                selector.component_table.loc[idx, "classification_tags"] = ",".join(
-                    str(s) for s in tmpset
-                )
+            if tag_if is not None:  # only run if a tag is provided
+                for idx in changeidx:
+                    tmpstr = selector.component_table.loc[idx, "classification_tags"]
+                    if tmpstr != "":
+                        tmpset = set(tmpstr.split(","))
+                        tmpset.update([tag_if])
+                    else:
+                        tmpset = set([tag_if])
+                    selector.component_table.loc[idx, "classification_tags"] = ",".join(
+                        str(s) for s in tmpset
+                    )
         else:
             LGR.info(
                 f"Step {selector.current_node_idx}: No components fit criterion {boolstate} to change classification"

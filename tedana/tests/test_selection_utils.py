@@ -17,7 +17,8 @@ def sample_component_table(options=None):
 
     Options: Different strings will also the contents of the component table
         'provclass': Change the classifications to "provisional accept" for 4 components
-        'unclass': Change 4 classifications to "provisional accept" and the rest to "unclassified"
+        'unclass': Change 4 classifications to "provisional accept", 2 to accepted,
+        2 to rejected, and the rest to "unclassified"
     """
 
     sample_fname = os.path.join(THIS_DIR, "data", "sample_comptable.tsv")
@@ -25,6 +26,9 @@ def sample_component_table(options=None):
     component_table["classification_tags"] = ""
     if options == "unclass":
         component_table["classification"] = "unclassified"
+        component_table.loc[[16, 18], "classification"] = "accepted"
+        component_table.loc[[11, 13], "classification"] = "rejected"
+
     if (options == "provclass") or (options == "unclass"):
         component_table.loc[[2, 4, 6, 8], "classification"] = "provisional accept"
     return component_table

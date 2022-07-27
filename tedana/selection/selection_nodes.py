@@ -402,7 +402,7 @@ def dec_left_op_right(
     def parse_vals(val):
         """Get the actual metric values for the selected components or return the constant int or float"""
         if isinstance(val, str):
-            return selector.component_table.loc[comps2use, val]
+            return selector.component_table.loc[comps2use, val].copy()
         else:
             return val  # should be a fixed number
 
