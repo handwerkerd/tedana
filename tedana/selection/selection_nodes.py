@@ -379,27 +379,36 @@ def dec_left_op_right(
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    def operator_scale_descript(val_scale):
-        """For equation description either include scaling factor or send an empty string if it's just 1"""
+    def operator_scale_descript(val_scale, val):
+        """
+        Return a string with one element from the mathematical expression
+        If val_scale is not 1, include scaling factor (rounded to 2 decimals)
+        If val is a column in the component_table output the column label
+        If val is a number (either an inputted number or from cross_component_metrics
+        include the number (rounded to 2 decimals)
+        This output is used to great a descriptor for visualizing the decision tree
+        Unrounded values are saved and rounding here will not affect results
+        """
+        if not isinstance(val, str):
+            val = str(round(val, 2))
         if val_scale == 1:
-            return ""
+            return val
         else:
-            return f"{left_scale}*"
+            return f"{round(val_scale,2)}*{val}"
 
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
-        tmp_left_scale = operator_scale_descript(left_scale)
-        tmp_right_scale = operator_scale_descript(right_scale)
+        tmp_left = operator_scale_descript(left_scale, left)
+        tmp_right = operator_scale_descript(right_scale, right)
         if is_compound:
-            tmp_left2_scale = operator_scale_descript(left2_scale)
-            tmp_right2_scale = operator_scale_descript(right2_scale)
+            tmp_left2 = operator_scale_descript(left2_scale, left2)
+            tmp_right2 = operator_scale_descript(right2_scale, right2)
             outputs["node_label"] = [
-                f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right} & "
-                f"{tmp_left2_scale}{left2}{op2}{tmp_right2_scale}{right2}"
+                f"{tmp_left}{op}{tmp_right} & " f"{tmp_left2}{op2}{tmp_right2}"
             ]
         else:
-            outputs["node_label"] = f"{tmp_left_scale}{left}{op}{tmp_right_scale}{right}"
+            outputs["node_label"] = f"{tmp_left}{op}{tmp_right}"
 
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
