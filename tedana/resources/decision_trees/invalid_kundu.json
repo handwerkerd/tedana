@@ -186,61 +186,17 @@
         {
             "functionname": "dec_left_op_right",
             "parameters": {
-                "ifTrue": "GT_meanmetricrank",
-                "ifFalse": "nochange",
+                "ifTrue": "rejected",
+                "ifFalse": "provisionalaccept",
                 "decide_comps": "provisionalaccept",
                 "op": ">",
                 "left": "d_table_score",
                 "right": "max_good_meanmetricrank"
             },
             "kwargs": {
-                "log_extra_info": "metric_rank>max_good_meanmetricrank",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "dec_left_op_right",
-            "parameters": {
-                "ifTrue": "reject",
-                "ifFalse": "provisionalaccept",
-                "decide_comps": "GT_meanmetricrank",
-                "op": ">",
-                "left": "variance explained",
-                "right": "varex_upper_thresh"
-            },
-            "kwargs": {
-                "log_extra_info": "metric_rank>max_good_meanmetricrank",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "dec_left_op_right",
-            "parameters": {
-                "ifTrue": "GT_meanmetricrank",
-                "ifFalse": "nochange",
-                "decide_comps": "provisionalreject",
-                "op": ">",
-                "left": "d_table_score",
-                "right": "max_good_meanmetricrank"
-            },
-            "kwargs": {
-                "log_extra_info": "metric_rank>max_good_meanmetricrank",
-                "log_extra_report": ""
-            }
-        },
-        {
-            "functionname": "dec_left_op_right",
-            "parameters": {
-                "ifTrue": "reject",
-                "ifFalse": "provisionalreject",
-                "decide_comps": "GT_meanmetricrank",
-                "op": ">",
-                "left": "variance explained",
-                "right": "varex_upper_thresh"
-            },
-            "kwargs": {
-                "log_extra_info": "metric_rank>max_good_meanmetricrank",
-                "log_extra_report": ""
+                "op2": ">",
+                "left2": "variance explained",
+                "right2": "varex_upper_thresh"
             }
         },
         {
