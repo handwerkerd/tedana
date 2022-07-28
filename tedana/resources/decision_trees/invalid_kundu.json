@@ -163,13 +163,13 @@
             }
         },
         {
-            "functionname": "calc_varex_upper_thresh",
+            "functionname": "calc_varex_thresh",
             "parameters": {
-                "decide_comps": "provisionalaccept"
+                "decide_comps": "provisionalaccept",
+                "thresh_label": "upper",
+                "percentile_thresh": 90
             },
-            "kwargs": {
-                "high_perc": 90
-            }
+            "kwargs": {}
         },
         {
             "functionname": "calc_extend_factor",

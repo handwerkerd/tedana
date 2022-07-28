@@ -495,86 +495,99 @@ def test_dec_classification_doesnt_exist_smoke():
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
 
-def test_calc_varex_upper_thresh_smoke():
-    """Smoke tests for calc_varex_upper_thresh"""
+def test_calc_varex_thresh_smoke():
+    """Smoke tests for calc_varex_thresh"""
 
     # Standard use of this function requires some components to be "provisional accept"
     selector = sample_selector(options="provclass")
     decide_comps = "provisional accept"
 
     # Outputs just the metrics used in this function {"variance explained"}
-    used_metrics = selection_nodes.calc_varex_upper_thresh(
-        selector, decide_comps, only_used_metrics=True
+    used_metrics = selection_nodes.calc_varex_thresh(
+        selector, decide_comps, thresh_label="upper", percentile_thresh=90, only_used_metrics=True
     )
     assert len(used_metrics - set(["variance explained"])) == 0
 
     # Standard call to this function.
-    selector = selection_nodes.calc_varex_upper_thresh(
+    selector = selection_nodes.calc_varex_thresh(
         selector,
         decide_comps,
-        high_perc=90,
+        thresh_label="upper",
+        percentile_thresh=90,
         log_extra_report="report log",
         log_extra_info="info log",
         custom_node_label="custom label",
     )
-    calc_cross_comp_metrics = {"varex_upper_thresh", "high_perc"}
+    calc_cross_comp_metrics = {"varex_upper_thresh", "upper_perc"}
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
     # Confirming the indended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_thresh"] > 0
-    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["high_perc"] == 90
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["upper_perc"] == 90
 
-    # Run warning logging code for if any of the cross_component_metrics already existed and would be over-written
+    # Standard call , but thresh_label is ""
+    selector = selection_nodes.calc_varex_thresh(
+        selector,
+        decide_comps,
+        thresh_label="",
+        percentile_thresh=90,
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {"varex_thresh", "perc"}
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the indended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_thresh"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["perc"] == 90
+
+    # Run warning logging code to see if any of the cross_component_metrics already existed and would be over-written
     selector = sample_selector(options="provclass")
     selector.cross_component_metrics["varex_upper_thresh"] = 1
-    selector.cross_component_metrics["high_perc"] = 1
+    selector.cross_component_metrics["upper_perc"] = 1
     decide_comps = "provisional accept"
-    selector = selection_nodes.calc_varex_upper_thresh(
+    selector = selection_nodes.calc_varex_thresh(
         selector,
         decide_comps,
+        thresh_label="upper",
+        percentile_thresh=90,
         log_extra_report="report log",
         log_extra_info="info log",
         custom_node_label="custom label",
     )
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_thresh"] > 0
-    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["high_perc"] == 90
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["upper_perc"] == 90
 
-    # Run with high_perc already defined (and set to None here)
-    selector = sample_selector(options="provclass")
-    selector.cross_component_metrics["high_perc"] = 80
-    selector = selection_nodes.calc_varex_upper_thresh(
-        selector,
-        decide_comps,
-        high_perc=None,
-    )
-    calc_cross_comp_metrics = {"varex_upper_thresh"}
-    output_calc_cross_comp_metrics = set(
-        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
-    )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
-    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
-    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_thresh"] > 0
-
-    # Raise error if high_perc == None, but not already defined
+    # Raise error if percentile_thresh isn't a number
     selector = sample_selector(options="provclass")
     with pytest.raises(ValueError):
-        selector = selection_nodes.calc_varex_upper_thresh(
-            selector,
-            decide_comps,
-            high_perc=None,
+        selector = selection_nodes.calc_varex_thresh(
+            selector, decide_comps, thresh_label="upper", percentile_thresh="NotANumber"
+        )
+
+    # Raise error if percentile_thresh isn't a number between 0 & 100
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selector = selection_nodes.calc_varex_thresh(
+            selector, decide_comps, thresh_label="upper", percentile_thresh=101
         )
 
     # Log without running if no components of decide_comps are in the component table
     selector = sample_selector()
-    selector = selection_nodes.calc_varex_upper_thresh(selector, decide_comps="NotAClassification")
+    selector = selection_nodes.calc_varex_thresh(
+        selector, decide_comps="NotAClassification", thresh_label="upper", percentile_thresh=90
+    )
     assert (
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_thresh"] == None
     )
-    # high_perc doesn't depend on components and is assigned
-    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["high_perc"] == 90
+    # percentile_thresh doesn't depend on components and is assigned
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["upper_perc"] == 90
 
 
 def test_calc_extend_factor_smoke():

@@ -816,10 +816,6 @@ def calc_kappa_rho_elbows_kundu(
 
 calc_kappa_rho_elbows_kundu.__doc__ = calc_kappa_rho_elbows_kundu.__doc__.format(**decision_docs)
 
-"""
-EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
-"""
-
 
 def dec_classification_doesnt_exist(
     selector,
@@ -934,30 +930,35 @@ dec_classification_doesnt_exist.__doc__ = dec_classification_doesnt_exist.__doc_
     **decision_docs
 )
 
-
-def calc_varex_upper_thresh(
+def calc_varex_thresh(
     selector,
     decide_comps,
+    thresh_label,
+    percentile_thresh,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
     only_used_metrics=False,
-    high_perc=90,
 ):
     """
-    Calculated the variance explained upper threshold to use in the kundu decision tree
+    Calculates the variance explained threshold to use in the kundu decision tree.
+    Will save a high or low percentile threshold depending on highlow_thresh
 
     Parameters
     ----------
     {selector}
     {decide_comps}
+    thresh_label: :obj:`str`
+        The threshold will be saved in "varex_(thresh_label)_thresh"
+        In the original kundu decision tree this was either "upper" or "lower"
+        If passed an empty string,t hen will be saved as "varex_thresh"
+    percentile_thresh: :obj:`int`
+        A percentile threshold to apply to components to set the variance threshold.
+        In the original kundu decision tree this was 90 for varex_upper_thresh and
+        25 for varex_lower_thresh
     {log_extra}
     {custom_node_label}
     {only_used_metrics}
-    high_perc: :obj:`int`
-        A percentile threshold to apply to components to set the variance
-        threshold. If None or empty "" then use the value already defined in another node.
-        default=90
 
     Returns
     -------
@@ -965,45 +966,50 @@ def calc_varex_upper_thresh(
 
     """
 
+    function_name_idx = f"Step {selector.current_node_idx}: calc_varex_thresh"
+    thresh_label = thresh_label.lower()
+    if thresh_label is None or thresh_label is "":
+        varex_name = "varex_thresh"
+        perc_name = "perc"
+    else:
+        varex_name = f"varex_{thresh_label}_thresh"
+        perc_name = f"{thresh_label}_perc"
+
     outputs = {
         "decision_node_idx": selector.current_node_idx,
         "node_label": None,
-        "varex_upper_thresh": None,
+        varex_name: None,
         "used_metrics": set(["variance explained"]),
     }
-    if high_perc:
-        outputs["calc_cross_comp_metrics"] = ["varex_upper_thresh", "high_perc"]
-        outputs["high_perc"] = high_perc
+    if (
+        isinstance(percentile_thresh, (int, float))
+        and (percentile_thresh > 0)
+        and (percentile_thresh < 100)
+    ):
+        outputs["calc_cross_comp_metrics"] = [varex_name, perc_name]
+        outputs[perc_name] = percentile_thresh
     else:
-        outputs["calc_cross_comp_metrics"] = ["varex_upper_thresh"]
+        raise ValueError(
+            f"percentile_thresh must be a number between 0 & 100. It is: {percentile_thresh}"
+        )
 
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    function_name_idx = f"Step {selector.current_node_idx}: calc_varex_upper_thresh"
-
-    if "varex_upper_thresh" in selector.cross_component_metrics:
+    if varex_name in selector.cross_component_metrics:
         LGR.warning(
-            f"varex_upper_thresh already calculated. Overwriting previous value in {function_name_idx}"
+            f"{varex_name} already calculated. Overwriting previous value in {function_name_idx}"
         )
 
-    if "high_perc" in selector.cross_component_metrics:
-        # if high_perc already exists, warn if overwriting and use if not also defined in this function
-        if "high_perc" in outputs["calc_cross_comp_metrics"]:
-            LGR.warning(
-                f"high_perc already calculated. Overwriting previous value in {function_name_idx}"
-            )
-        else:
-            high_perc = selector.cross_component_metrics["high_perc"]
-    elif high_perc is None:
-        raise ValueError(
-            f"high_perc set to None in {function_name_idx}, but not previously calculated in another node."
+    if perc_name in selector.cross_component_metrics:
+        LGR.warning(
+            f"{perc_name} already calculated. Overwriting previous value in {function_name_idx}"
         )
 
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
-        outputs["node_label"] = "Calc varex_upper_thresh"
+        outputs["node_label"] = f"Calc {varex_name}"
 
     if log_extra_info:
         LGR.info(log_extra_info)
@@ -1022,11 +1028,12 @@ def calc_varex_upper_thresh(
             decide_comps=decide_comps,
         )
     else:
-        outputs["varex_upper_thresh"] = scoreatpercentile(
-            selector.component_table.loc[comps2use, "variance explained"], high_perc
+
+        outputs[varex_name] = scoreatpercentile(
+            selector.component_table.loc[comps2use, "variance explained"], percentile_thresh
         )
 
-        selector.cross_component_metrics["varex_upper_thresh"] = outputs["varex_upper_thresh"]
+        selector.cross_component_metrics[varex_name] = outputs[varex_name]
 
         log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
 
@@ -1035,7 +1042,7 @@ def calc_varex_upper_thresh(
     return selector
 
 
-calc_varex_upper_thresh.__doc__ = calc_varex_upper_thresh.__doc__.format(**decision_docs)
+calc_varex_thresh.__doc__ = calc_varex_thresh.__doc__.format(**decision_docs)
 
 
 def calc_extend_factor(
@@ -1197,136 +1204,9 @@ def calc_max_good_meanmetricrank(
 
 calc_max_good_meanmetricrank.__doc__ = calc_max_good_meanmetricrank.__doc__.format(**decision_docs)
 
-
-# def meanmetricrank_and_variance_greaterthan_thresh(
-#     comptable,
-#     decision_node_idx,
-#     ifTrue,
-#     ifFalse,
-#     decide_comps,
-#     n_vols,
-#     high_perc=90,
-#     extend_factor=None,
-#     log_extra_report="",
-#     log_extra_info="",
-#     custom_node_label="",
-#     only_used_metrics=False,
-# ):
-#     """
-#     The 'mean metric rank' (formerly d_table) is the mean of rankings of 5 metrics:
-#         'kappa', 'dice_FT2', 'signal-noise_t',
-#         and 'countnoise', 'countsigFT2'
-#     For these 5 metrics, a lower rank (smaller number) is less likely to be
-#     T2* weighted.
-#     This function tests of meanmetricrank is above a threshold based on the number
-#     of provisionally accepted components & variance based on a threshold related
-#     to the variance of provisionally accepted components. This is indented to
-#     reject components that are greater than both of these thresholds
-
-#     Parameters
-#     ----------
-#     {comptable}
-#     {decision_node_idx}
-#     {ifTrue}
-#     {ifFalse}
-#     {decide_comps}
-#     {n_vols}
-#     high_perc: :obj:`int`
-#         A percentile threshold to apply to components to set the variance
-#         threshold. default=90
-#     {extend_factor}
-#     {log_extra}
-#     {custom_node_label}
-#     {only_used_metrics}
-
-#     Returns
-#     -------
-#     {basicreturns}
-#     dnode_ouputs also contains:
-#     num_prov_accept: :obj:`int`
-#         Number of provisionally accepted components
-#     max_good_meanmetricrank: :obj:`float`
-#         The threshold used meanmetricrank
-#     varex_threshold: :obj:`float`
-#         The threshold used for variance
-#     """
-
-#     used_metrics = ["d_table_score", "variance explained"]
-#     if only_used_metrics:
-#         return used_metrics
-
-#     function_name_idx = "Step {}: meanmetricrank_and_variance_greaterthan_thresh".format(
-#         decision_node_idx
-#     )
-#     if custom_node_label:
-#         node_label = custom_node_label
-#     else:
-#         node_label = "MeanRank & Variance Thresholding"
-
-#     if log_extra_info:
-#         LGR.info(log_extra_info)
-#     if log_extra_report:
-#         RepLGR.info(log_extra_report)
-
-#     metrics_exist, missing_metrics = confirm_metrics_exist(
-#         comptable, used_metrics, function_name=function_name_idx
-#     )
-
-#     comps2use = selectcomps2use(comptable, decide_comps)
-#     provaccept_comps2use = selectcomps2use(comptable, ["provisionalaccept"])
-#     if (not comps2use) or (not provaccept_comps2use):
-#         if not comps2use:
-#             log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
-#         if not provaccept_comps2use:
-#             log_decision_tree_step(function_name_idx, comps2use, decide_comps="provisionalaccept")
-#         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label, 0, 0)
-#     else:
-#         num_prov_accept = len(provaccept_comps2use)
-#         varex_upper_thresh = scoreatpercentile(
-#             comptable.loc[provaccept_comps2use, "variance explained"], high_perc
-#         )
-
-#         extend_factor = get_extend_factor(n_vols=n_vols, extend_factor=extend_factor)
-#         max_good_meanmetricrank = extend_factor * num_prov_accept
-
-#         decision_boolean1 = comptable.loc[comps2use, "d_table_score"] > max_good_meanmetricrank
-#         decision_boolean2 = comptable.loc[comps2use, "variance explained"] > varex_upper_thresh
-#         decision_boolean = decision_boolean1 & decision_boolean2
-
-#         comptable = change_comptable_classifications(
-#             comptable, ifTrue, ifFalse, decision_boolean, str(decision_node_idx)
-#         )
-#         numTrue = np.asarray(decision_boolean).sum()
-#         numFalse = np.logical_not(decision_boolean).sum()
-#         # print(('numTrue={}, numFalse={}, numcomps2use={}'.format(
-#         #    numTrue, numFalse, len(comps2use))))
-#         log_decision_tree_step(
-#             function_name_idx,
-#             comps2use,
-#             numTrue=numTrue,
-#             numFalse=numFalse,
-#             ifTrue=ifTrue,
-#             ifFalse=ifFalse,
-#         )
-
-#         dnode_outputs = create_dnode_outputs(
-#             decision_node_idx,
-#             used_metrics,
-#             node_label,
-#             numTrue,
-#             numFalse,
-#             num_prov_accept=num_prov_accept,
-#             varex_threshold=varex_upper_thresh,
-#             max_good_meanmetricrank=max_good_meanmetricrank,
-#             extend_factor=extend_factor,
-#         )
-
-#     return comptable, dnode_outputs
-
-
-# meanmetricrank_and_variance_greaterthan_thresh.__doc__ = (
-#     meanmetricrank_and_variance_greaterthan_thresh.__doc__.format(**decision_docs)
-# )
+"""
+EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
+"""
 
 
 # def lowvariance_highmeanmetricrank_lowkappa(
@@ -1394,32 +1274,22 @@ calc_max_good_meanmetricrank.__doc__ = calc_max_good_meanmetricrank.__doc__.form
 
 #     if (not comps2use) or (not provaccept_comps2use):
 #         if not comps2use:
-#             log_decision_tree_step(
-#                 function_name_idx, comps2use, decide_comps=decide_comps
-#             )
+#             log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
 #         if not provaccept_comps2use:
-#             log_decision_tree_step(
-#                 function_name_idx, comps2use, decide_comps="provisionalaccept"
-#             )
-#         dnode_outputs = create_dnode_outputs(
-#             decision_node_idx, used_metrics, node_label, 0, 0
-#         )
+#             log_decision_tree_step(function_name_idx, comps2use, decide_comps="provisionalaccept")
+#         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label, 0, 0)
 #     else:
 #         # low variance threshold
 #         varex_lower_thresh = scoreatpercentile(
 #             comptable.loc[provaccept_comps2use, "variance explained"], low_perc
 #         )
-#         db_low_varex = (
-#             comptable.loc[comps2use, "variance explained"] < varex_lower_thresh
-#         )
+#         db_low_varex = comptable.loc[comps2use, "variance explained"] < varex_lower_thresh
 
 #         # mean metric rank threshold
 #         num_prov_accept = len(provaccept_comps2use)
 #         extend_factor = get_extend_factor(n_vols=n_vols, extend_factor=extend_factor)
 #         max_good_meanmetricrank = extend_factor * num_prov_accept
-#         db_meanmetricrank = (
-#             comptable.loc[comps2use, "d_table_score"] < max_good_meanmetricrank
-#         )
+#         db_meanmetricrank = comptable.loc[comps2use, "d_table_score"] < max_good_meanmetricrank
 
 #         # kappa threshold
 #         kappa_elbow = kappa_elbow_kundu(comptable, n_echos)
