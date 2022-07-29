@@ -186,7 +186,6 @@
                 "decide_comps": "provisionalaccept"
             },
             "kwargs": {
-                "metric_suffix": "1",
                 "log_extra_info": "Number of provisionalaccept components * extend_factor"
             }
         },
@@ -201,7 +200,7 @@
                 ],
                 "op": ">",
                 "left": "d_table_score",
-                "right": "max_good_meanmetricrank_1"
+                "right": "max_good_meanmetricrank"
             },
             "kwargs": {
                 "op2": ">",
@@ -222,16 +221,6 @@
             }
         },
         {
-            "functionname": "calc_max_good_meanmetricrank",
-            "parameters": {
-                "decide_comps": "provisionalaccept"
-            },
-            "kwargs": {
-                "metric_suffix": "2",
-                "log_extra_info": "Number of provisionalaccept components * extend_factor. My be different than earlier calculation if some components were rejected"
-            }
-        },
-        {
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "accepted",
@@ -242,7 +231,7 @@
                 ],
                 "op": "<",
                 "left": "d_table_score",
-                "right": "max_good_meanmetricrank_2"
+                "right": "max_good_meanmetricrank"
             },
             "kwargs": {
                 "tag_ifTrue": "Low variance",
