@@ -123,7 +123,7 @@
                 "right": "kappa_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "kappa>elbow",
+                "log_extra_info": "Provisionally accept if kappa>elbow",
                 "log_extra_report": ""
             }
         },
@@ -141,7 +141,7 @@
                 "right": "rho_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "rho>elbow",
+                "log_extra_info": "Provisionally reject if rho>elbow",
                 "log_extra_report": ""
             }
         },
@@ -158,7 +158,7 @@
             },
             "kwargs": {
                 "tag_ifTrue": "No provisional accept",
-                "log_extra_info": "",
+                "log_extra_info": "If nothing is provisionally accepted by this point, stop making decisions on what to remove & keep everything",
                 "log_extra_report": ""
             }
         },
@@ -169,12 +169,16 @@
                 "thresh_label": "upper",
                 "percentile_thresh": 90
             },
-            "kwargs": {}
+            "kwargs": {
+                "log_extra_info": "Calculuate a high variance threshold based on the 90th percentile variance component"
+            }
         },
         {
             "functionname": "calc_extend_factor",
             "parameters": {},
-            "kwargs": {}
+            "kwargs": {
+                "log_extra_info": "2 if fewer than 90 fMRI volumes, 3 if more than 110 and linear in-between"
+            }
         },
         {
             "functionname": "calc_max_good_meanmetricrank",
@@ -182,7 +186,8 @@
                 "decide_comps": "provisionalaccept"
             },
             "kwargs": {
-                "metric_suffix": "1"
+                "metric_suffix": "1",
+                "log_extra_info": "Number of provisionalaccept components * extend_factor"
             }
         },
         {
@@ -201,7 +206,8 @@
             "kwargs": {
                 "op2": ">",
                 "left2": "variance explained",
-                "right2": "varex_upper_thresh"
+                "right2": "varex_upper_thresh",
+                "log_extra_info": "If variance and d_table_scores are high, then reject"
             }
         },
         {
@@ -211,7 +217,9 @@
                 "thresh_label": "lower",
                 "percentile_thresh": 25
             },
-            "kwargs": {}
+            "kwargs": {
+                "log_extra_info": "Calculuate a low variance threshold based on the 25th percentile variance component"
+            }
         },
         {
             "functionname": "calc_max_good_meanmetricrank",
@@ -219,7 +227,8 @@
                 "decide_comps": "provisionalaccept"
             },
             "kwargs": {
-                "metric_suffix": "2"
+                "metric_suffix": "2",
+                "log_extra_info": "Number of provisionalaccept components * extend_factor. My be different than earlier calculation if some components were rejected"
             }
         },
         {
@@ -242,7 +251,8 @@
                 "right2": "varex_lower_thresh",
                 "op3": ">",
                 "left3": "kappa",
-                "right3": "kappa_elbow_kundu"
+                "right3": "kappa_elbow_kundu",
+                "log_extra_info": "If low variance and good kappa & d_table_scores accept even if other metrics are bad"
             }
         },
         {
