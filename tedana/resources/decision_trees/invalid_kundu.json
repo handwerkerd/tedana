@@ -245,6 +245,23 @@
             }
         },
         {
+            "functionname": "dec_classification_doesnt_exist",
+            "parameters": {
+                "new_classification": "accepted",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject",
+                    "unclassified"
+                ],
+                "class_comp_exists": "provisionalreject"
+            },
+            "kwargs": {
+                "tag_ifTrue": "Likely BOLD",
+                "log_extra_info": "If nothing left is provisionalreject, then accept all",
+                "log_extra_report": ""
+            }
+        },
+        {
             "functionname": "manual_classify",
             "parameters": {
                 "new_classification": "accepted",

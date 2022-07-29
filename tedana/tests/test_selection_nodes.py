@@ -512,7 +512,8 @@ def test_dec_classification_doesnt_exist_smoke():
         tag_ifTrue="test true tag",
     )
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 0
-    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 0
+    # Lists the number of components in decide_comps in numFalse
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 17
     # During normal execution, it will find provionally accepted components
     #  and do nothing so another node isn't created
     assert f"Node {selector.current_node_idx}" not in selector.component_status_table

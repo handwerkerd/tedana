@@ -943,7 +943,8 @@ def dec_classification_doesnt_exist(
 
     if (not comps2use) or (do_comps_exist):
         outputs["numTrue"] = 0
-        outputs["numFalse"] = 0
+        # If nothing chanages, then assign the number of components in comps2use to numFalse
+        outputs["numFalse"] = len(comps2use)
         log_decision_tree_step(
             function_name_idx,
             comps2use,
@@ -1275,6 +1276,7 @@ calc_max_good_meanmetricrank.__doc__ = calc_max_good_meanmetricrank.__doc__.form
 EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 """
 
+
 # def highvariance_highmeanmetricrank_highkapparatio(
 #     comptable,
 #     decision_node_idx,
@@ -1330,10 +1332,8 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #     if only_used_metrics:
 #         return used_metrics
 
-#     function_name_idx = (
-#         "Step {}: highvariance_highmeanmetricrank_highkapparatio".format(
-#             decision_node_idx
-#         )
+#     function_name_idx = "Step {}: highvariance_highmeanmetricrank_highkapparatio".format(
+#         decision_node_idx
 #     )
 #     if custom_node_label:
 #         node_label = custom_node_label
@@ -1353,16 +1353,12 @@ EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
 #         log_decision_tree_step(function_name_idx, comps2use, decide_comps=decide_comps)
 #         numTrue = 0
 #         numFalse = 0
-#         dnode_outputs = create_dnode_outputs(
-#             decision_node_idx, used_metrics, node_label, 0, 0
-#         )
+#         dnode_outputs = create_dnode_outputs(decision_node_idx, used_metrics, node_label, 0, 0)
 #     else:
 #         # This will either identify a previously calculated revised meanmetricrank and
 #         # return it or it will calculate a revised meanmetricrank, return it,
 #         # and add a new column to comptable that contains this new metric
-#         meanmetricrank, comptable = get_new_meanmetricrank(
-#             comptable, comps2use, decision_node_idx
-#         )
+#         meanmetricrank, comptable = get_new_meanmetricrank(comptable, comps2use, decision_node_idx)
 
 #         # Identify components that were either provionsally accepted
 #         # or don't have a final classificaiton in prev_X_steps previous nodes
