@@ -179,7 +179,7 @@ def test_dec_left_op_right_succeeds():
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 3
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
-    # Testing combination of two statements. kappa>21 AND rho<13
+    # Testing combination of two statements. kappa>21 AND rho<14
     selector = sample_selector(options="provclass")
     selector = selection_nodes.dec_left_op_right(
         selector,
@@ -195,6 +195,27 @@ def test_dec_left_op_right_succeeds():
     )
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 2
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 2
+    assert f"Node {selector.current_node_idx}" in selector.component_status_table
+
+    # Testing combination of three statements. kappa>21 AND rho<14 AND 'variance explained'<5
+    selector = sample_selector(options="provclass")
+    selector = selection_nodes.dec_left_op_right(
+        selector,
+        "accepted",
+        "rejected",
+        decide_comps,
+        "<",
+        21.0,
+        "kappa",
+        left2="rho",
+        op2="<",
+        right2=14,
+        left3="variance explained",
+        op3="<",
+        right3=5,
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 1
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 3
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
 
@@ -273,6 +294,41 @@ def test_dec_left_op_right_fails():
             left2="rho",
             op2="<>",
             right2=14,
+        )
+
+    # Raise error if some but not all parameters for the third conditional statement are defined
+    #  In this case, op3 is not defined
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selection_nodes.dec_left_op_right(
+            selector,
+            "accepted",
+            "rejected",
+            decide_comps,
+            ">",
+            "kappa",
+            21,
+            left2="rho",
+            right2=14,
+            op2="<",
+            left3="variance explained",
+            right3=5,
+        )
+
+    # Raise error if there's a third conditional statement but not a second statement
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selection_nodes.dec_left_op_right(
+            selector,
+            "accepted",
+            "rejected",
+            decide_comps,
+            ">",
+            "kappa",
+            21,
+            left3="variance explained",
+            right3=5,
+            op3="<",
         )
 
 
@@ -454,7 +510,6 @@ def test_dec_classification_doesnt_exist_smoke():
         log_extra_info="info log",
         custom_node_label="custom label",
         tag_ifTrue="test true tag",
-        tag_ifFalse="test false tag",
     )
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 0
@@ -488,7 +543,6 @@ def test_dec_classification_doesnt_exist_smoke():
         decide_comps,
         class_comp_exists="provisional reject",
         tag_ifTrue="test true tag",
-        tag_ifFalse="test false tag",
     )
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 17
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 0

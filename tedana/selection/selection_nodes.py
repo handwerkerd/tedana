@@ -253,6 +253,11 @@ def dec_left_op_right(
     right2=None,
     left2_scale=1,
     right2_scale=1,
+    op3=None,
+    left3=None,
+    right3=None,
+    left3_scale=1,
+    right3_scale=1,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
@@ -287,16 +292,13 @@ def dec_left_op_right(
         if left='kappa', right='rho', right_scale=2, and op='>' this tests
         kappa>(2*rho). default=1
     op2: :ojb:`str`, optional
-    left2, right2: :obj:`str` or :obj:`float`, optional
-    left2_scale, right2_scale: :obj:`float`, optional
-        This function can be used to calculate the intersection of two
+    left2, right2, left3, right3: :obj:`str` or :obj:`float`, optional
+    left2_scale, right2_scale, left3_scale, right3_scale: :obj:`float`, optional
+        This function can also be used to calculate the intersection of two or three
         boolean statements. If op2, left2, and right2 are defined then
         this function returns
         (left_scale*)left op (right_scale*right) AND (left2_scale*)left2 op2 (right2_scale*right2)
-        Note: This is designed to only allow an "and" not an "or" for the two statements. If there
-        is a reason to use "or" then run this function once for each boolean statement. This is an
-        intentional decision so that, if a change happens if A or B is True, then the output logging
-        will log the status of both.
+        if the "3" parameters are also defined then it's the intersection of all 3 statements
     {log_extra}
     {custom_node_label}
     {only_used_metrics}
@@ -305,6 +307,19 @@ def dec_left_op_right(
     Returns
     -------
     {basicreturns}
+
+    Note
+    ----
+    This function is ideally run with one boolean statement at a time so that
+    the result of each boolean is logged. For example, it's better to test
+    kappa>kappa_elbow and rho>rho_elbow with two separate calls to this function
+    so that the results of each can be easily viewed. That said, particularly for
+    the original kundu decision tree, if you're making decisions on components with
+    various classifications based on multiple boolean statements, the decesion tree
+    becomes really messy and the added functionality here is useful.
+    Combinations of boolean statements only test with "and" and not "or". This is
+    an intentional decision because, if a classification changes if A or B are true
+    then the results of each should be logged separately
     """
 
     # predefine all outputs that should be logged
@@ -324,8 +339,9 @@ def dec_left_op_right(
 
     def identify_used_metric(val):
         """
-        Parse the left or right values if they're an existing using_metric cross_component_metric
-        If it's already an integer, no parse would be needed
+        Parse the left or right values to see if they're an existing used_metric
+        or cross_component_metric
+        If it's already a number, no parse would be needed
         """
         if isinstance(val, str):
             if val in selector.component_table.columns:
@@ -350,34 +366,17 @@ def dec_left_op_right(
                     )
         return val
 
-    left = identify_used_metric(left)
-    right = identify_used_metric(right)
-
     legal_ops = (">", ">=", "==", "<=", "<")
-    if op not in legal_ops:
-        raise ValueError(f"{op} is not a binary comparison operator, like > or <")
 
-    # If any of the values for the second boolean statement are set
-    if left2 or right2 or op2:
-        # Check if they're all set & use them all or raise an error
-        if left2 and right2 and op2:
-            is_compound = True
-            left2 = identify_used_metric(left2)
-            right2 = identify_used_metric(right2)
-            if op2 not in legal_ops:
-                raise ValueError(f"{op2} is not a binary comparison operator, like > or <")
-        else:
-            raise ValueError(
-                "left_op_right can check if a first and second boolean "
-                "statement are both true. This call includes some but not "
-                "all variables to define the second boolean statement "
-                f"left2={left2}, righ2={right2}, op2={op2}"
-            )
-    else:
-        is_compound = False
-
-    if only_used_metrics:
-        return outputs["used_metrics"]
+    def confirm_valid_conditional(left_val, right_val, op_val):
+        """
+        Makes sure the left, right, and operator variables combine into a valid statement
+        """
+        left_val = identify_used_metric(left_val)
+        right_val = identify_used_metric(right_val)
+        if op_val not in legal_ops:
+            raise ValueError(f"{op_val} is not a binary comparison operator, like > or <")
+        return left_val, right_val
 
     def operator_scale_descript(val_scale, val):
         """
@@ -396,19 +395,66 @@ def dec_left_op_right(
         else:
             return f"{round(val_scale,2)}*{val}"
 
+    left, right = confirm_valid_conditional(left, right, op)
+    descript_left = operator_scale_descript(left_scale, left)
+    descript_right = operator_scale_descript(right_scale, right)
+    is_compound = 0
+
+    # If any of the values for the second boolean statement are set
+    if left2 or right2 or op2:
+        # Check if they're all set & use them all or raise an error
+        if left2 and right2 and op2:
+            is_compound = 2
+            left2, right2 = confirm_valid_conditional(left2, right2, op2)
+            descript_left2 = operator_scale_descript(left2_scale, left2)
+            descript_right2 = operator_scale_descript(right2_scale, right2)
+        else:
+            raise ValueError(
+                "left_op_right can check if a first and second boolean "
+                "statement are both true. This call includes some but not "
+                "all variables to define the second boolean statement "
+                f"left2={left2}, right2={right2}, op2={op2}"
+            )
+
+    # If any of the values for the second boolean statement are set
+    if left3 or right3 or op3:
+        if is_compound == 0:
+            raise ValueError(
+                "left_op_right is includes parameters for a third conditional "
+                "(left3, right3, or op3) statement without setting the "
+                "second statement"
+            )
+        # Check if they're all set & use them all or raise an error
+        if left3 and right3 and op3:
+            is_compound = 3
+            left3, right3 = confirm_valid_conditional(left3, right3, op3)
+            descript_left3 = operator_scale_descript(left3_scale, left3)
+            descript_right3 = operator_scale_descript(right3_scale, right3)
+        else:
+            raise ValueError(
+                "left_op_right can check if three boolean "
+                "statements are all true. This call includes some but not "
+                "all variables to define the third boolean statement "
+                f"left3={left3}, right3={right3}, op3={op3}"
+            )
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
     if custom_node_label:
         outputs["node_label"] = custom_node_label
-    else:
-        tmp_left = operator_scale_descript(left_scale, left)
-        tmp_right = operator_scale_descript(right_scale, right)
-        if is_compound:
-            tmp_left2 = operator_scale_descript(left2_scale, left2)
-            tmp_right2 = operator_scale_descript(right2_scale, right2)
-            outputs["node_label"] = [
-                f"{tmp_left}{op}{tmp_right} & " f"{tmp_left2}{op2}{tmp_right2}"
-            ]
-        else:
-            outputs["node_label"] = f"{tmp_left}{op}{tmp_right}"
+    elif is_compound == 0:
+        outputs["node_label"] = f"{descript_left}{op}{descript_right}"
+    elif is_compound == 2:
+        outputs["node_label"] = [
+            f"{descript_left}{op}{descript_right} & " f"{descript_left2}{op2}{descript_right2}"
+        ]
+    elif is_compound == 3:
+        outputs["node_label"] = [
+            f"{descript_left}{op}{descript_right} & "
+            f"{descript_left2}{op2}{descript_right2} & "
+            f"{descript_left3}{op3}{descript_right3}"
+        ]
 
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
@@ -443,11 +489,20 @@ def dec_left_op_right(
         left1_val = parse_vals(left)
         right1_val = parse_vals(right)
         decision_boolean = eval(f"(left_scale*left1_val) {op} (right_scale * right1_val)")
-        if is_compound:
+        if is_compound >= 2:
             left2_val = parse_vals(left2)
             right2_val = parse_vals(right2)
             statement1 = decision_boolean.copy()
             statement2 = eval(f"(left2_scale*left2_val) {op2} (right2_scale * right2_val)")
+            # logical dot product for compound statement
+            decision_boolean = statement1 * statement2
+        if is_compound == 3:
+            left3_val = parse_vals(left3)
+            right3_val = parse_vals(right3)
+            # statement 1 is now the combination of the first two conditional statements
+            statement1 = decision_boolean.copy()
+            # statement 2 is now the third conditional statement
+            statement2 = eval(f"(left3_scale*left3_val) {op2} (right3_scale * right3_val)")
             # logical dot product for compound statement
             decision_boolean = statement1 * statement2
 
@@ -827,10 +882,9 @@ def dec_classification_doesnt_exist(
     custom_node_label="",
     only_used_metrics=False,
     tag_ifTrue=None,
-    tag_ifFalse=None,
 ):
     """
-    If there are not compontents with a classification specified in class_comp_exists,
+    If there are no compontents with a classification specified in class_comp_exists,
     change the classification of all components in decide_comps
     Parameters
     ----------
@@ -909,7 +963,6 @@ def dec_classification_doesnt_exist(
             ifFalse,
             decision_boolean,
             tag_ifTrue=tag_ifTrue,
-            tag_ifFalse=tag_ifFalse,
         )
 
         log_decision_tree_step(
@@ -929,6 +982,7 @@ def dec_classification_doesnt_exist(
 dec_classification_doesnt_exist.__doc__ = dec_classification_doesnt_exist.__doc__.format(
     **decision_docs
 )
+
 
 def calc_varex_thresh(
     selector,
@@ -1119,18 +1173,24 @@ calc_extend_factor.__doc__ = calc_extend_factor.__doc__.format(**decision_docs)
 def calc_max_good_meanmetricrank(
     selector,
     decide_comps,
+    metric_suffix=None,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
     only_used_metrics=False,
 ):
     """
-    Calculated the variance explained upper threshold to use in the kundu decision tree
+    Calculates the max_good_meanmetricrank to use in the kundu decision tree
+    This is the number of components seleted with decide_comps * the extend_factor
+    calculated in calc_extend_factor
 
     Parameters
     ----------
     {selector}
     {decide_comps}
+    metric_suffix: :obj:`str`
+        By default, this will output a value called "max_good_meanmetricrank"
+        If this variable is not None or "" then it will output: "max_good_meanmetricrank_[metric_suffix]
     {log_extra}
     {custom_node_label}
     {only_used_metrics}
@@ -1141,20 +1201,29 @@ def calc_max_good_meanmetricrank(
 
     """
 
+    function_name_idx = f"Step {selector.current_node_idx}: calc_max_good_meanmetricrank"
+
+    if (
+        (metric_suffix is not None)
+        and (metric_suffix is not "")
+        and isinstance(metric_suffix, str)
+    ):
+        metric_name = f"max_good_meanmetricrank_{metric_suffix}"
+    else:
+        metric_name = "max_good_meanmetricrank"
+
     outputs = {
         "decision_node_idx": selector.current_node_idx,
         "node_label": None,
-        "max_good_meanmetricrank": None,
+        metric_name: None,
         "used_metrics": set(),
-        "calc_cross_comp_metrics": ["max_good_meanmetricrank"],
+        "calc_cross_comp_metrics": [metric_name],
     }
 
     if only_used_metrics:
         return outputs["used_metrics"]
 
-    function_name_idx = f"Step {selector.current_node_idx}: calc_max_good_meanmetricrank"
-
-    if "max_good_meanmetricrank" in selector.cross_component_metrics:
+    if metric_name in selector.cross_component_metrics:
         LGR.warning(
             f"max_good_meanmetricrank already calculated. Overwriting previous value in {function_name_idx}"
         )
@@ -1162,7 +1231,7 @@ def calc_max_good_meanmetricrank(
     if custom_node_label:
         outputs["node_label"] = custom_node_label
     else:
-        outputs["node_label"] = "Calc max_good_meanmetricrank"
+        outputs["node_label"] = f"Calc {metric_name}"
 
     if log_extra_info:
         LGR.info(log_extra_info)
@@ -1185,15 +1254,13 @@ def calc_max_good_meanmetricrank(
         num_prov_accept = len(comps2use)
         if "extend_factor" in selector.cross_component_metrics:
             extend_factor = selector.cross_component_metrics["extend_factor"]
-            outputs["max_good_meanmetricrank"] = extend_factor * num_prov_accept
+            outputs[metric_name] = extend_factor * num_prov_accept
         else:
             raise ValueError(
                 f"extend_factor needs to be in cross_component_metrics for {function_name_idx}"
             )
 
-        selector.cross_component_metrics["max_good_meanmetricrank"] = outputs[
-            "max_good_meanmetricrank"
-        ]
+        selector.cross_component_metrics[metric_name] = outputs[metric_name]
 
         log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
 

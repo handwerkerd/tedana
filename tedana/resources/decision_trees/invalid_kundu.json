@@ -157,7 +157,7 @@
                 "class_comp_exists": "provisionalaccept"
             },
             "kwargs": {
-                "tag_ifFalse": "No provisional accept",
+                "tag_ifTrue": "No provisional accept",
                 "log_extra_info": "",
                 "log_extra_report": ""
             }
@@ -181,22 +181,68 @@
             "parameters": {
                 "decide_comps": "provisionalaccept"
             },
-            "kwargs": {}
+            "kwargs": {
+                "metric_suffix": "1"
+            }
         },
         {
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "rejected",
-                "ifFalse": "provisionalaccept",
-                "decide_comps": "provisionalaccept",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
                 "op": ">",
                 "left": "d_table_score",
-                "right": "max_good_meanmetricrank"
+                "right": "max_good_meanmetricrank_1"
             },
             "kwargs": {
                 "op2": ">",
                 "left2": "variance explained",
                 "right2": "varex_upper_thresh"
+            }
+        },
+        {
+            "functionname": "calc_varex_thresh",
+            "parameters": {
+                "decide_comps": "provisionalaccept",
+                "thresh_label": "lower",
+                "percentile_thresh": 25
+            },
+            "kwargs": {}
+        },
+        {
+            "functionname": "calc_max_good_meanmetricrank",
+            "parameters": {
+                "decide_comps": "provisionalaccept"
+            },
+            "kwargs": {
+                "metric_suffix": "2"
+            }
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "accepted",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
+                "op": "<",
+                "left": "d_table_score",
+                "right": "max_good_meanmetricrank_2"
+            },
+            "kwargs": {
+                "tag_ifTrue": "Low variance",
+                "op2": "<",
+                "left2": "variance explained",
+                "right2": "varex_lower_thresh",
+                "op3": ">",
+                "left3": "kappa",
+                "right3": "kappa_elbow_kundu"
             }
         },
         {
