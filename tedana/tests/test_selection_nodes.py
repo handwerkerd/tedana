@@ -98,13 +98,13 @@ def test_dec_left_op_right_succeeds():
         tag_ifTrue="test true tag",
         tag_ifFalse="test false tag",
     )
-    # scales are set to make sure 3 components are true and 1 is false using the sample compnent table
+    # scales are set to make sure 3 components are true and 1 is false using the sample component table
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 3
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 1
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
     # No components with "NotALabel" classification so nothing selected and no
-    #   Node 1 column not created in component_status_table
+    #   Node 1 column is created in component_status_table
     selector.current_node_idx = 1
     selector = selection_nodes.dec_left_op_right(
         selector,
@@ -120,7 +120,7 @@ def test_dec_left_op_right_succeeds():
 
     # Re-initializing selector so that it has components classificated as "provisional accept" again
     selector = sample_selector(options="provclass")
-    # Test when left is a component_table_metric, & right is across_component_metric
+    # Test when left is a component_table_metric, & right is a cross_component_metric
     selector = selection_nodes.dec_left_op_right(
         selector,
         "accepted",
@@ -134,8 +134,10 @@ def test_dec_left_op_right_succeeds():
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 1
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
-    # right component_table_metric, left cross_component_metric
+    # right is a component_table_metric, left is a cross_component_metric
+    # left also has a left_scale that's a cross component metric
     selector = sample_selector(options="provclass")
+    selector.cross_component_metrics["new_cc_metric"] = 1.02
     selector = selection_nodes.dec_left_op_right(
         selector,
         "accepted",
@@ -144,6 +146,7 @@ def test_dec_left_op_right_succeeds():
         ">",
         "test_elbow",
         "kappa",
+        left_scale="new_cc_metric",
     )
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numTrue"] == 1
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["numFalse"] == 3
@@ -225,7 +228,7 @@ def test_dec_left_op_right_fails():
     selector = sample_selector(options="provclass")
     decide_comps = "provisional accept"
 
-    # Raise error for left string that is not a metric
+    # Raise error for left value that is not a metric
     selector = sample_selector(options="provclass")
     with pytest.raises(ValueError):
         selection_nodes.dec_left_op_right(
@@ -238,7 +241,7 @@ def test_dec_left_op_right_fails():
             21,
         )
 
-    # Raise error for right string that is not a metric
+    # Raise error for right value that is not a metric
     selector = sample_selector(options="provclass")
     with pytest.raises(ValueError):
         selection_nodes.dec_left_op_right(
@@ -262,6 +265,36 @@ def test_dec_left_op_right_fails():
             "><",
             "kappa",
             21,
+        )
+
+    # Raise error for right_scale that is not a number
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selector = selection_nodes.dec_left_op_right(
+            selector,
+            "accepted",
+            "rejected",
+            decide_comps,
+            ">",
+            21.0,
+            "kappa",
+            right_scale="NotANumber",
+        )
+
+    # Raise error for right_scale that a column in the component_table
+    #  which isn't allowed since the scale value needs to resolve to a
+    #  a fixed number and not a different number for each component
+    selector = sample_selector(options="provclass")
+    with pytest.raises(ValueError):
+        selector = selection_nodes.dec_left_op_right(
+            selector,
+            "accepted",
+            "rejected",
+            decide_comps,
+            ">",
+            21.0,
+            "kappa",
+            right_scale="rho",
         )
 
     # Raise error if some but not all parameters for the second conditional statement are defined

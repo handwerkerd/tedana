@@ -146,23 +146,6 @@
             }
         },
         {
-            "functionname": "dec_classification_doesnt_exist",
-            "parameters": {
-                "new_classification": "accepted",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject",
-                    "unclassified"
-                ],
-                "class_comp_exists": "provisionalaccept"
-            },
-            "kwargs": {
-                "tag_ifTrue": "No provisional accept",
-                "log_extra_info": "If nothing is provisionally accepted by this point, stop making decisions on what to remove & keep everything",
-                "log_extra_report": ""
-            }
-        },
-        {
             "functionname": "calc_varex_thresh",
             "parameters": {
                 "decide_comps": "provisionalaccept",
@@ -171,6 +154,17 @@
             },
             "kwargs": {
                 "log_extra_info": "Calculuate a high variance threshold based on the 90th percentile variance component"
+            }
+        },
+        {
+            "functionname": "calc_varex_thresh",
+            "parameters": {
+                "decide_comps": "provisionalaccept",
+                "thresh_label": "lower",
+                "percentile_thresh": 25
+            },
+            "kwargs": {
+                "log_extra_info": "Calculuate a low variance threshold based on the 25th percentile variance component"
             }
         },
         {
@@ -210,14 +204,20 @@
             }
         },
         {
-            "functionname": "calc_varex_thresh",
+            "functionname": "dec_classification_doesnt_exist",
             "parameters": {
-                "decide_comps": "provisionalaccept",
-                "thresh_label": "lower",
-                "percentile_thresh": 25
+                "new_classification": "accepted",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject",
+                    "unclassified"
+                ],
+                "class_comp_exists": "provisionalaccept"
             },
             "kwargs": {
-                "log_extra_info": "Calculuate a low variance threshold based on the 25th percentile variance component"
+                "tag_ifTrue": "No provisional accept",
+                "log_extra_info": "If nothing is provisionally accepted by this point, stop making decisions on what to remove & keep everything",
+                "log_extra_report": ""
             }
         },
         {

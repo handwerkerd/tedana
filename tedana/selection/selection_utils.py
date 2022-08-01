@@ -654,48 +654,52 @@ def get_extend_factor(n_vols=None, extend_factor=None):
 
 # This will likely need to be revived to run the kundu decision tree, but it will be slightly differe
 #  So commenting out for now.
-# def get_new_meanmetricrank(comptable, comps2use, decision_node_idx, calc_new_rank=False):
-#     """
-#     If a revised d_table_score was already calculated, use that.
-#     If not, calculate a new d_table_score based on the components
-#     identified in comps2use
+def get_new_meanmetricrank(component_table, comps2use, decision_node_idx, calc_new_rank=False):
+    """
+    If a revised d_table_score was already calculated, use that.
+    If not, calculate a new d_table_score based on the components
+    identified in comps2use
 
-#     Parameters
-#     ----------
-#     comptable
-#     comps2use
-#     decision_node_idx: :obj:`int`
-#         The index for the current decision node
-#     calc_new_rank: :obj:`bool`
-#         calculate a new d_table_score even if a revised mean
-#         metric rank was already calculated
+    Parameters
+    ----------
+    component_table
+    comps2use
+    decision_node_idx: :obj:`int`
+        The index for the current decision node
+    calc_new_rank: :obj:`bool`
+        calculate a new d_table_score even if revised scores with the same
+        labels were already calculated
 
-#     Return
-#     ------
-#     meanmetricrank
-#     comptable
-#     """
-#     rank_label = "d_table_score" + str(decision_node_idx)
-#     if not calc_new_rank and (rank_label in comptable.columns):
-#         # go ahead and return existing
-#         return comptable[rank_label], comptable
-#     # get the array of ranks
-#     ranks = generate_decision_table_score(
-#         comptable.loc[comps2use, "kappa"],
-#         comptable.loc[comps2use, "dice_FT2"],
-#         comptable.loc[comps2use, "signal-noise_t"],
-#         comptable.loc[comps2use, "countnoise"],
-#         comptable.loc[comps2use, "countsigFT2"],
-#     )
-#     # see if we need to make a new column
-#     if rank_label not in comptable.columns:
-#         comptable[rank_label] = np.zeros(comptable.shape[0]) * np.nan
+    Return
+    ------
+    meanmetricrank
+    comptable
+    """
+    rank_label = f"d_table_score_node{decision_node_idx}"
+    if not calc_new_rank and (rank_label in component_table.columns):
+        # return existing
+        LGR.info(
+            f"{rank_label} already calculated so not recalculating in node {decision_node_idx}"
+        )
+        return component_table[rank_label], component_table
 
-#     # fill in the column with the components of interest
-#     for c, rank in zip(comps2use, ranks):
-#         comptable[c, rank_label] = rank
+    # get the array of ranks
+    ranks = generate_decision_table_score(
+        component_table.loc[comps2use, "kappa"],
+        component_table.loc[comps2use, "dice_FT2"],
+        component_table.loc[comps2use, "signal-noise_t"],
+        component_table.loc[comps2use, "countnoise"],
+        component_table.loc[comps2use, "countsigFT2"],
+    )
+    # see if we need to make a new column
+    if rank_label not in component_table.columns:
+        component_table[rank_label] = np.zeros(component_table.shape[0]) * np.nan
 
-#     return comptable[rank_label], comptable
+    # fill in the column with the components of interest
+    for c, rank in zip(comps2use, ranks):
+        component_table.loc[c, rank_label] = rank
+
+    return component_table[rank_label].copy(), component_table.copy()
 
 
 # Not currently being used and hopefully will never again be used

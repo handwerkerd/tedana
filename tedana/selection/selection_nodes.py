@@ -290,7 +290,10 @@ def dec_left_op_right(
     left_scale, right_scale: :obj:`float`, optional
         Multiply the left or right metrics value by a constant. For example
         if left='kappa', right='rho', right_scale=2, and op='>' this tests
-        kappa>(2*rho). default=1
+        kappa>(2*rho). These also be a string that labels a value in
+        cross_component_metrics, since those will resolve to a single value.
+        This cannot be a label for a component_table column since that would
+        output a different value for each component. default=1
     op2: :ojb:`str`, optional
     left2, right2, left3, right3: :obj:`str` or :obj:`float`, optional
     left2_scale, right2_scale, left3_scale, right3_scale: :obj:`float`, optional
@@ -337,12 +340,18 @@ def dec_left_op_right(
     if not only_used_metrics:
         comps2use = selectcomps2use(selector, decide_comps)
 
-    def identify_used_metric(val):
+    def identify_used_metric(val, isnum=False):
         """
-        Parse the left or right values to see if they're an existing used_metric
-        or cross_component_metric
-        If it's already a number, no parse would be needed
+        Parse the left or right values or scalers to see if they are an
+        existing used_metric or cross_component_metric
+        If the value already a number, no parse would be needed
+
+        This is also used on left_scale and right_scale to convert
+        a value in cross_component_metrics to a number. Set the isnum
+        flag to true for those inputs and this will raise an error
+        if a number isn't loaded
         """
+        orig_val = val
         if isinstance(val, str):
             if val in selector.component_table.columns:
                 outputs["used_metrics"].update([val])
@@ -364,19 +373,27 @@ def dec_left_op_right(
                     raise ValueError(
                         f"{val} is neither a metric in selector.component_table nor selector.cross_component_metrics"
                     )
+        if isnum:
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"{orig_val} must be a number. It is {val}")
         return val
 
     legal_ops = (">", ">=", "==", "<=", "<")
 
-    def confirm_valid_conditional(left_val, right_val, op_val):
+    def confirm_valid_conditional(left_scale, left_val, right_scale, right_val, op_val):
         """
-        Makes sure the left, right, and operator variables combine into a valid statement
+        Makes sure the left_scale, left_val, right_scale, right_val, and
+        operator variables combine into a valid conditional statement
         """
+
         left_val = identify_used_metric(left_val)
         right_val = identify_used_metric(right_val)
+        left_scale = identify_used_metric(left_scale, isnum=True)
+        right_scale = identify_used_metric(right_scale, isnum=True)
+
         if op_val not in legal_ops:
             raise ValueError(f"{op_val} is not a binary comparison operator, like > or <")
-        return left_val, right_val
+        return left_scale, left_val, right_scale, right_val
 
     def operator_scale_descript(val_scale, val):
         """
@@ -395,7 +412,9 @@ def dec_left_op_right(
         else:
             return f"{round(val_scale,2)}*{val}"
 
-    left, right = confirm_valid_conditional(left, right, op)
+    left_scale, left, right_scale, right = confirm_valid_conditional(
+        left_scale, left, right_scale, right, op
+    )
     descript_left = operator_scale_descript(left_scale, left)
     descript_right = operator_scale_descript(right_scale, right)
     is_compound = 0
@@ -405,7 +424,9 @@ def dec_left_op_right(
         # Check if they're all set & use them all or raise an error
         if left2 and right2 and op2:
             is_compound = 2
-            left2, right2 = confirm_valid_conditional(left2, right2, op2)
+            left2_scale, left2, right2_scale, right2 = confirm_valid_conditional(
+                left2_scale, left2, right2_scale, right2, op2
+            )
             descript_left2 = operator_scale_descript(left2_scale, left2)
             descript_right2 = operator_scale_descript(right2_scale, right2)
         else:
@@ -427,7 +448,9 @@ def dec_left_op_right(
         # Check if they're all set & use them all or raise an error
         if left3 and right3 and op3:
             is_compound = 3
-            left3, right3 = confirm_valid_conditional(left3, right3, op3)
+            left3_scale, left3, right3_scale, right3 = confirm_valid_conditional(
+                left3_scale, left3, right3_scale, right3, op3
+            )
             descript_left3 = operator_scale_descript(left3_scale, left3)
             descript_right3 = operator_scale_descript(right3_scale, right3)
         else:
