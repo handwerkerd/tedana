@@ -451,8 +451,6 @@ class ComponentSelector:
         self.are_only_necessary_metrics_used()
 
         self.are_all_components_accepted_or_rejected()
-        # TODO Remove this print statement once self.node is saved as a json
-        print(self.tree["nodes"])
 
     def add_manual(self, indices, classification):
         """Add nodes that will manually classify components

@@ -21,6 +21,7 @@
     "classification_tags": [
         "Likely BOLD",
         "Unlikely BOLD",
+        "Less likely BOLD",
         "Low variance",
         "No provisional accept"
     ],
@@ -284,6 +285,34 @@
             },
             "kwargs": {},
             "_comment": "Add more here"
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "rejected",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject",
+                    "unclassified"
+                ],
+                "op": ">",
+                "left": "d_table_score_node17",
+                "right": "conservative_guess"
+            },
+            "kwargs": {
+                "tag_ifTrue": "Less likely BOLD",
+                "op2": ">",
+                "left2": "varex kappa ratio",
+                "right2": "extend_factor",
+                "right2_scale": 2,
+                "op3": ">",
+                "left3": "variance explained",
+                "right3": "varex_upper_thresh",
+                "right3_scale": "extend_factor",
+                "log_extra_info": "Reject if a combination of kappa, variance, and other factors are ranked worse than others"
+            },
+            "_comment": "One of a final few quirky combinations of metrics that detail with rejecting some edge cases"
         },
         {
             "functionname": "manual_classify",
