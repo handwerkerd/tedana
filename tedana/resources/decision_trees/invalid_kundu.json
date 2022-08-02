@@ -146,6 +146,23 @@
             }
         },
         {
+            "functionname": "dec_classification_doesnt_exist",
+            "parameters": {
+                "new_classification": "accepted",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject",
+                    "unclassified"
+                ],
+                "class_comp_exists": "provisionalaccept"
+            },
+            "kwargs": {
+                "tag_ifTrue": "No provisional accept",
+                "log_extra_info": "If nothing is provisionally accepted by this point, be conservative and accept everything",
+                "log_extra_report": ""
+            }
+        },
+        {
             "functionname": "calc_varex_thresh",
             "parameters": {
                 "decide_comps": "provisionalaccept",
@@ -172,7 +189,8 @@
             "parameters": {},
             "kwargs": {
                 "log_extra_info": "2 if fewer than 90 fMRI volumes, 3 if more than 110 and linear in-between"
-            }
+            },
+            "_comment": "This is a scaling number that is used for a few thresholds"
         },
         {
             "functionname": "calc_max_good_meanmetricrank",
@@ -182,6 +200,16 @@
             "kwargs": {
                 "log_extra_info": "Number of provisionalaccept components * extend_factor"
             }
+        },
+        {
+            "functionname": "calc_varex_kappa_ratio",
+            "parameters": {
+                "decide_comps": "provisionalaccept"
+            },
+            "kwargs": {
+                "log_extra_info": "Scaled ratio of variance/kappa"
+            },
+            "_comment": "This is used to calculate the new 'varex kappa ratio' column in the component_table"
         },
         {
             "functionname": "dec_left_op_right",
@@ -201,24 +229,8 @@
                 "left2": "variance explained",
                 "right2": "varex_upper_thresh",
                 "log_extra_info": "If variance and d_table_scores are high, then reject"
-            }
-        },
-        {
-            "functionname": "dec_classification_doesnt_exist",
-            "parameters": {
-                "new_classification": "accepted",
-                "decide_comps": [
-                    "provisionalaccept",
-                    "provisionalreject",
-                    "unclassified"
-                ],
-                "class_comp_exists": "provisionalaccept"
             },
-            "kwargs": {
-                "tag_ifTrue": "No provisional accept",
-                "log_extra_info": "If nothing is provisionally accepted by this point, stop making decisions on what to remove & keep everything",
-                "log_extra_report": ""
-            }
+            "_comment": "One of several steps that makes it more likely to reject high variance components"
         },
         {
             "functionname": "dec_left_op_right",
@@ -241,7 +253,7 @@
                 "op3": ">",
                 "left3": "kappa",
                 "right3": "kappa_elbow_kundu",
-                "log_extra_info": "If low variance and good kappa & d_table_scores accept even if other metrics are bad"
+                "log_extra_info": "If low variance and good kappa & d_table_scores accept even if rho or other metrics are bad"
             }
         },
         {
@@ -268,7 +280,7 @@
                 "decide_comps": "provisionalaccept"
             },
             "kwargs": {
-                "log_extra_info": "",
+                "log_extra_info": "Anything that is still provisionalaccept should be accepted",
                 "log_extra_report": "",
                 "tag": "Likely BOLD"
             }
@@ -283,10 +295,11 @@
                 ]
             },
             "kwargs": {
-                "log_extra_info": "",
+                "log_extra_info": "Anything that is still provisionalreject should be rejected",
                 "log_extra_report": "",
                 "tag": "Unlikely BOLD"
-            }
+            },
+            "_comment": "According to a comment in the meica 2.7 code, nothing should be provisionalreject by this point."
         }
     ]
 }

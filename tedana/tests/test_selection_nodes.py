@@ -776,3 +776,53 @@ def test_max_good_meanmetricrank_smoke():
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["max_good_meanmetricrank"]
         == None
     )
+
+
+def test_calc_varex_kappa_ratio_smoke():
+    """Smoke tests for calc_varex_kappa_ratio"""
+
+    # Standard use of this function requires some components to be "provisional accept"
+    selector = sample_selector("provclass")
+
+    # Outputs just the metrics used in this function {""}
+    used_metrics = selection_nodes.calc_varex_kappa_ratio(
+        selector, "provisional accept", only_used_metrics=True
+    )
+    assert used_metrics == {"kappa", "variance explained"}
+
+    # Standard call to this function.
+    selector = selection_nodes.calc_varex_kappa_ratio(
+        selector,
+        "provisional accept",
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {"kappa_rate"}
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the indended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_rate"] > 0
+    # Confirm there's a new attribute for an added row to the component_table
+    assert selector.added_component_table_metrics == set(["varex kappa ratio"])
+
+    # Run warning logging code for if any of the cross_component_metrics already existed and would be over-written
+    selector = sample_selector("provclass")
+    selector.cross_component_metrics["kappa_rate"] = 10
+    selector = selection_nodes.calc_varex_kappa_ratio(selector, "provisional accept")
+
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_rate"] > 0
+
+    # Log without running if no components of decide_comps are in the component table
+    selector = sample_selector()
+    selector = selection_nodes.calc_varex_kappa_ratio(selector, "NotAClassification")
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_rate"] == None
+
+    # Raise error if "varex kappa ratio" is already in component_table
+    selector = sample_selector("provclass")
+    selector.component_table["varex kappa ratio"] = 42
+    with pytest.raises(ValueError):
+        selector = selection_nodes.calc_varex_kappa_ratio(selector, "provisional accept")

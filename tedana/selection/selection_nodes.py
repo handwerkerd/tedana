@@ -1223,6 +1223,15 @@ def calc_max_good_meanmetricrank(
     -------
     {basicreturns}
 
+    Note
+    ----
+    "meanmetricrank" is the same as "d_table_score" and is used to set a threshold for
+    the "d_table" values in the component table. This metric ranks
+    the components based on 5 metrics and then outputs the mean rank across the 5 metrics.
+    Thus "meanmetricrank" is a slightly better description but d_table was used in earlier
+    versions of this code. It might be worth consistently using the same term, but this
+    note will suffice for now.
+
     """
 
     function_name_idx = f"Step {selector.current_node_idx}: calc_max_good_meanmetricrank"
@@ -1294,6 +1303,125 @@ def calc_max_good_meanmetricrank(
 
 
 calc_max_good_meanmetricrank.__doc__ = calc_max_good_meanmetricrank.__doc__.format(**decision_docs)
+
+
+def calc_varex_kappa_ratio(
+    selector,
+    decide_comps,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    Calculates the variance explained / kappa ratio for the componentse in decide_comps
+    and add those values to a new column in the component_table titled "varex kappa ratio".
+    Also calculated kappa_rate which is a cross_component_metric
+
+    Parameters
+    ----------
+    {selector}
+    {decide_comps}
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+
+    Note
+    ----
+    These measures are used in the original kundu decision tree.
+    kappa_rate = (max-min kappa values of selected components)/(max-min variance explained)
+    varex_k
+    varex kappa ratio = kappa_rate * "variance explained"/"kappa" for each component
+    Components with larger variance and smaller kappa are more likely to be rejected
+    This metric sometimes causes issues with high magnitude BOLD responses
+    such as the V1 response to a block-design flashing checkerboard
+    """
+
+    function_name_idx = f"Step {selector.current_node_idx}: calc_varex_kappa_ratio"
+
+    outputs = {
+        "decision_node_idx": selector.current_node_idx,
+        "node_label": None,
+        "kappa_rate": None,
+        "used_metrics": {"kappa", "variance explained"},
+        "calc_cross_comp_metrics": ["kappa_rate"],
+        "added_component_table_metrics": ["varex kappa ratio"],
+    }
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
+    if "kappa_rate" in selector.cross_component_metrics:
+        LGR.warning(
+            f"kappa_rate already calculated. Overwriting previous value in {function_name_idx}"
+        )
+
+    if "varex kappa ratio" in selector.component_table:
+        raise ValueError(
+            f"'varex kappa ratio' is already a column in the component_table. Recalculating in {function_name_idx} can cause problems since these are only calculated on a subset of components"
+        )
+
+    if custom_node_label:
+        outputs["node_label"] = custom_node_label
+    else:
+        outputs["node_label"] = "Calc varex kappa ratio"
+
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    comps2use = selectcomps2use(selector, decide_comps)
+    confirm_metrics_exist(
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
+    )
+
+    if not comps2use:
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+        )
+    else:
+        kappa_rate = (
+            np.nanmax(selector.component_table.loc[comps2use, "kappa"])
+            - np.nanmin(selector.component_table.loc[comps2use, "kappa"])
+        ) / (
+            np.nanmax(selector.component_table.loc[comps2use, "variance explained"])
+            - np.nanmin(selector.component_table.loc[comps2use, "variance explained"])
+        )
+        outputs["kappa_rate"] = kappa_rate
+        LGR.info(f"Kappa rate found to be {kappa_rate} from components " f"{comps2use}")
+        selector.component_table["varex kappa ratio"] = (
+            kappa_rate
+            * selector.component_table.loc[comps2use, "variance explained"]
+            / selector.component_table.loc[comps2use, "kappa"]
+        )
+        # Unclear if necessary, but this may clean up a weird issue on passing references in a data frame
+        # See longer comment in selection_utils.comptable_classification_changer
+        selector.component_table = selector.component_table.copy()
+
+        selector.cross_component_metrics["kappa_rate"] = outputs["kappa_rate"]
+
+        # Keep a list of added metrics to the component table in selector
+        if hasattr(selector, "added_component_table_metrics"):
+            selector.added_component_table_metrics.add(["varex kappa ratio"])
+        else:
+            selector.added_component_table_metrics = set(["varex kappa ratio"])
+
+        log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
+
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
+
+    return selector
+
+
+calc_varex_kappa_ratio.__doc__ = calc_varex_kappa_ratio.__doc__.format(**decision_docs)
+
 
 """
 EVERTYHING BELOW HERE IS FOR THE KUNDU DECISION TREE AND IS NOT YET UPDATED
