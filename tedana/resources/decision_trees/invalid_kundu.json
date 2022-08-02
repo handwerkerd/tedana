@@ -23,6 +23,7 @@
         "Unlikely BOLD",
         "Less likely BOLD",
         "Low variance",
+        "Accept borderline",
         "No provisional accept"
     ],
     "nodes": [
@@ -117,14 +118,14 @@
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "provisionalaccept",
-                "ifFalse": "nochange",
+                "ifFalse": "provisionalreject",
                 "decide_comps": "unclassified",
                 "op": ">",
                 "left": "kappa",
                 "right": "kappa_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "Provisionally accept if kappa>elbow",
+                "log_extra_info": "Provisionally accept if kappa>elbow and provisionally reject if kappa<elbow",
                 "log_extra_report": ""
             }
         },
@@ -134,7 +135,7 @@
                 "ifTrue": "nochange",
                 "ifFalse": "provisionalreject",
                 "decide_comps": [
-                    "unclassified",
+                    "provisionalreject",
                     "provisionalaccept"
                 ],
                 "op": ">",
@@ -263,8 +264,7 @@
                 "new_classification": "accepted",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject",
-                    "unclassified"
+                    "provisionalreject"
                 ],
                 "class_comp_exists": "provisionalreject"
             },
@@ -279,8 +279,7 @@
             "parameters": {
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject",
-                    "unclassified"
+                    "provisionalreject"
                 ]
             },
             "kwargs": {},
@@ -293,8 +292,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject",
-                    "unclassified"
+                    "provisionalreject"
                 ],
                 "op": ">",
                 "left": "d_table_score_node17",
@@ -312,7 +310,90 @@
                 "right3_scale": "extend_factor",
                 "log_extra_info": "Reject if a combination of kappa, variance, and other factors are ranked worse than others"
             },
-            "_comment": "One of a final few quirky combinations of metrics that detail with rejecting some edge cases"
+            "_comment": "Quirky combination 1 of a bunch of metrics that deal with rejecting some edge cases"
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "rejected",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
+                "op": ">",
+                "left": "d_table_score_node17",
+                "right": "num_acc_guess"
+            },
+            "kwargs": {
+                "tag_ifTrue": "Less likely BOLD",
+                "right_scale": 0.9,
+                "op2": ">",
+                "left2": "variance explained",
+                "right2": "varex_lower_thresh",
+                "right2_scale": "extend_factor",
+                "log_extra_info": "Reject if a combination of variance and ranks of other metrics are worse than others"
+            },
+            "_comment": "Quirky combination 2 of a bunch of metrics that deal with rejecting some edge cases"
+        },
+        {
+            "functionname": "calc_varex_thresh",
+            "parameters": {
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
+                "thresh_label": "new_lower",
+                "percentile_thresh": 25
+            },
+            "kwargs": {
+                "log_extra_info": "Calculuate a low variance threshold based on the 25th percentile variance component"
+            },
+            "_comment": "In the original kundu code, this is run only on the first num_acc_guess remaining component... probably sorted for the lowest variance. Adding that functionality here would be messy and unlikely to significantly alter results"
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "rejected",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
+                "op": ">",
+                "left": "d_table_score_node17",
+                "right": "num_acc_guess"
+            },
+            "kwargs": {
+                "tag_ifTrue": "Accept borderline",
+                "op2": ">",
+                "left2": "variance explained",
+                "right2": "varex_new_lower_thresh",
+                "log_extra_info": "Accept components with a bad d_table_score, but are at the higher end of the remaining variance so more cautious to not remove"
+            },
+            "_comment": "Yet another quirky criterion, but this one to keep components. In the original tree, varex_new_lower_thresh would be lower than it is here. If there are differences in results, might be worth adding a scaling factor"
+        },
+        {
+            "functionname": "dec_left_op_right",
+            "parameters": {
+                "ifTrue": "rejected",
+                "ifFalse": "nochange",
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject"
+                ],
+                "op": "<=",
+                "left": "kappa",
+                "right": "kappa_elbow_kundu"
+            },
+            "kwargs": {
+                "tag_ifTrue": "Accept borderline",
+                "op2": ">",
+                "left2": "variance explained",
+                "right2": "varex_new_lower_thresh",
+                "log_extra_info": "Accept components above the kappa elbow, but are at the higher end of the remaining variance so more cautious to not remove"
+            },
+            "_comment": "Yet another quirky criterion, but this one to keep components. In the original tree, varex_new_lower_thresh would be lower than it is here. If there are differences in results, might be worth adding a scaling factor"
         },
         {
             "functionname": "manual_classify",
