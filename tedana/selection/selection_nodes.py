@@ -19,6 +19,7 @@ from tedana.selection.selection_utils import (
     kappa_elbow_kundu,
     # get_new_meanmetricrank,
 )
+from tedana.metrics.dependence import generate_decision_table_score
 
 LGR = logging.getLogger("GENERAL")
 RepLGR = logging.getLogger("REPORT")
@@ -1407,12 +1408,6 @@ def calc_varex_kappa_ratio(
 
         selector.cross_component_metrics["kappa_rate"] = outputs["kappa_rate"]
 
-        # Keep a list of added metrics to the component table in selector
-        if hasattr(selector, "added_component_table_metrics"):
-            selector.added_component_table_metrics.add(["varex kappa ratio"])
-        else:
-            selector.added_component_table_metrics = set(["varex kappa ratio"])
-
         log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
 
     selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
@@ -1421,6 +1416,177 @@ def calc_varex_kappa_ratio(
 
 
 calc_varex_kappa_ratio.__doc__ = calc_varex_kappa_ratio.__doc__.format(**decision_docs)
+
+
+def calc_revised_meanmetricrank_guesses(
+    selector,
+    decide_comps,
+    restrict_factor=2,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    Calculates a new d_table_score (meanmetricrank) on a subset of components defiend in decide_comps
+    Also saves a bunch of cross_component_metrics that are used for various thresholds. These
+    are:
+    num_acc_guess: A guess of the final number of accepted components
+    restrict_factor: An inputted scaling value
+    conservative_guess: A conservative guess of the final number of accepted components
+        (num_acc_guess/restrict_factor)
+
+    Parameters
+    ----------
+    {selector}
+    {decide_comps}
+    restrict_factor: :obj:`int` or :obj:`float`
+        A scaling factor to scale between num_acc_guess and conservative_guess. default=2
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+
+    Note
+    ----
+    These measures are used in the original kundu decision tree.
+    Since the d_table_rank is a mean rank across 5 metrics, those ranks
+    will change when they're calculated on a subset of components. It's
+    unclear how much the relative magnitudes will change and when the
+    recalculation will affect results, but this was in the original
+    kundu tree and will be replicated here to allow for comparisions
+    """
+
+    function_name_idx = f"Step {selector.current_node_idx}: calc_revised_meanmetricrank_guesses"
+
+    outputs = {
+        "decision_node_idx": selector.current_node_idx,
+        "node_label": None,
+        "num_acc_guess": None,
+        "conservative_guess": None,
+        "restrict_factor": None,
+        "used_metrics": {
+            "kappa",
+            "dice_FT2",
+            "signal-noise_t",
+            "countnoise",
+            "countsigFT2",
+            "rho",
+        },
+        "used_cross_component_metrics": {"kappa_elbow_kundu", "rho_elbow_kundu"},
+        "calc_cross_comp_metrics": ["num_acc_guess", "conservative_guess", "restrict_factor"],
+        "added_component_table_metrics": ["d_table_score_node{selector.current_node_idx}"],
+    }
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
+    if "num_acc_guess" in selector.cross_component_metrics:
+        LGR.warning(
+            f"num_acc_guess already calculated. Overwriting previous value in {function_name_idx}"
+        )
+
+    if "conservative_guess" in selector.cross_component_metrics:
+        LGR.warning(
+            f"conservative_guess already calculated. Overwriting previous value in {function_name_idx}"
+        )
+
+    if "restrict_factor" in selector.cross_component_metrics:
+        LGR.warning(
+            f"restrict_factor already calculated. Overwriting previous value in {function_name_idx}"
+        )
+    if not isinstance(restrict_factor, (int, float)):
+        raise ValueError(f"restrict_factor needs to be a number. It is: {restrict_factor}")
+
+    if f"d_table_score_node{selector.current_node_idx}" in selector.component_table:
+        raise ValueError(
+            f"d_table_score_node{selector.current_node_idx} is already a column in the component_table. Recalculating in {function_name_idx} can cause problems since these are only calculated on a subset of components"
+        )
+
+    for xcompmetric in outputs["used_cross_component_metrics"]:
+        if xcompmetric not in selector.cross_component_metrics:
+            raise ValueError(
+                f"{xcompmetric} not in cross_component_metrics. It needs to be calculated before {function_name_idx}"
+            )
+
+    if custom_node_label:
+        outputs["node_label"] = custom_node_label
+    else:
+        outputs["node_label"] = "Calc revised d_table_score & num accepted component guesses"
+
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    comps2use = selectcomps2use(selector, decide_comps)
+    confirm_metrics_exist(
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
+    )
+
+    if not comps2use:
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+        )
+    else:
+        outputs["restrict_factor"] = restrict_factor
+        outputs["num_acc_guess"] = int(
+            np.mean(
+                [
+                    np.sum(
+                        (
+                            selector.component_table.loc[comps2use, "kappa"]
+                            > selector.cross_component_metrics["kappa_elbow_kundu"]
+                        )
+                        & (
+                            selector.component_table.loc[comps2use, "rho"]
+                            < selector.cross_component_metrics["rho_elbow_kundu"]
+                        )
+                    ),
+                    np.sum(
+                        selector.component_table.loc[comps2use, "kappa"]
+                        > selector.cross_component_metrics["kappa_elbow_kundu"]
+                    ),
+                ]
+            )
+        )
+        outputs["conservative_guess"] = outputs["num_acc_guess"] / outputs["restrict_factor"]
+
+        tmp_kappa = selector.component_table.loc[comps2use, "kappa"].to_numpy()
+        tmp_dice_FT2 = selector.component_table.loc[comps2use, "dice_FT2"].to_numpy()
+        tmp_signal_m_noise_t = selector.component_table.loc[comps2use, "signal-noise_t"].to_numpy()
+        tmp_countnoise = selector.component_table.loc[comps2use, "countnoise"].to_numpy()
+        tmp_countsigFT2 = selector.component_table.loc[comps2use, "countsigFT2"].to_numpy()
+        tmp_d_table_score = generate_decision_table_score(
+            tmp_kappa, tmp_dice_FT2, tmp_signal_m_noise_t, tmp_countnoise, tmp_countsigFT2
+        )
+        selector.component_table[f"d_table_score_node{selector.current_node_idx}"] = np.NaN
+        selector.component_table.loc[
+            comps2use, f"d_table_score_node{selector.current_node_idx}"
+        ] = tmp_d_table_score
+        # Unclear if necessary, but this may clean up a weird issue on passing references in a data frame
+        # See longer comment in selection_utils.comptable_classification_changer
+        selector.component_table = selector.component_table.copy()
+
+        selector.cross_component_metrics["conservative_guess"] = outputs["conservative_guess"]
+        selector.cross_component_metrics["num_acc_guess"] = outputs["num_acc_guess"]
+        selector.cross_component_metrics["restrict_factor"] = outputs["restrict_factor"]
+
+        log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
+
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
+
+    return selector
+
+
+calc_revised_meanmetricrank_guesses.__doc__ = calc_revised_meanmetricrank_guesses.__doc__.format(
+    **decision_docs
+)
 
 
 """

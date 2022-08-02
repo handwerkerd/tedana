@@ -274,6 +274,18 @@
             }
         },
         {
+            "functionname": "calc_revised_meanmetricrank_guesses",
+            "parameters": {
+                "decide_comps": [
+                    "provisionalaccept",
+                    "provisionalreject",
+                    "unclassified"
+                ]
+            },
+            "kwargs": {},
+            "_comment": "Add more here"
+        },
+        {
             "functionname": "manual_classify",
             "parameters": {
                 "new_classification": "accepted",

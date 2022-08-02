@@ -440,7 +440,7 @@ def test_calc_kappa_rho_elbows_kundu():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_elbow_kundu"] > 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_kundu"] > 0
@@ -471,7 +471,7 @@ def test_calc_kappa_rho_elbows_kundu():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_elbow_kundu"] > 0
     assert "rho_elbow_kundu" not in selector.tree["nodes"][selector.current_node_idx]["outputs"]
@@ -484,7 +484,7 @@ def test_calc_kappa_rho_elbows_kundu():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_kundu"] > 0
     assert "kappa_elbow_kundu" not in selector.tree["nodes"][selector.current_node_idx]["outputs"]
@@ -499,7 +499,7 @@ def test_calc_kappa_rho_elbows_kundu():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_elbow_kundu"] > 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_kundu"] > 0
@@ -610,7 +610,7 @@ def test_calc_varex_thresh_smoke():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_thresh"] > 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["upper_perc"] == 90
@@ -629,7 +629,7 @@ def test_calc_varex_thresh_smoke():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_thresh"] > 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["perc"] == 90
@@ -698,7 +698,7 @@ def test_calc_extend_factor_smoke():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["extend_factor"] > 0
 
@@ -744,7 +744,7 @@ def test_max_good_meanmetricrank_smoke():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert (
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["max_good_meanmetricrank"] > 0
@@ -802,11 +802,9 @@ def test_calc_varex_kappa_ratio_smoke():
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
     )
-    # Confirming the indended metrics are added to outputs and they have non-zero values
+    # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_rate"] > 0
-    # Confirm there's a new attribute for an added row to the component_table
-    assert selector.added_component_table_metrics == set(["varex kappa ratio"])
 
     # Run warning logging code for if any of the cross_component_metrics already existed and would be over-written
     selector = sample_selector("provclass")
@@ -826,3 +824,100 @@ def test_calc_varex_kappa_ratio_smoke():
     selector.component_table["varex kappa ratio"] = 42
     with pytest.raises(ValueError):
         selector = selection_nodes.calc_varex_kappa_ratio(selector, "provisional accept")
+
+
+def test_calc_revised_meanmetricrank_guesses_smoke():
+    """Smoke tests for calc_revised_meanmetricrank_guesses"""
+
+    # Standard use of this function requires some components to be "provisional accept"
+    selector = sample_selector("provclass")
+    selector.cross_component_metrics["kappa_elbow_kundu"] = 19.1
+    selector.cross_component_metrics["rho_elbow_kundu"] = 15.2
+
+    # Outputs just the metrics used in this function {""}
+    used_metrics = selection_nodes.calc_revised_meanmetricrank_guesses(
+        selector,
+        ["provisional accept", "provisional reject", "unclassified"],
+        only_used_metrics=True,
+    )
+    assert used_metrics == {
+        "kappa",
+        "dice_FT2",
+        "signal-noise_t",
+        "countnoise",
+        "countsigFT2",
+        "rho",
+    }
+
+    # Standard call to this function.
+    selector = selection_nodes.calc_revised_meanmetricrank_guesses(
+        selector,
+        ["provisional accept", "provisional reject", "unclassified"],
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {"num_acc_guess", "conservative_guess", "restrict_factor"}
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the intended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["num_acc_guess"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["conservative_guess"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["restrict_factor"] == 2
+
+    # Run warning logging code for if any of the cross_component_metrics already existed and would be over-written
+    selector = sample_selector("provclass")
+    selector.cross_component_metrics["kappa_elbow_kundu"] = 19.1
+    selector.cross_component_metrics["rho_elbow_kundu"] = 15.2
+    selector.cross_component_metrics["num_acc_guess"] = 10
+    selector.cross_component_metrics["conservative_guess"] = 10
+    selector.cross_component_metrics["restrict_factor"] = 5
+    selector = selection_nodes.calc_revised_meanmetricrank_guesses(
+        selector, ["provisional accept", "provisional reject", "unclassified"]
+    )
+
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["num_acc_guess"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["conservative_guess"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["restrict_factor"] == 2
+
+    # Log without running if no components of decide_comps are in the component table
+    selector = sample_selector()
+    selector.cross_component_metrics["kappa_elbow_kundu"] = 19.1
+    selector.cross_component_metrics["rho_elbow_kundu"] = 15.2
+    selector = selection_nodes.calc_revised_meanmetricrank_guesses(selector, "NotAClassification")
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["num_acc_guess"] == None
+    assert (
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["conservative_guess"] == None
+    )
+
+    # Raise error if "d_table_score_node0" is already in component_table
+    selector = sample_selector("provclass")
+    selector.cross_component_metrics["kappa_elbow_kundu"] = 19.1
+    selector.cross_component_metrics["rho_elbow_kundu"] = 15.2
+    selector.component_table["d_table_score_node0"] = 42
+    with pytest.raises(ValueError):
+        selector = selection_nodes.calc_revised_meanmetricrank_guesses(
+            selector, ["provisional accept", "provisional reject", "unclassified"]
+        )
+
+    # Raise error if restrict_factor isn't a number
+    selector = sample_selector("provclass")
+    selector.cross_component_metrics["kappa_elbow_kundu"] = 19.1
+    selector.cross_component_metrics["rho_elbow_kundu"] = 15.2
+    with pytest.raises(ValueError):
+        selector = selection_nodes.calc_revised_meanmetricrank_guesses(
+            selector,
+            ["provisional accept", "provisional reject", "unclassified"],
+            restrict_factor="2",
+        )
+
+    # Raise error if kappa_elbow_kundu isn't in cross_component_metrics
+    selector = sample_selector("provclass")
+    selector.cross_component_metrics["rho_elbow_kundu"] = 15.2
+    with pytest.raises(ValueError):
+        selector = selection_nodes.calc_revised_meanmetricrank_guesses(
+            selector, ["provisional accept", "provisional reject", "unclassified"]
+        )
