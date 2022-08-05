@@ -319,7 +319,7 @@ def dec_left_op_right(
     kappa>kappa_elbow and rho>rho_elbow with two separate calls to this function
     so that the results of each can be easily viewed. That said, particularly for
     the original kundu decision tree, if you're making decisions on components with
-    various classifications based on multiple boolean statements, the decesion tree
+    various classifications based on multiple boolean statements, the decision tree
     becomes really messy and the added functionality here is useful.
     Combinations of boolean statements only test with "and" and not "or". This is
     an intentional decision because, if a classification changes if A or B are true
