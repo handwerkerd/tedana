@@ -1231,7 +1231,7 @@ def calc_max_good_meanmetricrank(
     the components based on 5 metrics and then outputs the mean rank across the 5 metrics.
     Thus "meanmetricrank" is a slightly better description but d_table was used in earlier
     versions of this code. It might be worth consistently using the same term, but this
-    note will suffice for now.
+    note will hopefully suffice for now.
 
     """
 
