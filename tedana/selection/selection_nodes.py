@@ -908,7 +908,7 @@ def dec_classification_doesnt_exist(
     tag_ifTrue=None,
 ):
     """
-    If there are no compontents with a classification specified in class_comp_exists,
+    If there are no components with a classification specified in class_comp_exists,
     change the classification of all components in decide_comps
     Parameters
     ----------
