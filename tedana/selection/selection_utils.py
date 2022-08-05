@@ -38,9 +38,6 @@ def selectcomps2use(selector, decide_comps):
     -------
     comps2use: :obj:`list[int]`
         A list of component indices that should be used by a function
-
-    TODO: Confirm that multiple decide_comps with a space in their name causes problems
-       If so, then figure out why an fix or remove spaces: x = [s.replace(‘ ‘, ‘’) for s in x]
     """
 
     if "classification" not in selector.component_table:
@@ -363,7 +360,6 @@ def log_decision_tree_step(
     ifTrue=None,
     ifFalse=None,
     calc_outputs=None,
-    comps_needed=True,
 ):
     """
     Logging text to add for every decision tree calculation
@@ -373,10 +369,15 @@ def log_decision_tree_step(
     function_name_idx: :obj:`str`
         The name of the function that should be logged. By convention, this
         be "Step current_node_idx: function_name"
-    comps2use: :obj:`list[int]`
+    comps2use: :obj:`list[int]` or -1
         A list of component indices that should be used by a function.
         Only used to report no components found if empty and report
         the number of components found if not empty.
+        Note: calc_ functions that don't use component metrics do not
+        need to use the component_table and may not require selecting
+        components. For those functions, set comps2use==-1 to avoid
+        logging a warning that no components were found. Currently,
+        this is only used by calc_extend_factor
     decide_comps: :obj:`str` or :obj:`list[str]` or :obj:`list[int]`
         This is string or a list of strings describing what classifications
         of components to operate on. Only used in this function to report
@@ -392,11 +393,6 @@ def log_decision_tree_step(
         cross component metrics (i.e. kappa or rho elbows) that were calculated
         within the function. Each of those metrics will also be a key in calc_outputs
         and those keys and values will be logged by this function
-    comps_needed: :obj:`bool`
-        Thresholds, like extend_factor need to be calculated because they use the number
-        of volumes, but they don't use the components. In this case, comps2use might be
-        none, but that's not an problem. Set comps_needed to False so that a warning is
-        not logged
 
     Returns
     -------
@@ -406,7 +402,7 @@ def log_decision_tree_step(
     calculated
     """
 
-    if not comps2use and comps_needed:
+    if not (comps2use == -1) and not comps2use:
         LGR.info(
             f"{function_name_idx} not applied because no remaining components were "
             f"classified as {decide_comps}"
@@ -426,7 +422,7 @@ def log_decision_tree_step(
             LGR.info(f"{function_name_idx} calculated: {', '.join(calc_summaries)}")
         else:
             LGR.warning(
-                f"{function_name_idx} logged to write out cross_component_metrics, but not were calculated"
+                f"{function_name_idx} logged to write out cross_component_metrics, but none were calculated"
             )
 
 

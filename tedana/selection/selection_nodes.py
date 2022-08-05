@@ -910,6 +910,7 @@ def dec_classification_doesnt_exist(
     """
     If there are no components with a classification specified in class_comp_exists,
     change the classification of all components in decide_comps
+
     Parameters
     ----------
     {selector}
@@ -931,6 +932,18 @@ def dec_classification_doesnt_exist(
     Returns
     -------
     {basicreturns}
+
+    Note
+    ----
+    This function is useful to end the component selection process early
+    even if there are additional nodes. For example, in the original
+    kundu tree, if no components are identified with kappa>elbow and
+    rho>elbow then, instead of removing everything, it effectively says
+    something's wrong and conservatively keeps everything. Similarly,
+    later in the kundu tree, there are several steps deciding how to
+    classify any remaining provisional components. If none of the
+    remaining components are "provisionalreject" then it skips those
+    steps and accepts everything left.
 
     """
 
@@ -1185,7 +1198,7 @@ def calc_extend_factor(
 
     selector.cross_component_metrics["extend_factor"] = outputs["extend_factor"]
 
-    log_decision_tree_step(function_name_idx, None, calc_outputs=outputs, comps_needed=False)
+    log_decision_tree_step(function_name_idx, -1, calc_outputs=outputs)
 
     selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
 
@@ -1478,7 +1491,7 @@ def calc_revised_meanmetricrank_guesses(
         },
         "used_cross_component_metrics": {"kappa_elbow_kundu", "rho_elbow_kundu"},
         "calc_cross_comp_metrics": ["num_acc_guess", "conservative_guess", "restrict_factor"],
-        "added_component_table_metrics": ["d_table_score_node{selector.current_node_idx}"],
+        "added_component_table_metrics": [f"d_table_score_node{selector.current_node_idx}"],
     }
 
     if only_used_metrics:
