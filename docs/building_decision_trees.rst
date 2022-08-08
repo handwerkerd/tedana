@@ -122,7 +122,7 @@ added_component_table_metrics:
     It is possible to add a new metric to the component table during the selection process.
     This is useful if a metric is to be calculated on a subset of components based on what
     happened during previous steps in the selection process. This is **not** recommended, but
-    since it was done as part of the original decision tree processed defined in meica
+    since it was done as part of the original decision tree process defined in meica
     it is possible.
 
 
