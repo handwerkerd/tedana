@@ -62,7 +62,7 @@ New columns in the ``component_table`` (sometimes a stand alone variable ``compt
     Default file name: ``desc-ICA_decision_tree.json``
     A copy of the inputted decision tree specification with an added "output" field
     for each node. The output field (see next section) contains information about what happened during
-    execution. Of particularly note, each output includes a list of the metrics
+    execution. Of particular note, each output includes a list of the metrics
     used within the node, "node_label", which is a (hopefully) human readable brief
     description of the node's function and, for nodes where component classifications
     can change, "numFalse" & "numTrue" list what changed. The inputted parameters include
