@@ -270,7 +270,8 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         diff_vals = temp_comptable["variance explained"].diff(-1)
         diff_vals = diff_vals.fillna(0)
         ncls = temp_comptable.loc[diff_vals < varex_upper_p].index.values
-        LGR.info(f"ncls after weird for loop, iter {i_loop}: {ncls}")
+        LGR.info(f"ncls after weird for loop, iter {i_loop}: {sorted(ncls)}")
+        LGR.info(f"Components removed from ncls, {sorted(np.setdiff1d(unclf, ncls))}")
 
     # Compute elbows from other elbows
     f05, _, f01 = getfbounds(n_echos)
@@ -298,7 +299,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     acc_prov = ncls[
         (comptable.loc[ncls, "kappa"] >= kappa_elbow) & (comptable.loc[ncls, "rho"] < rho_elbow)
     ]
-    LGR.info(f"acc_prov after elbows: {acc_prov}")
+    LGR.info(f"acc_prov after elbows: {sorted(acc_prov)}")
 
     # Quit early if no potentially accepted components remain
     if len(acc_prov) <= 1:
