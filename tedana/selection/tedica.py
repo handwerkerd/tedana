@@ -169,6 +169,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     # the remaining elements in unclf are classified as accepted
     unclf = all_comps.copy()
 
+    LGR.info(f"Pre tree unclf: {unclf}")
     """
     Step 1: Reject anything that's obviously an artifact
     a. Estimate a null variance
@@ -178,6 +179,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     comptable.loc[temp_rej0a, "classification"] = "rejected"
     comptable.loc[temp_rej0a, "rationale"] += "I002;"
 
+    LGR.info(f"temp_rej0a: {temp_rej0a}")
     # Number of significant voxels for S0 model is higher than number for T2
     # model *and* number for T2 model is greater than zero.
     temp_rej0b = all_comps[
@@ -185,7 +187,9 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     ]
     comptable.loc[temp_rej0b, "classification"] = "rejected"
     comptable.loc[temp_rej0b, "rationale"] += "I003;"
+    LGR.info(f"temp_rej0a: {temp_rej0a}")
     rej = np.union1d(temp_rej0a, temp_rej0b)
+    LGR.info(f"rej: {rej}")
 
     # Dice score for S0 maps is higher than Dice score for T2 maps and variance
     # explained is higher than the median across components.
@@ -193,9 +197,12 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         (comptable["dice_FS0"] > comptable["dice_FT2"])
         & (comptable["variance explained"] > np.median(comptable["variance explained"]))
     ]
+    LGR.info(f"temp_rej1: {temp_rej1}")
     comptable.loc[temp_rej1, "classification"] = "rejected"
     comptable.loc[temp_rej1, "rationale"] += "I004;"
     rej = np.union1d(temp_rej1, rej)
+
+    LGR.info(f"rej: {rej}")
 
     # T-value is less than zero (noise has higher F-statistics than signal in
     # map) and variance explained is higher than the median across components.
@@ -203,10 +210,14 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         (comptable.loc[unclf, "signal-noise_t"] < 0)
         & (comptable.loc[unclf, "variance explained"] > np.median(comptable["variance explained"]))
     ]
+    LGR.info(f"temp_rej2: {temp_rej2}")
     comptable.loc[temp_rej2, "classification"] = "rejected"
     comptable.loc[temp_rej2, "rationale"] += "I005;"
     rej = np.union1d(temp_rej2, rej)
     unclf = np.setdiff1d(unclf, rej)
+
+    LGR.info(f"End step 1 unclf: {unclf}")
+    LGR.info(f"End step 1 rej: {rej}")
 
     # Quit early if no potentially accepted components remain
     if len(unclf) == 0:
@@ -240,6 +251,8 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         ]
     )
 
+    LGR.info(f"varex_upper_p: {varex_upper_p}")
+
     # Sort component table by variance explained and find outlier components by
     # change in variance explained from one component to the next.
     # Remove variance-explained outliers from list of components to consider
@@ -247,7 +260,9 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     # later on.
     # NOTE: We're not sure why this is done this way, nor why it's specifically
     # done three times.
+
     ncls = unclf.copy()
+    LGR.info(f"ncls before weird for loop {ncls}")
     for i_loop in range(3):
         temp_comptable = comptable.loc[ncls].sort_values(
             by=["variance explained"], ascending=False
@@ -255,6 +270,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         diff_vals = temp_comptable["variance explained"].diff(-1)
         diff_vals = diff_vals.fillna(0)
         ncls = temp_comptable.loc[diff_vals < varex_upper_p].index.values
+        LGR.info(f"ncls after weird for loop, iter {i_loop}: {ncls}")
 
     # Compute elbows from other elbows
     f05, _, f01 = getfbounds(n_echos)
@@ -276,11 +292,13 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     rhos_ncls_elbow = getelbow(comptable.loc[ncls, "rho"], return_val=True)
     rhos_all_elbow = getelbow(comptable["rho"], return_val=True)
     rho_elbow = np.mean((rhos_ncls_elbow, rhos_all_elbow, f05))
+    LGR.info(f"kappa_elbow {kappa_elbow}, rho_elbow {rho_elbow}")
 
     # Provisionally accept components based on Kappa and Rho elbows
     acc_prov = ncls[
         (comptable.loc[ncls, "kappa"] >= kappa_elbow) & (comptable.loc[ncls, "rho"] < rho_elbow)
     ]
+    LGR.info(f"acc_prov after elbows: {acc_prov}")
 
     # Quit early if no potentially accepted components remain
     if len(acc_prov) <= 1:
@@ -303,17 +321,21 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         np.max(comptable.loc[acc_prov, "variance explained"])
         - np.min(comptable.loc[acc_prov, "variance explained"])
     )
+    LGR.info(f"kappa_rate: {kappa_rate}")
     comptable["kappa ratio"] = kappa_rate * comptable["variance explained"] / comptable["kappa"]
 
     # Calculate bounds for variance explained
     varex_lower = stats.scoreatpercentile(comptable.loc[acc_prov, "variance explained"], LOW_PERC)
     varex_upper = stats.scoreatpercentile(comptable.loc[acc_prov, "variance explained"], HIGH_PERC)
 
+    LGR.info(f"varex_lower {varex_lower}, varex_upper {varex_upper}")
+
     """
     Step 3: Get rid of midk components; i.e., those with higher than
     max decision score and high variance
     """
     max_good_d_score = EXTEND_FACTOR * len(acc_prov)
+    LGR.info(f"max_good_d_score {max_good_d_score}")
     midk = unclf[
         (comptable.loc[unclf, "d_table_score"] > max_good_d_score)
         & (comptable.loc[unclf, "variance explained"] > EXTEND_FACTOR * varex_upper)
@@ -322,6 +344,10 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     comptable.loc[midk, "rationale"] += "I007;"
     unclf = np.setdiff1d(unclf, midk)
     acc_prov = np.setdiff1d(acc_prov, midk)
+
+    LGR.info(f"Post step 3: midk {midk}")
+    LGR.info(f"Post step 3: unclf {unclf}")
+    LGR.info(f"Post step 3: acc_prov {acc_prov}")
 
     """
     Step 4: Find components to ignore
@@ -337,9 +363,13 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     ign = np.setdiff1d(ign, ign[comptable.loc[ign, "d_table_score"] < max_good_d_score])
     # and low kappa
     ign = np.setdiff1d(ign, ign[comptable.loc[ign, "kappa"] > kappa_elbow])
+
     comptable.loc[ign, "classification"] = "ignored"
     comptable.loc[ign, "rationale"] += "I008;"
     unclf = np.setdiff1d(unclf, ign)
+
+    LGR.info(f"Post step 4: ign {ign}")
+    LGR.info(f"Post step 4: unclf {unclf}")
 
     """
     Step 5: Scrub the set if there are components that haven't been rejected or
@@ -372,6 +402,9 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
 
         # Rejection candidate based on artifact type A: candartA
         conservative_guess = num_acc_guess / RESTRICT_FACTOR
+
+        LGR.info(f"num_acc_guess: {num_acc_guess}")
+        LGR.info(f"conservative_guess: {conservative_guess}")
         candartA = np.intersect1d(
             unclf[comptable.loc[unclf, "d_table_score_scrub"] > conservative_guess],
             unclf[comptable.loc[unclf, "kappa ratio"] > EXTEND_FACTOR * 2],
@@ -381,25 +414,35 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         ]
         comptable.loc[candartA, "classification"] = "rejected"
         comptable.loc[candartA, "rationale"] += "I009;"
+        LGR.info(f"candartA {candartA}")
         midk = np.union1d(midk, candartA)
         unclf = np.setdiff1d(unclf, midk)
 
+        LGR.info(f"Post step 5A: midk {midk}")
+        LGR.info(f"Post step 5A: unclf {unclf}")
+
         # Rejection candidate based on artifact type B: candartB
         conservative_guess2 = num_acc_guess * HIGH_PERC / 100.0
+        LGR.info(f"conservative_guess2: {conservative_guess2}")
         candartB = unclf[comptable.loc[unclf, "d_table_score_scrub"] > conservative_guess2]
         candartB = candartB[
             comptable.loc[candartB, "variance explained"] > varex_lower * EXTEND_FACTOR
         ]
+        LGR.info(f"candartB {candartB}")
         comptable.loc[candartB, "classification"] = "rejected"
         comptable.loc[candartB, "rationale"] += "I010;"
         midk = np.union1d(midk, candartB)
         unclf = np.setdiff1d(unclf, midk)
+
+        LGR.info(f"Post step 5B: midk {midk}")
+        LGR.info(f"Post step 5B: unclf {unclf}")
 
         # Find components to ignore
         # Ignore high variance explained, poor decision tree scored components
         new_varex_lower = stats.scoreatpercentile(
             comptable.loc[unclf[:num_acc_guess], "variance explained"], LOW_PERC
         )
+        LGR.info(f"new_varex_lower {new_varex_lower}")
         candart = unclf[comptable.loc[unclf, "d_table_score_scrub"] > num_acc_guess]
         ign_add0 = candart[comptable.loc[candart, "variance explained"] > new_varex_lower]
         ign_add0 = np.setdiff1d(ign_add0, midk)
@@ -408,16 +451,22 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         ign = np.union1d(ign, ign_add0)
         unclf = np.setdiff1d(unclf, ign)
 
+        LGR.info(f"Post step 4: ign_add0 {ign_add0}")
+        LGR.info(f"Post step 4: ign {ign}")
+        LGR.info(f"Post step 4: unclf {unclf}")
+
         # Ignore low Kappa, high variance explained components
         ign_add1 = np.intersect1d(
             unclf[comptable.loc[unclf, "kappa"] <= kappa_elbow],
             unclf[comptable.loc[unclf, "variance explained"] > new_varex_lower],
         )
         ign_add1 = np.setdiff1d(ign_add1, midk)
+        LGR.info(f"Post step 4: ign_add1 {ign_add1}")
         comptable.loc[ign_add1, "classification"] = "ignored"
         comptable.loc[ign_add1, "rationale"] += "I012;"
 
     # at this point, unclf is equivalent to accepted
+    LGR.info(f"unclf is equivalent to accepted: {unclf}")
 
     # Move decision columns to end
     comptable = clean_dataframe(comptable)
