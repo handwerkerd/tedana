@@ -591,7 +591,7 @@ def kappa_elbow_kundu(comptable, n_echos):
     # a subset of lower values?
     # Note: Only use the subset of values if it includes at least 5 data point
     #  That is enough to calculate an elbow of a curve
-    #  This is an arbitrary threshold not from the original meica as is
+    #  This is an arbitrary threshold not from the original meica and is
     #  worth reconsidering at some point
     if kappas_nonsig.size > 5:
         kappa_elbow = np.min(

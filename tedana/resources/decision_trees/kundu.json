@@ -15,8 +15,7 @@
         "d_table_score"
     ],
     "intermediate_classifications": [
-        "provisionalaccept",
-        "provisionalreject"
+        "provisionalaccept"
     ],
     "classification_tags": [
         "Likely BOLD",
@@ -136,24 +135,23 @@
             "functionname": "dec_left_op_right",
             "parameters": {
                 "ifTrue": "provisionalaccept",
-                "ifFalse": "provisionalreject",
+                "ifFalse": "nochange",
                 "decide_comps": "unclassified",
                 "op": ">=",
                 "left": "kappa",
                 "right": "kappa_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "Provisionally accept if kappa>elbow and provisionally reject if kappa<elbow",
+                "log_extra_info": "Provisionally accept if kappa>elbow",
                 "log_extra_report": ""
             }
         },
         {
             "functionname": "dec_left_op_right",
             "parameters": {
-                "ifTrue": "provisionalreject",
+                "ifTrue": "unclassified",
                 "ifFalse": "nochange",
                 "decide_comps": [
-                    "provisionalreject",
                     "provisionalaccept"
                 ],
                 "op": ">",
@@ -161,7 +159,7 @@
                 "right": "rho_elbow_kundu"
             },
             "kwargs": {
-                "log_extra_info": "Provisionally reject if rho>elbow",
+                "log_extra_info": "Move any provisionally accepted components back to unclassified if rho>elbow",
                 "log_extra_report": ""
             }
         },
@@ -171,7 +169,6 @@
                 "new_classification": "accepted",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject",
                     "unclassified"
                 ],
                 "class_comp_exists": "provisionalaccept"
@@ -238,7 +235,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "op": ">",
                 "left": "d_table_score",
@@ -259,7 +256,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "op": ">",
                 "left": "d_table_score",
@@ -282,13 +279,13 @@
                 "new_classification": "accepted",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
-                "class_comp_exists": "provisionalreject"
+                "class_comp_exists": "unclassified"
             },
             "kwargs": {
                 "tag_ifTrue": "Likely BOLD",
-                "log_extra_info": "If nothing left is provisionalreject, then accept all",
+                "log_extra_info": "If nothing left is unclassified, then accept all",
                 "log_extra_report": ""
             }
         },
@@ -297,7 +294,7 @@
             "parameters": {
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ]
             },
             "kwargs": {},
@@ -310,7 +307,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "op": ">",
                 "left": "d_table_score_node18",
@@ -337,7 +334,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "op": ">",
                 "left": "d_table_score_node18",
@@ -359,7 +356,7 @@
             "parameters": {
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "thresh_label": "new_lower",
                 "percentile_thresh": 25
@@ -376,7 +373,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "op": ">",
                 "left": "d_table_score_node18",
@@ -398,7 +395,7 @@
                 "ifFalse": "nochange",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ],
                 "op": "<=",
                 "left": "kappa",
@@ -419,7 +416,7 @@
                 "new_classification": "accepted",
                 "decide_comps": [
                     "provisionalaccept",
-                    "provisionalreject"
+                    "unclassified"
                 ]
             },
             "kwargs": {

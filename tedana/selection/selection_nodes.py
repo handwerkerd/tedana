@@ -794,8 +794,7 @@ def calc_kappa_rho_elbows_kundu(
     rho_only=False,
 ):
     """
-    Calculates 'elbows' for kappa and rho values across compnents and thresholds
-    on kappa>kappa_elbow & rho<rho_elbow
+    Calculates 'elbows' for kappa and rho values across compnents
 
     Parameters
     ----------
