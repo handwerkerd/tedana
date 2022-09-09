@@ -415,6 +415,110 @@ def test_dec_variance_lessthan_thresholds_smoke():
     assert f"Node {selector.current_node_idx}" in selector.component_status_table
 
 
+def test_calc_kappa_elbow():
+    """Smoke tests for calc_kappa_elbow"""
+
+    selector = sample_selector()
+    decide_comps = "all"
+
+    # Outputs just the metrics used in this function
+    used_metrics = selection_nodes.calc_kappa_elbow(selector, decide_comps, only_used_metrics=True)
+    assert len(used_metrics - {"kappa"}) == 0
+
+    # Standard call to this function.
+    selector = selection_nodes.calc_kappa_elbow(
+        selector,
+        decide_comps,
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {
+        "kappa_elbow_kundu",
+        "kappa_allcomps_elbow",
+        "kappa_nonsig_elbow",
+    }
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the intended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_elbow_kundu"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_allcomps_elbow"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_nonsig_elbow"] > 0
+
+    # Using a subset of components for decide_comps.
+    selector = selection_nodes.calc_kappa_elbow(
+        selector,
+        decide_comps="accepted",
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {
+        "kappa_elbow_kundu",
+        "kappa_allcomps_elbow",
+        "kappa_nonsig_elbow",
+    }
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the intended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_elbow_kundu"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_allcomps_elbow"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_nonsig_elbow"] > 0
+
+
+def test_calc_varex_upper_p():
+    """Smoke tests for calc_varex_upper_p"""
+
+    selector = sample_selector()
+    decide_comps = "all"
+
+    # Outputs just the metrics used in this function
+    used_metrics = selection_nodes.calc_varex_upper_p(
+        selector, decide_comps, only_used_metrics=True
+    )
+    assert len(used_metrics - {"kappa"}) == 0
+
+    # Standard call to this function.
+    selector = selection_nodes.calc_varex_upper_p(
+        selector,
+        decide_comps,
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {
+        "varex_upper_p",
+    }
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the intended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] > 0
+
+    # Using a subset of components for decide_comps.
+    selector = selection_nodes.calc_varex_upper_p(
+        selector,
+        decide_comps="accepted",
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {
+        "varex_upper_p",
+    }
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the intended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] > 0
+
+
 def test_calc_kappa_rho_elbows_kundu():
     """Smoke tests for calc_kappa_rho_elbows_kundu"""
 

@@ -783,6 +783,348 @@ def calc_median(
 calc_median.__doc__ = calc_median.__doc__.format(**decision_docs)
 
 
+def calc_kappa_elbow(
+    selector,
+    decide_comps,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    Calculates elbow for kappa across components
+
+    Parameters
+    ----------
+    {selector}
+    {decide_comps}
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+
+    Note
+    ----
+    This script is currently hard coded for a specific way to calculate the kappa elbow
+    based on the method by Kundu in the MEICA v2.7 code. This uses the minimum of
+    a kappa elbow calculation on all components and on a subset of nonsignificant
+    components. To get the same funcationality in MEICA v2.7, decide_comps must be 'all'
+    Additional options could be added to this function or distinct functions
+    for some more flexible options
+
+    """
+
+    outputs = {
+        "decision_node_idx": selector.current_node_idx,
+        "node_label": None,
+        "n_echos": selector.n_echos,
+        "used_metrics": set(["kappa"]),
+        "calc_cross_comp_metrics": [
+            "kappa_elbow_kundu",
+            "kappa_allcomps_elbow",
+            "kappa_nonsig_elbow",
+        ],
+        "kappa_elbow_kundu": None,
+        "kappa_allcomps_elbow": None,
+        "kappa_nonsig_elbow": None,
+    }
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
+    function_name_idx = f"Step {selector.current_node_idx}: calc_kappa_elbow"
+
+    if ("kappa_elbow_kundu" in selector.cross_component_metrics) and (
+        "kappa_elbow_kundu" in outputs["calc_cross_comp_metrics"]
+    ):
+        LGR.warning(
+            "kappa_elbow_kundu already calculated."
+            f"Overwriting previous value in {function_name_idx}"
+        )
+
+    if custom_node_label:
+        outputs["node_label"] = custom_node_label
+    else:
+        outputs["node_label"] = "Calc Kappa Elbow"
+
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    comps2use = selectcomps2use(selector, decide_comps)
+    confirm_metrics_exist(
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
+    )
+
+    if not comps2use:
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+        )
+    else:
+        (
+            outputs["kappa_elbow_kundu"],
+            outputs["kappa_allcomps_elbow"],
+            outputs["kappa_nonsig_elbow"],
+        ) = kappa_elbow_kundu(selector.component_table, selector.n_echos, comps2use=comps2use)
+        selector.cross_component_metrics["kappa_elbow_kundu"] = outputs["kappa_elbow_kundu"]
+        selector.cross_component_metrics["kappa_allcomps_elbow"] = outputs["kappa_allcomps_elbow"]
+        selector.cross_component_metrics["kappa_nonsig_elbow"] = outputs["kappa_nonsig_elbow"]
+
+        log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
+
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
+
+    return selector
+
+
+calc_kappa_elbow.__doc__ = calc_kappa_elbow.__doc__.format(**decision_docs)
+
+
+def calc_rho_elbow(
+    selector,
+    decide_comps,
+    subset_decide_comps="unclassified",
+    rho_elbow_type="kundu",
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    Calculates elbow for rho across components
+
+    Parameters
+    ----------
+    {selector}
+    {decide_comps}
+    subset_decide_comps: :obj:`str`
+        This is a string with a single component classification label. For the
+        elbow calculation used by Kundu in MEICA v.27 thresholds are based
+        on all components and on unclassified components. default='unclassified'
+    rho_elbow_type: :obj:`str`
+        The algorithm used to calculate the rho elbow. Current options are:
+        kundu (default): Method used by Kundu in MEICA v2.7. It is the mean between
+            the rho elbow calculated on all components and a subset of unclassificated
+            components with some extra quirks
+        liberal: Same as kundu but is the maximum of the two elbows, which will minimize
+            the number of components rejected by having values greater than the rho elbow
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+
+    Note
+    ----
+    This script is currently hard coded for a specific way to calculate the rho elbow
+    based on the method by Kundu in the MEICA v2.7 code. To get the same funcationality in MEICA v2.7,
+    decide_comps must be 'all' and subset_decide_comps must be 'unclassified'
+
+    """
+
+    function_name_idx = f"Step {selector.current_node_idx}: calc_rho_elbow"
+
+    if rho_elbow_type == "kundu".lower():
+        elbow_name = "rho_elbow_kundu"
+    elif rho_elbow_type == "liberal".lower():
+        elbow_name = "rho_elbow_liberal"
+    else:
+        raise ValueError(
+            f"{function_name_idx}: rho_elbow_type must be 'kundu' or 'liberal' It is {rho_elbow_type} "
+        )
+
+    outputs = {
+        "decision_node_idx": selector.current_node_idx,
+        "node_label": None,
+        "n_echos": selector.n_echos,
+        "calc_cross_comp_metrics": [
+            elbow_name,
+            "varex_upper_p",
+            "rho_allcomps_elbow",
+            "rho_unclassified_elbow",
+        ],
+        "used_metrics": set(["kappa", "rho", "variance explained"]),
+        elbow_name: None,
+        "varex_upper_p": None,
+        "rho_allcomps_elbow": None,
+        "rho_unclassified_elbow": None,
+    }
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
+    if (elbow_name in selector.cross_component_metrics) and (
+        elbow_name in outputs["calc_cross_comp_metrics"]
+    ):
+        LGR.warning(
+            f"{elbow_name} already calculated."
+            f"Overwriting previous value in {function_name_idx}"
+        )
+
+    if "varex_upper_p" in selector.cross_component_metrics:
+        LGR.warning(
+            f"varex_upper_p already calculated. Overwriting previous value in {function_name_idx}"
+        )
+
+    if custom_node_label:
+        outputs["node_label"] = custom_node_label
+    else:
+        outputs["node_label"] = "Calc Rho Elbow"
+
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    comps2use = selectcomps2use(selector, decide_comps)
+    confirm_metrics_exist(
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
+    )
+
+    subset_comps2use = selectcomps2use(selector, subset_decide_comps)
+
+    if not comps2use:
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+        )
+    else:
+        (
+            outputs[elbow_name],
+            outputs["varex_upper_p"],
+            outputs["rho_allcomps_elbow"],
+            outputs["rho_unclassified_elbow"],
+        ) = rho_elbow_kundu_liberal(
+            selector.component_table,
+            selector.n_echos,
+            rho_elbow_type = rho_elbow_type,
+            comps2use=comps2use,
+            subset_comps2use=subset_comps2use,
+        )
+        selector.cross_component_metrics[elbow_name] = outputs[elbow_name]
+        selector.cross_component_metrics["varex_upper_p"] = outputs["varex_upper_p"]
+        selector.cross_component_metrics["rho_allcomps_elbow"] = outputs["rho_allcomps_elbow"]
+        selector.cross_component_metrics["rho_unclassified_elbow"] = outputs[
+            "rho_unclassified_elbow"
+        ]
+
+        log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
+
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
+
+    return selector
+
+
+calc_rho_elbow.__doc__ = calc_rho_elbow.__doc__.format(**decision_docs)
+
+
+def calc_varex_upper_p(
+    selector,
+    decide_comps,
+    log_extra_report="",
+    log_extra_info="",
+    custom_node_label="",
+    only_used_metrics=False,
+):
+    """
+    Calculate the upper limit for variance explained. This is the median variance
+    explained across components with kappa values greater than the kappa_elbow
+    calculated using all components
+
+    Parameters
+    ----------
+    {selector}
+    {decide_comps}
+    {log_extra}
+    {custom_node_label}
+    {only_used_metrics}
+
+    Returns
+    -------
+    {basicreturns}
+
+    Note
+    ----
+    To replicate how this is calculated by Kundu in the MEICA v2.7 code, set decide_comps='all'
+    """
+
+    outputs = {
+        "decision_node_idx": selector.current_node_idx,
+        "node_label": None,
+        "n_echos": selector.n_echos,
+        "varex_upper_p": None,
+        "used_metrics": set(["kappa"]),
+        "calc_cross_comp_metrics": ["varex_upper_p"],
+    }
+
+    if only_used_metrics:
+        return outputs["used_metrics"]
+
+    function_name_idx = f"Step {selector.current_node_idx}: calc_varex_upper_p"
+
+    if "varex_upper_p" in selector.cross_component_metrics:
+        LGR.warning(
+            f"varex_upper_p already calculated. Overwriting previous value in {function_name_idx}"
+        )
+
+    if custom_node_label:
+        outputs["node_label"] = custom_node_label
+    else:
+        outputs["node_label"] = "Calc varex_upper_p"
+
+    if log_extra_info:
+        LGR.info(log_extra_info)
+    if log_extra_report:
+        RepLGR.info(log_extra_report)
+
+    comps2use = selectcomps2use(selector, decide_comps)
+    confirm_metrics_exist(
+        selector.component_table, outputs["used_metrics"], function_name=function_name_idx
+    )
+
+    if not comps2use:
+        log_decision_tree_step(
+            function_name_idx,
+            comps2use,
+            decide_comps=decide_comps,
+        )
+    else:
+        # Upper limit for variance explained is median across components with high
+        # Kappa values. High Kappa is defined as Kappa above Kappa elbow.
+        kappa_comps2use = selector.component_table.loc[comps2use, "kappa"]
+        high_kappa_idx = list(
+            kappa_comps2use.index[
+                kappa_comps2use
+                > getelbow(selector.component_table.loc[comps2use, "kappa"], return_val=True)
+            ]
+        )
+        outputs["varex_upper_p"] = np.median(
+            selector.component_table.loc[
+                high_kappa_idx,
+                "variance explained",
+            ]
+        )
+        selector.cross_component_metrics["varex_upper_p"] = outputs["varex_upper_p"]
+
+        log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
+
+    selector.tree["nodes"][selector.current_node_idx]["outputs"] = outputs
+
+    return selector
+
+
+calc_varex_upper_p.__doc__ = calc_varex_upper_p.__doc__.format(**decision_docs)
+
+
 def calc_kappa_rho_elbows_kundu(
     selector,
     decide_comps,
