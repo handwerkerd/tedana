@@ -398,11 +398,13 @@ def test_rho_elbow_kundu_liberal_smoke():
         varex_upper_p,
         rho_allcomps_elbow,
         rho_unclassified_elbow,
+        elbow_f05,
     ) = selection_utils.rho_elbow_kundu_liberal(component_table, n_echos=3)
     assert isinstance(rho_elbow_kundu, float)
     assert isinstance(varex_upper_p, float)
     assert isinstance(rho_allcomps_elbow, float)
     assert isinstance(rho_unclassified_elbow, float)
+    assert isinstance(elbow_f05, float)
 
     # Normal execution with liberal threshold
     (
@@ -410,6 +412,7 @@ def test_rho_elbow_kundu_liberal_smoke():
         varex_upper_p,
         rho_allcomps_elbow,
         rho_unclassified_elbow,
+        elbow_f05,
     ) = selection_utils.rho_elbow_kundu_liberal(
         component_table, n_echos=3, rho_elbow_type="liberal"
     )
@@ -417,6 +420,7 @@ def test_rho_elbow_kundu_liberal_smoke():
     assert isinstance(varex_upper_p, float)
     assert isinstance(rho_allcomps_elbow, float)
     assert isinstance(rho_unclassified_elbow, float)
+    assert isinstance(elbow_f05, float)
 
     # Run using only a subset of components
     (
@@ -424,6 +428,7 @@ def test_rho_elbow_kundu_liberal_smoke():
         varex_upper_p,
         rho_allcomps_elbow,
         rho_unclassified_elbow,
+        elbow_f05,
     ) = selection_utils.rho_elbow_kundu_liberal(
         component_table,
         n_echos=3,
@@ -435,6 +440,7 @@ def test_rho_elbow_kundu_liberal_smoke():
     assert isinstance(varex_upper_p, float)
     assert isinstance(rho_allcomps_elbow, float)
     assert isinstance(rho_unclassified_elbow, float)
+    assert isinstance(elbow_f05, float)
 
     # Run with no unclassified components and thus subset_comps2use is empty
     component_table = sample_component_table()
@@ -443,11 +449,13 @@ def test_rho_elbow_kundu_liberal_smoke():
         varex_upper_p,
         rho_allcomps_elbow,
         rho_unclassified_elbow,
+        elbow_f05,
     ) = selection_utils.rho_elbow_kundu_liberal(component_table, n_echos=3)
     assert isinstance(rho_elbow_kundu, float)
     assert isinstance(varex_upper_p, type(None))
     assert isinstance(rho_allcomps_elbow, float)
     assert isinstance(rho_unclassified_elbow, type(None))
+    assert isinstance(elbow_f05, float)
 
     with pytest.raises(ValueError):
         selection_utils.rho_elbow_kundu_liberal(

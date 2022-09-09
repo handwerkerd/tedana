@@ -669,23 +669,35 @@ def rho_elbow_kundu_liberal(
     rho_elbow: :obj:`float`
         The 'elbow' value for rho values, above which components are considered
         more likely to contain S0 weighted signals
+    varex_upper_p: :obj:`float`
+        This is the median "variance explained" across components with kappa values
+        greater than the kappa_elbow calculated using all components
+        None if subset_comps2use is None
+    rho_allcomps_elbow: :obj:`float`
+        rho elbow calculated using all components in comps2use
+    rho_unclassified_elbow: :obj:`float`
+        rho elbow clculated using all components in subset_comps2use
+        None if subset_comps2use is None
+    elbow_f05: :obj:`float`
+        A significant threshold based on the number of echoes. Used
+        as part of the mean for rho_elbow_type=='kundu'
 
     Note
     ----
     The rho elbow calculation in Kundu's original meica code calculates
     one elbow using all components' rho values, one elbow using only
-    unclassified components (plus some quirky stuff with high variance components)
-    and it takes the mean of those two values. To replicate the original code,
-    comps2use should include indices for all components and subset_comps2use
-    should includes indices for unclassified components
+    unclassified components (plus some quirky stuff with high variance components),
+    on threshold based on the number of echos, and takes the mean of those 3 values
+    To replicate the original code, comps2use should include indices for all components
+    and subset_comps2use should includes indices for unclassified components
 
     Also, in practice, one of these elbows is sometimes extremely low and the
     mean creates an overly agressive rho threshold (values >rho_elbow are more
-    likely rejected). The liberal threshold option takes the max of these two
-    elbows. The assumption is that the thrshold on unclassified components is
-    always lower and can likely be excluded. Both rho elbows are now logged
-    so that it will be possible to confirm this with data & make additional
-    adjustments to this threshold
+    likely rejected). The liberal threshold option takes the max of the two
+    elbows based on rho values. The assumption is that the thrshold on
+    unclassified components is always lower and can likely be excluded. Both
+    rho elbows are now logged so that it will be possible to confirm this with
+    data & make additional adjustments to this threshold
     """
 
     if rho_elbow_type not in ["kundu", "liberal"]:
@@ -761,7 +773,7 @@ def rho_elbow_kundu_liberal(
         else:  # rho_elbow_type == 'liberal'
             rho_elbow = np.maximum(rho_allcomps_elbow, rho_unclassified_elbow)
 
-    return rho_elbow, varex_upper_p, rho_allcomps_elbow, rho_unclassified_elbow
+    return rho_elbow, varex_upper_p, rho_allcomps_elbow, rho_unclassified_elbow, elbow_f05
 
 
 def get_extend_factor(n_vols=None, extend_factor=None):

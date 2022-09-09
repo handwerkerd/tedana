@@ -470,20 +470,18 @@ def test_calc_kappa_elbow():
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["kappa_nonsig_elbow"] > 0
 
 
-def test_calc_varex_upper_p():
-    """Smoke tests for calc_varex_upper_p"""
+def test_calc_rho_elbow():
+    """Smoke tests for calc_rho_elbow"""
 
-    selector = sample_selector()
+    selector = sample_selector(options="unclass")
     decide_comps = "all"
 
     # Outputs just the metrics used in this function
-    used_metrics = selection_nodes.calc_varex_upper_p(
-        selector, decide_comps, only_used_metrics=True
-    )
-    assert len(used_metrics - {"kappa"}) == 0
+    used_metrics = selection_nodes.calc_rho_elbow(selector, decide_comps, only_used_metrics=True)
+    assert len(used_metrics - {"kappa", "rho", "variance explained"}) == 0
 
     # Standard call to this function.
-    selector = selection_nodes.calc_varex_upper_p(
+    selector = selection_nodes.calc_rho_elbow(
         selector,
         decide_comps,
         log_extra_report="report log",
@@ -491,7 +489,11 @@ def test_calc_varex_upper_p():
         custom_node_label="custom label",
     )
     calc_cross_comp_metrics = {
+        "rho_elbow_kundu",
         "varex_upper_p",
+        "rho_allcomps_elbow",
+        "rho_unclassified_elbow",
+        "elbow_f05",
     }
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
@@ -499,17 +501,28 @@ def test_calc_varex_upper_p():
     # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_kundu"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_allcomps_elbow"] > 0
+    assert (
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_unclassified_elbow"] > 0
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["elbow_f05"] > 0
 
-    # Using a subset of components for decide_comps.
-    selector = selection_nodes.calc_varex_upper_p(
+    # Standard call to this function using rho_elbow_type="liberal"
+    selector = selection_nodes.calc_rho_elbow(
         selector,
-        decide_comps="accepted",
+        decide_comps,
+        rho_elbow_type="liberal",
         log_extra_report="report log",
         log_extra_info="info log",
         custom_node_label="custom label",
     )
     calc_cross_comp_metrics = {
+        "rho_elbow_liberal",
         "varex_upper_p",
+        "rho_allcomps_elbow",
+        "rho_unclassified_elbow",
+        "elbow_f05",
     }
     output_calc_cross_comp_metrics = set(
         selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
@@ -517,6 +530,43 @@ def test_calc_varex_upper_p():
     # Confirming the intended metrics are added to outputs and they have non-zero values
     assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
     assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_liberal"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_allcomps_elbow"] > 0
+    assert (
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_unclassified_elbow"] > 0
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["elbow_f05"] > 0
+
+    # Using a subset of components for decide_comps.
+    selector = selection_nodes.calc_rho_elbow(
+        selector,
+        decide_comps=["accepted", "unclassified"],
+        log_extra_report="report log",
+        log_extra_info="info log",
+        custom_node_label="custom label",
+    )
+    calc_cross_comp_metrics = {
+        "rho_elbow_kundu",
+        "varex_upper_p",
+        "rho_allcomps_elbow",
+        "rho_unclassified_elbow",
+        "elbow_f05",
+    }
+    output_calc_cross_comp_metrics = set(
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["calc_cross_comp_metrics"]
+    )
+    # Confirming the intended metrics are added to outputs and they have non-zero values
+    assert len(output_calc_cross_comp_metrics - calc_cross_comp_metrics) == 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["varex_upper_p"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_elbow_kundu"] > 0
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_allcomps_elbow"] > 0
+    assert (
+        selector.tree["nodes"][selector.current_node_idx]["outputs"]["rho_unclassified_elbow"] > 0
+    )
+    assert selector.tree["nodes"][selector.current_node_idx]["outputs"]["elbow_f05"] > 0
+
+    with pytest.raises(ValueError):
+        selection_nodes.calc_rho_elbow(selector, decide_comps, rho_elbow_type="perfect")
 
 
 def test_calc_kappa_rho_elbows_kundu():

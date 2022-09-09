@@ -14,6 +14,7 @@ from tedana.selection.selection_utils import (
     get_extend_factor,
     getelbow,
     kappa_elbow_kundu,
+    rho_elbow_kundu_liberal,
     log_decision_tree_step,
     selectcomps2use,
 )
@@ -950,12 +951,14 @@ def calc_rho_elbow(
             "varex_upper_p",
             "rho_allcomps_elbow",
             "rho_unclassified_elbow",
+            "elbow_f05",
         ],
         "used_metrics": set(["kappa", "rho", "variance explained"]),
         elbow_name: None,
         "varex_upper_p": None,
         "rho_allcomps_elbow": None,
         "rho_unclassified_elbow": None,
+        "elbow_f05": None,
     }
 
     if only_used_metrics:
@@ -1003,10 +1006,11 @@ def calc_rho_elbow(
             outputs["varex_upper_p"],
             outputs["rho_allcomps_elbow"],
             outputs["rho_unclassified_elbow"],
+            outputs["elbow_f05"],
         ) = rho_elbow_kundu_liberal(
             selector.component_table,
             selector.n_echos,
-            rho_elbow_type = rho_elbow_type,
+            rho_elbow_type=rho_elbow_type,
             comps2use=comps2use,
             subset_comps2use=subset_comps2use,
         )
@@ -1016,6 +1020,7 @@ def calc_rho_elbow(
         selector.cross_component_metrics["rho_unclassified_elbow"] = outputs[
             "rho_unclassified_elbow"
         ]
+        selector.cross_component_metrics["elbow_f05"] = outputs["elbow_f05"]
 
         log_decision_tree_step(function_name_idx, comps2use, calc_outputs=outputs)
 
