@@ -121,15 +121,28 @@
             }
         },
         {
-            "functionname": "calc_kappa_rho_elbows_kundu",
+            "functionname": "calc_kappa_elbow",
             "parameters": {
-                "decide_comps": "unclassified"
+                "decide_comps": "all"
             },
             "kwargs": {
                 "log_extra_info": "",
                 "log_extra_report": ""
             },
-            "_comment": "In original code, this was followed by a step that turned everything not rejected to ignored (accepted) if there are no unclassified components left. At this point, components are either rejected or unclassified so it is not clear how that could ever happen"
+            "_comment": ""
+        },
+        {
+            "functionname": "calc_rho_elbow",
+            "parameters": {
+                "decide_comps": "all"
+            },
+            "kwargs": {
+                "subset_decide_comps": "unclassified",
+                "rho_elbow_type": "kundu",
+                "log_extra_info": "",
+                "log_extra_report": ""
+            },
+            "_comment": ""
         },
         {
             "functionname": "dec_left_op_right",
@@ -310,7 +323,7 @@
                     "unclassified"
                 ],
                 "op": ">",
-                "left": "d_table_score_node18",
+                "left": "d_table_score_node19",
                 "right": "conservative_guess"
             },
             "kwargs": {
@@ -337,7 +350,7 @@
                     "unclassified"
                 ],
                 "op": ">",
-                "left": "d_table_score_node18",
+                "left": "d_table_score_node19",
                 "right": "num_acc_guess"
             },
             "kwargs": {
@@ -376,7 +389,7 @@
                     "unclassified"
                 ],
                 "op": ">",
-                "left": "d_table_score_node18",
+                "left": "d_table_score_node19",
                 "right": "num_acc_guess"
             },
             "kwargs": {
