@@ -702,13 +702,13 @@ def rho_elbow_kundu_liberal(
 
     if rho_elbow_type not in ["kundu", "liberal"]:
         raise ValueError(
-            f"rho_elbow_kundu_liberal: rho_elbow_type must be 'kundu' or 'liberal' It is {rho_elbow_type} "
+            f"rho_elbow_kundu_liberal: rho_elbow_type must be 'kundu' or 'liberal'"
+            f"It is {rho_elbow_type} "
         )
 
     # If comps2use is None then set to a list of all component numbers
     if not comps2use:
         comps2use = list(range(component_table.shape[0]))
-    rhos2use = component_table.loc[comps2use, "rho"].to_numpy()
 
     # If subset_comps2use is -1 then set to a list of all unclassified components
     if subset_comps2use == -1:
@@ -730,7 +730,8 @@ def rho_elbow_kundu_liberal(
     # Only calculate
     if not subset_comps2use:
         LGR.warning(
-            f"No unclassified components for rho elbow calculation only elbow based on all components is used"
+            "No unclassified components for rho elbow calculation only elbow based "
+            "on all components is used"
         )
         varex_upper_p = None
         rho_unclassified_elbow = None
