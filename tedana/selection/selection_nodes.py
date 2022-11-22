@@ -1512,7 +1512,7 @@ def calc_varex_kappa_ratio(
     only_used_metrics=False,
 ):
     """
-    Calculates the cross_component_metric, kappa_rate, for the components in decide_comps
+    Calculates the cross_component_metric ``kappa_rate`` for the components in decide_comps
     and then calculate the variance explained / kappa ratio for ALL components
     and adds those values to a new column in the component_table titled "varex kappa ratio".
 
