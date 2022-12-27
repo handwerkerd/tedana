@@ -316,7 +316,9 @@ def post_tedana(
     selector.to_files(io_generator)
 
     if selector.n_accepted_comps == 0:
-        LGR.warning("No BOLD components detected! Please check data and results!")
+        LGR.warning(
+            "No accepted components remaining after manual classification! Please check data and results!"
+        )
 
     mmix_orig = mmix.copy()
     # TODO: make this a function

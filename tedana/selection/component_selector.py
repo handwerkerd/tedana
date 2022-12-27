@@ -510,8 +510,26 @@ class ComponentSelector:
         return len(self.component_table)
 
     @property
+    def LikelyBOLD_comps(self):
+        """A boolean pd.DataSeries of components that are tagged "Likely BOLD"."""
+        LikelyBOLD_comps = self.component_table["classification_tags"].copy()
+        print(LikelyBOLD_comps)
+        for idx in range(len(LikelyBOLD_comps)):
+            if "Likely BOLD" in LikelyBOLD_comps.loc[idx]:
+                LikelyBOLD_comps.loc[idx] = True
+            else:
+                LikelyBOLD_comps.loc[idx] = False
+        print(LikelyBOLD_comps)
+        return LikelyBOLD_comps
+
+    @property
+    def n_LikelyBOLD_comps(self):
+        """The number of components that are tagged "Likely BOLD"."""
+        return self.LikelyBOLD_comps.sum()
+
+    @property
     def accepted_comps(self):
-        """The indices of components that are accepted."""
+        """A boolean pd.DataSeries of components that are accepted."""
         return self.component_table["classification"] == "accepted"
 
     @property
@@ -521,7 +539,7 @@ class ComponentSelector:
 
     @property
     def rejected_comps(self):
-        """The indices of components that are rejected."""
+        """A boolean pd.DataSeries of components that are rejected."""
         return self.component_table["classification"] == "rejected"
 
     def to_files(self, io_generator):
