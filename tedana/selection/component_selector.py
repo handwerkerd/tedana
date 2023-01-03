@@ -513,13 +513,11 @@ class ComponentSelector:
     def LikelyBOLD_comps(self):
         """A boolean pd.DataSeries of components that are tagged "Likely BOLD"."""
         LikelyBOLD_comps = self.component_table["classification_tags"].copy()
-        print(LikelyBOLD_comps)
         for idx in range(len(LikelyBOLD_comps)):
             if "Likely BOLD" in LikelyBOLD_comps.loc[idx]:
                 LikelyBOLD_comps.loc[idx] = True
             else:
                 LikelyBOLD_comps.loc[idx] = False
-        print(LikelyBOLD_comps)
         return LikelyBOLD_comps
 
     @property
