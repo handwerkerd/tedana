@@ -442,6 +442,7 @@ def dec_left_op_right(
 
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
+    LGR.info(f"{function_name_idx} {ifTrue} if {outputs['node_label']}, else {ifFalse}")
     if log_extra_info:
         LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
@@ -996,6 +997,7 @@ def dec_classification_doesnt_exist(
     new_classification,
     decide_comps,
     class_comp_exists,
+    at_least_num_exist=1,
     log_extra_report="",
     log_extra_info="",
     custom_node_label="",
@@ -1017,6 +1019,9 @@ def dec_classification_doesnt_exist(
         This has the same structure options as decide_comps. This function tests
         whether any components in decide_comps have the classifications defined in this
         variable.
+    at_least_num_exist: :obj:`int`
+        Instead of just testing whether a classification exists, test whether at least
+        this number of components have that classification. Default=1
     {log_extra_info}
     {log_extra_report}
     {custom_node_label}
@@ -1034,7 +1039,7 @@ def dec_classification_doesnt_exist(
     ----
     This function is useful to end the component selection process early
     even if there are additional nodes. For example, in the original
-    kundu tree, if no components are identified with kappa>elbow and
+    kundu tree, if 0 or 1 components are identified with kappa>elbow and
     rho>elbow then, instead of removing everything, it effectively says
     something's wrong and conservatively keeps everything. Similarly,
     later in the kundu tree, there are several steps deciding how to
@@ -1047,7 +1052,7 @@ def dec_classification_doesnt_exist(
     outputs = {
         "decision_node_idx": selector.current_node_idx,
         "used_metrics": set(),
-        "used_cross_component_metrics": set(),
+        "used_cross_comp_metrics": set(),
         "node_label": None,
         "numTrue": None,
         "numFalse": None,
@@ -1059,8 +1064,12 @@ def dec_classification_doesnt_exist(
     function_name_idx = "Step {}: classification_doesnt_exist".format((selector.current_node_idx))
     if custom_node_label:
         outputs["node_label"] = custom_node_label
-    else:
+    elif at_least_num_exist == 1:
         outputs["node_label"] = f"Change {decide_comps} if {class_comp_exists} doesn't exist"
+    else:
+        outputs[
+            "node_label"
+        ] = f"Change {decide_comps} if less than {at_least_num_exist} components with {class_comp_exists} exist"
 
     if log_extra_info:
         LGR.info(f"{function_name_idx} {log_extra_info}")
@@ -1074,7 +1083,7 @@ def dec_classification_doesnt_exist(
 
     do_comps_exist = selectcomps2use(selector, class_comp_exists)
 
-    if (not comps2use) or (do_comps_exist):
+    if (not comps2use) or (len(do_comps_exist) >= at_least_num_exist):
         outputs["numTrue"] = 0
         # If nothing chanages, then assign the number of components in comps2use to numFalse
         outputs["numFalse"] = len(comps2use)

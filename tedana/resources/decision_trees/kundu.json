@@ -55,7 +55,6 @@
                 "right": "kappa"
             },
             "kwargs": {
-                "log_extra_info": "Reject if Kappa>Rho",
                 "log_extra_report": "",
                 "tag_ifTrue": "Unlikely BOLD"
             },
@@ -196,6 +195,7 @@
                 "class_comp_exists": "provisionalaccept"
             },
             "kwargs": {
+                "at_least_num_exist": 2,
                 "tag": "No provisional accept",
                 "log_extra_info": "If nothing is provisionally accepted by this point, then rerun ICA & selection. If max iterations of rerunning done, then accept everything not already rejected",
                 "log_extra_report": ""
