@@ -197,7 +197,7 @@
             },
             "kwargs": {
                 "tag": "No provisional accept",
-                "log_extra_info": "If nothing is provisionally accepted by this point, be conservative and accept everything. NOTE This means there will be no Likely BOLD components, ICA will be rerun with a new seed and the decision tree will be rerun on the new ICA components",
+                "log_extra_info": "If nothing is provisionally accepted by this point, then rerun ICA & selection. If max iterations of rerunning done, then accept everything not already rejected",
                 "log_extra_report": ""
             },
             "_comment": "Code I006 in premodularized tedana"
