@@ -657,7 +657,9 @@ def tedana_workflow(
                 "ICA",
                 metrics=required_metrics,
             )
-            ica_selection = selection.automatic_selection(comptable, n_echos, n_vols, tree=tree)
+            ica_selection = selection.automatic_selection(
+                comptable, n_echos, n_vols, tree=tree, verbose=verbose
+            )
             n_LikelyBOLD_comps = ica_selection.n_LikelyBOLD_comps
             if (n_restarts < maxrestart) and (n_LikelyBOLD_comps == 0):
                 LGR.warning("No BOLD components found. Re-attempting ICA.")

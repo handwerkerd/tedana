@@ -283,7 +283,11 @@ def post_tedana(
 
     # Make a new selector with the added files
     selector = selection.component_selector.ComponentSelector(
-        previous_tree_fname, comptable, cross_component_metrics=xcomp, status_table=status_table
+        previous_tree_fname,
+        comptable,
+        cross_component_metrics=xcomp,
+        status_table=status_table,
+        verbose=debug,
     )
 
     if accept:

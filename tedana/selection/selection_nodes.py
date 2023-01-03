@@ -155,7 +155,7 @@ def manual_classify(
         outputs["node_label"] = "Set " + str(decide_comps) + " to " + new_classification
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -443,7 +443,7 @@ def dec_left_op_right(
     # Might want to add additional default logging to functions here
     # The function input will be logged before the function call
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -586,7 +586,7 @@ def dec_variance_lessthan_thresholds(
         )
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -711,7 +711,7 @@ def calc_median(
         outputs["node_label"] = f"Calc {label_name}"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -809,7 +809,7 @@ def calc_kappa_elbow(
         outputs["node_label"] = "Calc Kappa Elbow"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -942,7 +942,7 @@ def calc_rho_elbow(
         outputs["node_label"] = "Calc Rho Elbow"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -1063,7 +1063,7 @@ def dec_classification_doesnt_exist(
         outputs["node_label"] = f"Change {decide_comps} if {class_comp_exists} doesn't exist"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -1235,7 +1235,7 @@ def calc_varex_thresh(
         outputs["node_label"] = f"Calc {varex_name}"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -1331,7 +1331,7 @@ def calc_extend_factor(
         outputs["node_label"] = "Calc extend_factor"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -1422,7 +1422,7 @@ def calc_max_good_meanmetricrank(
         outputs["node_label"] = f"Calc {metric_name}"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -1529,7 +1529,7 @@ def calc_varex_kappa_ratio(
         outputs["node_label"] = "Calc varex kappa ratio"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx} {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
@@ -1553,7 +1553,10 @@ def calc_varex_kappa_ratio(
             - np.nanmin(selector.component_table.loc[comps2use, "variance explained"])
         )
         outputs["kappa_rate"] = kappa_rate
-        LGR.info(f"Kappa rate found to be {kappa_rate} from components " f"{comps2use}")
+        LGR.info(
+            f"{function_name_idx} Kappa rate found to be {kappa_rate} from components "
+            f"{comps2use}"
+        )
         # NOTE: kappa_rate is calculated on a subset of components while
         #     "varex kappa ratio" is calculated for all compnents
         selector.component_table["varex kappa ratio"] = (
@@ -1704,7 +1707,7 @@ def calc_revised_meanmetricrank_guesses(
         outputs["node_label"] = "Calc revised d_table_score & num accepted component guesses"
 
     if log_extra_info:
-        LGR.info(log_extra_info)
+        LGR.info(f"{function_name_idx}: {log_extra_info}")
     if log_extra_report:
         RepLGR.info(log_extra_report)
 
