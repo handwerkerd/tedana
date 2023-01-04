@@ -310,6 +310,12 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     ]
     comptable.loc[midk, "classification"] = "rejected"
     comptable.loc[midk, "rationale"] += "I007;"
+    LGR.debug(f"max_good_d_score {max_good_d_score}")
+    LGR.debug(f"len(acc_prov) {len(acc_prov)}")
+    LGR.debug(f"EXTEND_FACTOR {EXTEND_FACTOR}")
+    LGR.debug(f"varex_upper {varex_upper}")
+    LGR.debug(f"len(midk) {len(midk)}")
+    LGR.debug(f"midk {list(midk)}")
     unclf = np.setdiff1d(unclf, midk)
     acc_prov = np.setdiff1d(acc_prov, midk)
 
