@@ -412,6 +412,9 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         ign_add1 = np.setdiff1d(ign_add1, midk)
         comptable.loc[ign_add1, "classification"] = "ignored"
         comptable.loc[ign_add1, "rationale"] += "I012;"
+        LGR.debug(f"kappa_elbow {kappa_elbow}")
+        LGR.debug(f"new_varex_lower {new_varex_lower}")
+        LGR.debug(f"num_acc_guess {num_acc_guess}")
 
     # at this point, unclf is equivalent to accepted
 
