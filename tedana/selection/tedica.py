@@ -197,6 +197,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     comptable.loc[temp_rej2, "rationale"] += "I005;"
     rej = np.union1d(temp_rej2, rej)
     unclf = np.setdiff1d(unclf, rej)
+    LGR.debug(f"unclf after I005 {list(unclf)}")
 
     # Quit early if no potentially accepted components remain
     if len(unclf) == 0:
@@ -318,6 +319,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     LGR.debug(f"midk {list(midk)}")
     unclf = np.setdiff1d(unclf, midk)
     acc_prov = np.setdiff1d(acc_prov, midk)
+    LGR.debug(f"unclf after I007 {list(unclf)}")
 
     """
     Step 4: Find components to ignore
@@ -336,6 +338,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
     comptable.loc[ign, "classification"] = "ignored"
     comptable.loc[ign, "rationale"] += "I008;"
     unclf = np.setdiff1d(unclf, ign)
+    LGR.debug(f"unclf after I008 {list(unclf)}")
 
     """
     Step 5: Scrub the set if there are components that haven't been rejected or
@@ -379,6 +382,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         comptable.loc[candartA, "rationale"] += "I009;"
         midk = np.union1d(midk, candartA)
         unclf = np.setdiff1d(unclf, midk)
+        LGR.debug(f"unclf after I009 {list(unclf)}")
 
         # Rejection candidate based on artifact type B: candartB
         conservative_guess2 = num_acc_guess * HIGH_PERC / 100.0
@@ -390,12 +394,15 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         comptable.loc[candartB, "rationale"] += "I010;"
         midk = np.union1d(midk, candartB)
         unclf = np.setdiff1d(unclf, midk)
+        LGR.debug(f"unclf after I010 {list(unclf)}")
 
         # Find components to ignore
         # Ignore high variance explained, poor decision tree scored components
         new_varex_lower = stats.scoreatpercentile(
             comptable.loc[unclf[:num_acc_guess], "variance explained"], LOW_PERC
         )
+        LGR.debug(f"unclf {list(unclf)}")
+        LGR.debug(f"unclf[:num_acc_guess] {unclf[:num_acc_guess]}")
         candart = unclf[comptable.loc[unclf, "d_table_score_scrub"] > num_acc_guess]
         ign_add0 = candart[comptable.loc[candart, "variance explained"] > new_varex_lower]
         ign_add0 = np.setdiff1d(ign_add0, midk)
@@ -403,6 +410,7 @@ def kundu_selection_v2(comptable, n_echos, n_vols):
         comptable.loc[ign_add0, "rationale"] += "I011;"
         ign = np.union1d(ign, ign_add0)
         unclf = np.setdiff1d(unclf, ign)
+        LGR.debug(f"unclf after I011 {list(unclf)}")
 
         # Ignore low Kappa, high variance explained components
         ign_add1 = np.intersect1d(
