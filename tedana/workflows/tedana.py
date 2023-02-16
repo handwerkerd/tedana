@@ -304,7 +304,8 @@ def _get_parser():
         "-f",
         dest="overwrite",
         action="store_true",
-        help="Force overwriting of files.", default=False,
+        help="Force overwriting of files.",
+        default=False,
     )
     optional.add_argument("-v", "--version", action="version", version=verstr)
     parser._action_groups.append(optional)
