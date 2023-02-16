@@ -58,7 +58,7 @@ def _main():
     parser.add_argument(
         "--config",
         dest="config",
-        help="File naming configuration. Default auto (prepackaged).",
+        help="File naming configuration.",
         default="auto",
     )
     parser.add_argument(
@@ -124,7 +124,7 @@ def _main():
         "-f",
         dest="overwrite",
         action="store_true",
-        help="Force overwriting of files. Default False.",
+        help="Force overwriting of files.",
     )
     parser.add_argument(
         "--quiet", dest="quiet", help=argparse.SUPPRESS, action="store_true", default=False
