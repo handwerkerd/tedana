@@ -47,7 +47,7 @@ def _get_parser():
     from tedana import __version__
 
     verstr = "tedana v{}".format(__version__)
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # Argument parser follow templtate provided by RalphyZ
     # https://stackoverflow.com/a/43456577
     optional = parser._action_groups.pop()

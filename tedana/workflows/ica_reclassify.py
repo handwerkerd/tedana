@@ -28,7 +28,7 @@ def _main():
     from tedana import __version__
 
     verstr = "ica_reclassify v{}".format(__version__)
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "registry",
         help="File registry from a previous tedana run",
