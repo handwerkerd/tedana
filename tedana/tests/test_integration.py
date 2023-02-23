@@ -12,6 +12,7 @@ import subprocess
 import tarfile
 from gzip import GzipFile
 from io import BytesIO
+from datetime import datetime
 
 import pandas as pd
 import pytest
@@ -61,23 +62,94 @@ def check_integration_outputs(fname, outpath, n_logs=1):
     assert sorted(tocheck) == sorted(existing)
 
 
-def download_test_data(osf, outpath):
+def download_test_data(osfID, outpath):
     """
-    Downloads tar.gz data stored at `osf` and unpacks into `outpath`
+    If current data is not already available, downloads tar.gz data
+    stored at `https://osf.io/osfID/download`
+    and unpacks into `outpath`
 
     Parameters
     ----------
-    osf : str
-        URL to OSF file that contains data to be downloaded
+    osfID : str
+       The ID for the OSF file.
     outpath : str
         Path to directory where OSF data should be extracted
     """
 
-    req = requests.get(osf)
-    req.raise_for_status()
-    t = tarfile.open(fileobj=GzipFile(fileobj=BytesIO(req.content)))
-    os.makedirs(outpath, exist_ok=True)
-    t.extractall(outpath)
+    try:
+        datainfo = requests.get(f"https://osf.io/{osfID}/metadata/?format=datacite-json")
+        datainfo.raise_for_stats()
+        metadata = datainfo.content()
+        # TODO Get date field (date, highest number, date) and save to osf_filedate
+        # TODO Get file name in titles highest number title and save to datafilename
+        local_filedate = os.path.getmtime(os.path.join(outpath, datafilename))
+        if local_filedate:
+            local_filedate_str = str(datetime.fromtimestamp(local_filedate).date())
+            if local_filedate_str == osf_filename:
+                print(f"Downloaded and up-to-date data already in {outpath}. Not redownloading")
+                return
+            else:
+                print(
+                    "Downloaded data in {outpath} is older than data in https://osf.io/{osfID}. Redownloading"
+                )
+
+        req = requests.get("https://osf.io/{osfID}/download")
+        req.raise_for_status()
+        t = tarfile.open(fileobj=GzipFile(fileobj=BytesIO(req.content)))
+        os.makedirs(outpath, exist_ok=True)
+        t.extractall(outpath)
+    except:
+        if len(os.listdir(outpath)) == 0:
+            raise ConnectionError(
+                f"Cannot access https://osf.io/{osfID} and testing data are not yet downloaded"
+            )
+        else:
+            raise Warning(
+                f"Cannot access https://osf.io/{osfID}. Using local copy of testing data in {outpath} but cannot validate that local copy is up-to-date"
+            )
+
+
+def data_for_testing_info(test_dataset=str):
+    """
+    Get the path and download link for each dataset used for testing
+
+    Parameters
+    ----------
+    test_dataset : str
+       References one of the datasets to download. It can be:
+        three-echo
+        three-echo-reclassify
+        four-echo
+        five-echo
+
+    Returns
+    -------
+    outpath : str
+       The path to the local directory where the data will be downloaded
+    osfID : str
+       The ID for the OSF file.
+       Data download link would be https://osf.io/osfID/download
+       Metadata download link would be https://osf.io/osfID/metadata/?format=datacite-json
+    """
+
+    tedana_path = os.path.dirname(tedana_cli.__file__)
+    base_output_data_path = os.path.abspath(os.path.join(tedana_path, "../../.testing_data_cache"))
+    if test_dataset == "three-echo":
+        outpath = os.path.join(base_output_data_path, "three-echo/TED.three-echo")
+        osfID = "rqhfc"
+    elif test_dataset == "three-echo-reclassify":
+        outpath = os.path.join(base_output_data_path, "reclassify")
+        osfID = "f6g45"
+    elif test_dataset == "four-echo":
+        outpath = os.path.join(base_output_data_path, "four-echo/TED.four-echo")
+        osfID = "gnj73"
+    elif test_dataset == "five-echo":
+        outpath = os.path.join(base_output_data_path, "five-echo/TED.five-echo")
+        osfID = "9c42e"
+    else:
+        raise ValueError(f"{test_dataset} is not a valid dataset string for data_for_testing_info")
+
+    return outpath, osfID
 
 
 def reclassify_path() -> str:
