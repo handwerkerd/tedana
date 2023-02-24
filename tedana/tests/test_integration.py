@@ -3,6 +3,7 @@ Integration tests for "real" data
 """
 
 import glob
+import json
 import logging
 import os
 import os.path as op
@@ -10,9 +11,9 @@ import re
 import shutil
 import subprocess
 import tarfile
+from datetime import datetime
 from gzip import GzipFile
 from io import BytesIO
-from datetime import datetime
 
 import pandas as pd
 import pytest
@@ -66,6 +67,9 @@ def data_for_testing_info(test_dataset=str):
     """
     Get the path and download link for each dataset used for testing
 
+    Also creates the base directories into which the data and output
+    directories are written
+
     Parameters
     ----------
     test_dataset : str
@@ -87,18 +91,27 @@ def data_for_testing_info(test_dataset=str):
 
     tedana_path = os.path.dirname(tedana_cli.__file__)
     base_data_path = os.path.abspath(os.path.join(tedana_path, "../../.testing_data_cache"))
+    os.makedirs(base_data_path, exist_ok=True)
+    os.makedirs(os.path.join(base_data_path, "outputs"), exist_ok=True)
     if test_dataset == "three-echo":
         test_data_path = os.path.join(base_data_path, "three-echo/TED.three-echo")
         osfID = "rqhfc"
+        os.makedirs(os.path.join(base_data_path, "three-echo"), exist_ok=True)
+        os.makedirs(os.path.join(base_data_path, "outputs/three-echo"), exist_ok=True)
     elif test_dataset == "three-echo-reclassify":
         test_data_path = os.path.join(base_data_path, "reclassify")
         osfID = "f6g45"
+        os.makedirs(os.path.join(base_data_path, "outputs/reclassify"), exist_ok=True)
     elif test_dataset == "four-echo":
         test_data_path = os.path.join(base_data_path, "four-echo/TED.four-echo")
         osfID = "gnj73"
+        os.makedirs(os.path.join(base_data_path, "four-echo"), exist_ok=True)
+        os.makedirs(os.path.join(base_data_path, "outputs/four-echo"), exist_ok=True)
     elif test_dataset == "five-echo":
         test_data_path = os.path.join(base_data_path, "five-echo/TED.five-echo")
         osfID = "9c42e"
+        os.makedirs(os.path.join(base_data_path, "five-echo"), exist_ok=True)
+        os.makedirs(os.path.join(base_data_path, "outputs/five-echo"), exist_ok=True)
     else:
         raise ValueError(f"{test_dataset} is not a valid dataset string for data_for_testing_info")
 
@@ -121,41 +134,53 @@ def download_test_data(osfID, test_data_path):
 
     try:
         datainfo = requests.get(f"https://osf.io/{osfID}/metadata/?format=datacite-json")
-        datainfo.raise_for_stats()
-        metadata = datainfo.content()
-        # TODO Get date field (date, highest number, date) and save to osf_filedate
-        # TODO Get file name in titles highest number title and save to datafilename
-        local_filedate = os.path.getmtime(os.path.join(test_data_path, datafilename))
-        if local_filedate:
-            local_filedate_str = str(datetime.fromtimestamp(local_filedate).date())
-            if local_filedate_str == osf_filename:
-                print(
-                    f"Downloaded and up-to-date data already in {test_data_path}. Not redownloading"
-                )
-                return
-            else:
-                print(
-                    "Downloaded data in {test_data_path} is older than data in https://osf.io/{osfID}. Deleting and redownloading"
-                )
-                shutil.rmtree(test_data_path)
-        elif os.path.exists(test_data_path):
-            # if the expected output directory exists, but the local file is not there, remove the directory
-            shutil.rmtree(test_data_path)
-
-        req = requests.get("https://osf.io/{osfID}/download")
-        req.raise_for_status()
-        t = tarfile.open(fileobj=GzipFile(fileobj=BytesIO(req.content)))
-        os.makedirs(test_data_path, exist_ok=True)
-        t.extractall(test_data_path)
-    except:
+    except Exception:
         if len(os.listdir(test_data_path)) == 0:
             raise ConnectionError(
-                f"Cannot access https://osf.io/{osfID} and testing data are not yet downloaded"
+                f"Cannot access https://osf.io/{osfID} and testing data " "are not yet downloaded"
             )
         else:
-            raise Warning(
-                f"Cannot access https://osf.io/{osfID}. Using local copy of testing data in {test_data_path} but cannot validate that local copy is up-to-date"
+            print(
+                f"WARNING: Cannot access https://osf.io/{osfID}. "
+                f"Using local copy of testing data in {test_data_path} "
+                "but cannot validate that local copy is up-to-date"
             )
+            return
+    datainfo.raise_for_status()
+    metadata = json.loads(datainfo.content)
+    # 'dates' is a list with all udpates to the file, the last item in the list
+    # is the most recent and the 'date' field in the list is the date of the last
+    # update.
+    osf_filedate = metadata["dates"][-1]["date"]
+
+    # File the file with the most recent date for comparision with
+    # the lsst updated date for the osf file
+    if os.path.exists(test_data_path):
+        filelist = glob.glob(f"{test_data_path}/*")
+        most_recent_file = max(filelist, key=os.path.getctime)
+        if os.path.exists(most_recent_file):
+            local_filedate = os.path.getmtime(most_recent_file)
+            local_filedate_str = str(datetime.fromtimestamp(local_filedate).date())
+            local_data_exists = True
+        else:
+            local_data_exists = False
+    else:
+        local_data_exists = False
+    if local_data_exists:
+        if local_filedate_str == osf_filedate:
+            print(f"Downloaded and up-to-date data already in {test_data_path}. Not redownloading")
+            return
+        else:
+            print(
+                f"Downloaded data in {test_data_path} is older than data "
+                f"in https://osf.io/{osfID}. Deleting and redownloading"
+            )
+            shutil.rmtree(test_data_path)
+    req = requests.get(f"https://osf.io/{osfID}/download")
+    req.raise_for_status()
+    t = tarfile.open(fileobj=GzipFile(fileobj=BytesIO(req.content)))
+    os.makedirs(test_data_path, exist_ok=True)
+    t.extractall(test_data_path)
 
 
 def reclassify_raw() -> str:
