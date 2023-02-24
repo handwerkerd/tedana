@@ -27,6 +27,8 @@ from tedana.workflows.ica_reclassify import post_tedana
 
 # Need to see if a no BOLD warning occurred
 LOGGER = logging.getLogger(__name__)
+# Added a testing logger to output whether or not testing data were downlaoded
+TestLGR = logging.getLogger("TESTING")
 
 
 def check_integration_outputs(fname, outpath, n_logs=1):
@@ -140,8 +142,8 @@ def download_test_data(osfID, test_data_path):
                 f"Cannot access https://osf.io/{osfID} and testing data " "are not yet downloaded"
             )
         else:
-            print(
-                f"WARNING: Cannot access https://osf.io/{osfID}. "
+            TestLGR.warning(
+                f"Cannot access https://osf.io/{osfID}. "
                 f"Using local copy of testing data in {test_data_path} "
                 "but cannot validate that local copy is up-to-date"
             )
@@ -168,10 +170,12 @@ def download_test_data(osfID, test_data_path):
         local_data_exists = False
     if local_data_exists:
         if local_filedate_str == osf_filedate:
-            print(f"Downloaded and up-to-date data already in {test_data_path}. Not redownloading")
+            TestLGR.INFO(
+                f"Downloaded and up-to-date data already in {test_data_path}. Not redownloading"
+            )
             return
         else:
-            print(
+            TestLGR.INFO(
                 f"Downloaded data in {test_data_path} is older than data "
                 f"in https://osf.io/{osfID}. Deleting and redownloading"
             )
