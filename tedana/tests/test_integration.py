@@ -176,8 +176,9 @@ def download_test_data(osfID, test_data_path):
             return
         else:
             TestLGR.INFO(
-                f"Downloaded data in {test_data_path} is older than data "
-                f"in https://osf.io/{osfID}. Deleting and redownloading"
+                f"Downloaded data in {test_data_path} was last modified on "
+                f"{local_filedate_str}. Data on https://osf.io/{osfID} "
+                f" was last updated on {osf_filedate}. Deleting and redownloading"
             )
             shutil.rmtree(test_data_path)
     req = requests.get(f"https://osf.io/{osfID}/download")
