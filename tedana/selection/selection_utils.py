@@ -704,7 +704,7 @@ def rho_elbow_kundu_liberal(
     ----
     The rho elbow calculation in Kundu's original meica code calculates
     one elbow using all components' rho values, one elbow using only
-    unclassified components (plus some quirky stuff with high variance components),
+    unclassified components (excluding 2-3 remaining high variance componetns),
     on threshold based on the number of echos, and takes the mean of those 3 values
     To replicate the original code, comps2use should include indices for all components
     and subset_comps2use should includes indices for unclassified components
@@ -715,7 +715,15 @@ def rho_elbow_kundu_liberal(
     elbows based on rho values. The assumption is that the threshold on
     unclassified components is always lower and can likely be excluded. Both
     rho elbows are now logged so that it will be possible to confirm this with
-    data & make additional adjustments to this threshold
+    data & make additional adjustments to this threshold.
+
+    Additionally, the liberal threshold does not exclude 2-3 high variance components
+    from the unclassified threshold. This was done as a practical matter because
+    those components are now removed in a separate node, dec_reclassify_high_var_comps,
+    and adding that separate node to the minimal tree would make it less minimal, but
+    it also seems reasonable since there was no clear reason why they elbow with them
+    removed was reliably better than the elbow containing them. More direct comparisons
+    between these two arbitrary thresholds might be useful at some point.
     """
     if rho_elbow_type not in ["kundu", "liberal"]:
         raise ValueError(
