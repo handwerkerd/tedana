@@ -38,7 +38,7 @@ def _get_parser():
     verstr = "ica_reclassify v{}".format(__version__)
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # Argument parser follow templtate provided by RalphyZ
+    # Argument parser follow template provided by RalphyZ
     # https://stackoverflow.com/a/43456577
     optional = parser._action_groups.pop()
     required = parser.add_argument_group("Required Arguments")
@@ -156,14 +156,11 @@ def _main(argv=None):
 
     args = _get_parser().parse_args(argv)
 
-    manual_accept = parse_manual_list(args.manual_accept)
-    manual_reject = parse_manual_list(args.manual_reject)
-
     # Run ica_reclassify_workflow
     ica_reclassify_workflow(
         args.registry,
-        accept=manual_accept,
-        reject=manual_reject,
+        accept=args.manual_accept,
+        reject=args.manual_reject,
         out_dir=args.out_dir,
         config=args.config,
         prefix=args.prefix,
@@ -178,7 +175,7 @@ def _main(argv=None):
     )
 
 
-def parse_manual_list(manual_list):
+def _parse_manual_list(manual_list):
     """
     Parse the list of components to accept or reject into a list of integers
 
@@ -198,13 +195,25 @@ def parse_manual_list(manual_list):
         manual_nums = []
     elif len(manual_list) > 1:
         # We should assume that this is a list of integers
-        manual_nums = [int(x) for x in manual_list]
+        try:
+            manual_nums = [int(x) for x in manual_list]
+        except ValueError:
+            LGR.error(
+                f"_parse_manual_list expected a list of integers, but the input is {manual_nums}"
+            )
     elif op.exists(manual_list[0]):
         # filename was given
         manual_nums = fname_to_component_list(manual_list[0])
-    else:
+    elif type(manual_list[0]) == str:
         # arbitrary string was given, length of list is 1
         manual_nums = str_to_component_list(manual_list[0])
+    elif type(manual_list[0]) == int:
+        # Is a single integer and should remain a list with a single integer
+        manual_nums = manual_list
+    else:
+        LGR.error(
+            f"_parse_manual_list expected integers or a filename, but the input is {manual_nums}"
+        )
 
     return manual_nums
 
@@ -277,6 +286,12 @@ def ica_reclassify_workflow(
     out_dir = op.abspath(out_dir)
     if not op.isdir(out_dir):
         os.mkdir(out_dir)
+
+    # If accept and reject are a list of integers, they stay the same
+    # If they are a filename, load numbers of from
+    # If they are a string of values, convert to a list of ints
+    accept = _parse_manual_list(accept)
+    reject = _parse_manual_list(reject)
 
     # Check that there is no overlap in accepted/rejected components
     if accept:
