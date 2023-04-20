@@ -190,18 +190,26 @@ def _parse_manual_list(manual_list):
     manual_nums: :obj:`list[int]`
         A list of integers or an empty list.
 
+    Note
+    ----
+    Do not need to check if integers are less than 0 or greater than the total
+    number of components here, because it is later checked in selectcomps2use
+    and a descriptive error message will appear there
     """
     if not manual_list:
         manual_nums = []
     elif len(manual_list) > 1:
         # We should assume that this is a list of integers
-        try:
-            manual_nums = [int(x) for x in manual_list]
-        except ValueError:
-            LGR.error(
-                f"_parse_manual_list expected a list of integers, but the input is {manual_nums}"
-            )
-    elif op.exists(manual_list[0]):
+        manual_nums = []
+        for x in manual_list:
+            if float(x) == int(x):
+                manual_nums.append(int(x))
+            else:
+                raise ValueError(
+                    "_parse_manual_list expected a list of integers, "
+                    f"but the input is {manual_list}"
+                )
+    elif op.exists(str(manual_list[0])):
         # filename was given
         manual_nums = fname_to_component_list(manual_list[0])
     elif type(manual_list[0]) == str:
@@ -211,8 +219,8 @@ def _parse_manual_list(manual_list):
         # Is a single integer and should remain a list with a single integer
         manual_nums = manual_list
     else:
-        LGR.error(
-            f"_parse_manual_list expected integers or a filename, but the input is {manual_nums}"
+        raise ValueError(
+            f"_parse_manual_list expected integers or a filename, but the input is {manual_list}"
         )
 
     return manual_nums

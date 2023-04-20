@@ -599,6 +599,38 @@ def test_integration_reclassify_accrej_files(skip_integration, caplog):
     check_integration_outputs(fn, out_dir)
 
 
+def test_integration_reclassify_index_failures(skip_integration, caplog):
+    if skip_integration:
+        pytest.skip("Skip reclassify index failures")
+
+    test_data_path = guarantee_reclassify_data()
+    out_dir = os.path.abspath(os.path.join(test_data_path, "../outputs/reclassify/index_failures"))
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+
+    with pytest.raises(
+        ValueError,
+        match=r"_parse_manual_list expected a list of integers, but the input is",
+    ):
+        ica_reclassify_workflow(
+            reclassify_raw_registry(),
+            accept=[1, 2.5, 3],
+            out_dir=out_dir,
+            no_reports=True,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r"_parse_manual_list expected integers or a filename, but the input is",
+    ):
+        ica_reclassify_workflow(
+            reclassify_raw_registry(),
+            accept=[2.5],
+            out_dir=out_dir,
+            no_reports=True,
+        )
+
+
 def test_integration_t2smap(skip_integration):
     """Integration test of the full t2smap workflow using five-echo test data"""
     if skip_integration:
