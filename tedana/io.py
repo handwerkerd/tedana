@@ -344,6 +344,50 @@ class OutputGenerator:
         else:
             data.to_csv(name, sep="\t", line_terminator="\n", na_rep="n/a", index=False)
 
+    def save_self(self):
+        fname = self.save_file(self.registry, "registry json")
+        return fname
+
+
+class InputHarvester:
+    """Class for turning a registry file into a lookup table to get previous data."""
+
+    loaders = {
+        "json": lambda f: load_json(f),
+        "tsv": lambda f: pd.read_csv(f, delimiter="\t"),
+        "img": lambda f: nib.load(f),
+    }
+
+    def __init__(self, path):
+        self._full_path = path
+        self._base_dir = op.dirname(path)
+        self._registry = load_json(path)
+
+    def get_file_path(self, description):
+        if description in self._registry.keys():
+            return op.join(self._base_dir, self._registry[description])
+        else:
+            return None
+
+    def get_file_contents(self, description):
+        """Get file contents.
+        Notes
+        -----
+        Since we restrict to just these three types, this function should always return.
+        If more types are added, the loaders dict will need to be updated with an appropriate
+        loader.
+        """
+        for ftype, loader in InputHarvester.loaders.items():
+            if ftype in description:
+                return loader(self.get_file_path(description))
+
+    @property
+    def registry(self):
+        """The underlying file registry, including the root directory."""
+        d = self._registry
+        d["root"] = self._base_dir
+        return d
+
 
 def versiontuple(v):
     return tuple(map(int, (v.split("."))))
