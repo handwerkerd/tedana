@@ -359,9 +359,9 @@ class InputHarvester:
     }
 
     def __init__(self, path):
-        self._full_path = path
-        self._base_dir = op.dirname(path)
-        self._registry = load_json(path)
+        self._full_path = op.abspath(path)
+        self._base_dir = op.dirname(self._full_path)
+        self._registry = load_json(self._full_path)
 
     def get_file_path(self, description):
         if description in self._registry.keys():
