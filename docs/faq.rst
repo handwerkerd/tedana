@@ -140,6 +140,9 @@ tested on (i.e. human whole-brain acquisitions). It is also possible, but a bit 
 challenging, to add additional metrics for each component so that the selection process
 can include additional criteria.
 
+`Flow charts detailing both decision trees are here`_.
+
+.. _Flow charts detailing both decision trees are here: included_decision_trees.html
 .. _make their own: building\ decision\ trees.html
 
 *************************************************************************************
