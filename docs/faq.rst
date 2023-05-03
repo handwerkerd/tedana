@@ -143,7 +143,7 @@ can include additional criteria.
 `Flow charts detailing both decision trees are here`_.
 
 .. _Flow charts detailing both decision trees are here: included_decision_trees.html
-.. _make their own: building\ decision\ trees.html
+.. _make their own: building_decision_trees.html
 
 *************************************************************************************
 [tedana] What different versions of this method exist?
