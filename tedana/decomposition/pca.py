@@ -62,6 +62,7 @@ def tedpca(
     algorithm="aic",
     kdaw=10.0,
     rdaw=1.0,
+    subsample_depth=None,
     verbose=False,
     low_mem=False,
 ):
@@ -103,11 +104,18 @@ def tedpca(
         to select
         Default is 'aic'.
     kdaw : :obj:`float`, optional
-        Dimensionality augmentation weight for Kappa calculations. Must be a
-        non-negative float, or -1 (a special value). Default is 10.
+        Dimensionality augmentation weight for Kappa calculations when `algorithm` is 'kundu'.
+        Must be a non-negative float, or -1 (a special value). Default is 10.
     rdaw : :obj:`float`, optional
-        Dimensionality augmentation weight for Rho calculations. Must be a
-        non-negative float, or -1 (a special value). Default is 1.
+        Dimensionality augmentation weight for Rho calculations when `algorithm` is 'kundu'.
+        Must be a non-negative float, or -1 (a special value). Default is 1.
+    subsample_depth : int, optional
+        When `algorithm` is 'aic', 'kic', or 'mdl' the MAPCA method is used. That method
+        subsamples the voxels to retain only independent and identically distributed (IID)
+        voxels for the dimensionality estimate. This parameter can be used to set that
+        subsampling rather than automatically estiamte a value. 2 would mean using every other
+        voxel in 3D space and 3 would mean every 3rd voxel.
+        Default=None (use estimated value)
     verbose : :obj:`bool`, optional
         Whether to output files from fitmodels_direct or not. Default: False
     low_mem : :obj:`bool`, optional
@@ -158,6 +166,21 @@ def tedpca(
 
             - Nonsignificant :math:`{\\kappa}` and :math:`{\\rho}`.
             - Nonsignificant variance explained.
+
+    Comment on subsample_depth
+    -----------------------
+    When the MAPCA method is used, the method estimates the degree of subsampling
+    to generate IID voxels. Since data with identical acqusition parameters should
+    have similar levels of spatial smoothness, this estimate should be similar
+    across a dataset. In practice, we've observed outlier runs with different estimates.
+    For example, most runs estimate this value as 2, but a few estimate 1 or 3. In those
+    cases, when it is 1, there is often almost no dimensionality reduction (e.g. 300 time
+    points and >>250 PCA components), and when it is 3, there are too many removed dimensions
+    (e.g. 300 time points and <<30 components). This has been a persistent issue for users
+    of tedana. subsample_depth was added to let users set this parameter to the value estimated
+    for most runs in a study. Since setting this parameter means it is no longer linked to
+    an estimation of IID properties, it should be used with caution and the results should
+    be checked.
 
     Generated Files
     ---------------
@@ -228,7 +251,7 @@ def tedpca(
         data_img = io.new_nii_like(io_generator.reference_img, utils.unmask(data, mask))
         mask_img = io.new_nii_like(io_generator.reference_img, mask.astype(int))
         ma_pca = MovingAveragePCA(criterion=algorithm, normalize=True)
-        _ = ma_pca.fit_transform(data_img, mask_img)
+        _ = ma_pca.fit_transform(data_img, mask_img, subsample_depth=subsample_depth)
 
         # Extract results from maPCA
         voxel_comp_weights = ma_pca.u_
@@ -307,6 +330,18 @@ def tedpca(
             "varex_95": {
                 "n_components": n_varex_95,
                 "explained_variance_total": varex_95_varexp,
+            },
+            "all": {
+                "n_components": all_comps["n_components"],
+                "explained_variance_total": np.round(all_comps["explained_variance_total"], 3),
+            },
+            "MAPCA_subsampling": {
+                "calculated_IID_subsample_depth": ma_pca.subsampling_[
+                    "calculated_IID_subsample_depth"
+                ],
+                "used_IID_subsample_depth": ma_pca.subsampling_["used_IID_subsample_depth"],
+                "effective_num_IID_samples": ma_pca.subsampling_["effective_num_IID_samples"],
+                "total_num_samples": ma_pca.subsampling_["total_num_samples"],
             },
         }
 

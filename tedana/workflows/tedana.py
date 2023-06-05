@@ -150,8 +150,27 @@ def _get_parser():
             "in which case the specificed number of components will be "
             "selected."
         ),
-        choices=["mdl", "kic", "aic"],
+        choices=["mdl", "kic", "aic", "kundu", "kundu-stabilize"],
         default="aic",
+    )
+    optional.add_argument(
+        "--mapca_subsample",
+        dest="mapca_subsample",
+        type=int,
+        help=(
+            "When tedpca is 'aic', 'kic', or 'mdl' the MAPCA method is used. "
+            "That method subsamples the voxels to retain only independent and "
+            "identically distributed (IID) voxels for the dimensionality estimate. "
+            "2 means use every other voxel in 3D space, 3 is every 3rd voxel. "
+            "This parameter can set that subsampling value rather than using an "
+            "estimate. This might be useful if a dataset with consistent acqusition "
+            "parameters has a different estimate for a few runs and those runs also "
+            "have implausibly high or low estimations for the number of PCA and ICA "
+            "components compared to other runs in a study. Default is to automatically "
+            "estimate."
+        ),
+        choices=[1, 2, 3, 4, 5, 6, "None"],
+        default=None,
     )
     optional.add_argument(
         "--tree",
@@ -325,6 +344,7 @@ def tedana_workflow(
     combmode="t2s",
     tree="kundu",
     tedpca="aic",
+    mapca_subsample=None,
     fixed_seed=42,
     maxit=500,
     maxrestart=10,
@@ -388,6 +408,16 @@ def tedana_workflow(
         If a float is provided, then it is assumed to represent percentage of variance
         explained (0-1) to retain from PCA.
         Default is 'aic'.
+    mapca_subsample : :obj:`int` or None, optional
+        When tedpca is 'aic', 'kic', or 'mdl' the MAPCA method is used.
+        That method subsamples the voxels to retain only independent and
+        identically distributed (IID) voxels for the dimensionality estimate.
+        2 means use every other voxel in 3D space, 3 is every 3rd voxel.
+        This parameter can set that subsampling value rather than using an
+        estimate. This might be useful if a dataset with consistent acqusition
+        parameters has a different estimate for a few runs and those runs also
+        have implausibly high or low estimations for the number of PCA and ICA
+        components compared to other runs in a study. Default is None (estimate)
     fixed_seed : :obj:`int`, optional
         Value passed to ``mdp.numx_rand.seed()``.
         Set to a positive integer value for reproducible ICA results;
@@ -629,6 +659,7 @@ def tedana_workflow(
             algorithm=tedpca,
             kdaw=10.0,
             rdaw=1.0,
+            subsample_depth=mapca_subsample,
             verbose=verbose,
             low_mem=low_mem,
         )
