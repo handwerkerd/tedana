@@ -56,7 +56,6 @@ def tedica(
         where `C` is components and `T` is the same as in `data`
     fixed_seed : :obj:`int`
         Random seed from final decomposition.
-
     """
     warnings.filterwarnings(action="ignore", module="scipy", message="^internal gelsd")
     RepLGR.info(
@@ -134,13 +133,16 @@ def r_ica(data, n_components, fixed_seed, n_robust_runs, max_it):
             fun="logcosh",
             robust_method="DBSCAN",
         )
-
+        LGR.info("RobustICA Initialized")
         s, mmix = rica.fit_transform(data)
+        LGR.info("RobustICA fit_transform completed")
         q = rica.evaluate_clustering(
             rica.S_all, rica.clustering.labels_, rica.signs_, rica.orientation_
         )
+        LGR.info("RobustICA evaluate_clustering complted")
 
-    except:
+    except ValueError:
+        LGR.warning("Running RobustICA with AgglomerativeClustering")
         rica = RobustICA(
             n_components=n_components,
             robust_runs=n_robust_runs,
@@ -174,7 +176,9 @@ def r_ica(data, n_components, fixed_seed, n_robust_runs, max_it):
 
     LGR.info(
         f"RobustICA with {n_robust_runs} robust runs and seed {fixed_seed} was used. "
-        f"The mean Index Quality is {iq}."
+        f"The mean Index Quality is {iq}. "
+        f"{n_components} components initially specificed. "
+        f"{mmix.shape[1]} stable components found"
     )
 
     no_outliers = np.count_nonzero(rica.clustering.labels_ == -1)
