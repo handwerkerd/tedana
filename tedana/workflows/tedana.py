@@ -202,11 +202,12 @@ def _get_parser():
         dest="n_robust_runs",
         type=int,
         help=(
-            "The number of times robustica will run."
+            "The number of times robustica will run. "
             "This is only effective when ica_method is "
             "set to robustica."
         ),
         choices=range(5, 500),
+        metavar="[5-500]",
         default=DEFAULT_N_ROBUST_RUNS,
     )
     optional.add_argument(
