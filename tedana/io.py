@@ -223,7 +223,7 @@ class OutputGenerator:
             The mask image to register.
         """
         if isinstance(mask, str):
-            mask = _convert_to_nifti1(nb.load(mask), max_dim=3)
+            mask = _convert_to_nifti1(nb.load(mask), vol_3d=True)
         self.mask = mask
 
     def get_name(self, description, **kwargs):
@@ -1141,7 +1141,7 @@ def load_data_nilearn(data, mask_img, n_echos, dtype=np.float32):
             return np.stack(masked, axis=1)
 
 
-def _convert_to_nifti1(img, dtype=None, max_dim=None):
+def _convert_to_nifti1(img, dtype=None, vol_3d=False):
     """Convert any nibabel image to NIfTI1Image format.
 
     Parameters
@@ -1153,9 +1153,9 @@ def _convert_to_nifti1(img, dtype=None, max_dim=None):
         The data type to use when creating the numpy array
         Default is None (Keep the datatype the same)
 
-    max_dim : int or None
-        If the inputted data has more than max_dims dimensions,
-        if those excess dimensions are all of length 1, remove them.
+    vol_3d : bool
+        If True, if the inputted data has more than 3 dimensions,
+        if the excess dimensions are of length 1, remove them.
         Otherwise raise an error.
         This addresses an issue where nibabel reads in 3D AFNI volumes
         with 4th dimension of length 1,
@@ -1186,10 +1186,10 @@ def _convert_to_nifti1(img, dtype=None, max_dim=None):
     new_img = nb.Nifti1Image(data, affine)
     new_img.header.set_zooms(zooms)
 
-    if max_dim and (new_img.ndim > max_dim):
+    if vol_3d and (new_img.ndim > 3):
         new_img = nb.funcs.squeeze_image(new_img)
-        if new_img.ndim > max_dim:
-            raise ValueError(f"{img.get_filename()} has more than {max_dim} dimensions")
+        if new_img.ndim > 3:
+            raise ValueError(f"{img.get_filename()} has more than 3 dimensions")
 
     return new_img
 

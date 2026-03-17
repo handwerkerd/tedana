@@ -784,7 +784,6 @@ def check_te_values(te_values):
     - If all TE values are >= 1: values are assumed to be in milliseconds, a
       deprecation warning is logged, and values are returned as-is
     - Mixed values or negative values raise an error
-
     """
     te_values = np.array(te_values)
     if all((te_values > 0) & (te_values < 1)):
@@ -915,13 +914,13 @@ def load_mask(ref_img, mask=None, t2smap=None):
         # TODO: add affine check
         LGR.info("Using user-defined mask")
         RepLGR.info("A user-defined mask was applied to the data.")
-        mask_img = io._convert_to_nifti1(nb.load(mask), max_dim=3)
+        mask_img = io._convert_to_nifti1(nb.load(mask), vol_3d=True)
         # Convert mask to binary (assuming non-zero values indicate mask inclusion)
         mask = mask_img.get_fdata() > 0
         mask_img = nb.Nifti1Image(mask, mask_img.affine, mask_img.header)
     elif t2smap and not mask:
         LGR.info("Assuming user-defined T2* map is masked and using it to generate mask")
-        t2s_img = io._convert_to_nifti1(nb.load(t2smap), max_dim=3)
+        t2s_img = io._convert_to_nifti1(nb.load(t2smap), vol_3d=True)
         t2s_loaded = t2s_img.get_fdata()
         mask = (t2s_loaded != 0).astype(np.uint8)
         mask_img = nb.Nifti1Image(mask, ref_img.affine)
@@ -929,10 +928,10 @@ def load_mask(ref_img, mask=None, t2smap=None):
         t2s = check_t2s_values(t2s)
     elif t2smap and mask:
         LGR.info("Combining user-defined mask and T2* map to generate mask")
-        t2s_img = io._convert_to_nifti1(nb.load(t2smap), max_dim=3)
+        t2s_img = io._convert_to_nifti1(nb.load(t2smap), vol_3d=True)
         t2s_loaded = t2s_img.get_fdata()
         # Load and convert user-defined mask to NIfTI1 (e.g., AFNI format)
-        mask_img = io._convert_to_nifti1(nb.load(mask), max_dim=3)
+        mask_img = io._convert_to_nifti1(nb.load(mask), vol_3d=True)
         # Convert mask to binary (assuming non-zero values indicate mask inclusion)
         mask = mask_img.get_fdata() > 0
         mask[t2s_loaded == 0] = 0  # reduce mask based on T2* map

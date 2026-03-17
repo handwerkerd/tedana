@@ -322,12 +322,13 @@ def test_load_data_nilearn_multi_echo_fallback_path(tmp_path, monkeypatch):
 def test_convert_to_nifti1():
     """Test whether the dimensionality issues with AFNI values are properly handled."""
     afni_img = nb.load(os.path.join(data_dir, "TE_slice+orig.HEAD"))
-    nii_img = me._convert_to_nifti1(afni_img, max_dim=3)
+    nii_img = me._convert_to_nifti1(afni_img, vol_3d=True)
     # data shrunk to only 3D
     assert nii_img.header.get_data_shape() == (64, 64, 1)
 
-    with pytest.raises(ValueError, match=r"has more than 1 dimensions"):
-        me._convert_to_nifti1(afni_img, max_dim=1)
+    data_4d = nb.funcs.concat_images([afni_img, afni_img], axis=3)
+    with pytest.raises(ValueError, match=r"has more than 3 dimensions"):
+        me._convert_to_nifti1(data_4d, vol_3d=True)
 
 
 def test_smoke_filewrite():
